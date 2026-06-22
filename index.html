@@ -1,0 +1,104 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YY Integration Hub — Live</title>
+<style>
+*{box-sizing:border-box;margin:0;font-family:Inter,'Noto Sans Thai',system-ui,sans-serif}
+body{background:#F8F9FA;color:#333}
+header{background:#0D2F4F;color:#fff;padding:16px 24px;display:flex;align-items:center;gap:12px}
+header h1{font-size:18px;font-weight:600}
+.dot{width:9px;height:9px;border-radius:50%;background:#3DC5B7;animation:p 1.6s infinite}
+@keyframes p{0%{box-shadow:0 0 0 0 rgba(61,197,183,.6)}70%{box-shadow:0 0 0 8px rgba(61,197,183,0)}100%{box-shadow:0 0 0 0 rgba(61,197,183,0)}}
+.upd{margin-left:auto;font-size:12px;opacity:.75}
+.logout{color:#fff;background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer}
+.wrap{max-width:1100px;margin:0 auto;padding:20px}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px}
+.stat{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:12px 14px}
+.stat .n{font-size:24px;font-weight:600;color:#0D2F4F}.stat .l{font-size:12px;color:#6B7280;margin-top:2px}
+.card{background:#fff;border:1px solid #E5E7EB;border-radius:12px;margin-bottom:16px;overflow:hidden}
+.card h2{font-size:14px;font-weight:600;color:#0D2F4F;padding:10px 14px;border-bottom:1px solid #E5E7EB;background:#E6F7F5}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:#6B7280;font-weight:500;padding:8px 14px;border-bottom:1px solid #E5E7EB}
+td{padding:8px 14px;border-bottom:1px solid #F1F1F1}tr:last-child td{border-bottom:none}
+.b{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px}
+.b.dispatched{background:#E6F7F5;color:#0F6E56}.b.logged{background:#F3F4F6;color:#6B7280}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.stats{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}}
+.flash{animation:fl 1.6s}@keyframes fl{0%{background:#FFF7CC}100%{background:transparent}}
+#login{max-width:340px;margin:80px auto;background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:28px}
+#login h2{color:#0D2F4F;font-size:18px;margin-bottom:6px}#login p{color:#6B7280;font-size:13px;margin-bottom:18px}
+#login input{width:100%;padding:10px 12px;border:1px solid #E5E7EB;border-radius:8px;margin-bottom:10px;font-size:14px}
+#login button{width:100%;padding:10px;background:#3DC5B7;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+#err{color:#DC2626;font-size:13px;margin-top:8px;min-height:18px}
+.hidden{display:none}
+</style></head><body>
+
+<div id="login">
+  <h2>YY Integration Hub</h2><p>เข้าสู่ระบบเพื่อดูข้อมูล realtime</p>
+  <input id="email" type="email" placeholder="อีเมล" autocomplete="username">
+  <input id="pass" type="password" placeholder="รหัสผ่าน" autocomplete="current-password">
+  <button id="btn">เข้าสู่ระบบ</button>
+  <div id="err"></div>
+</div>
+
+<div id="app" class="hidden">
+  <header><span class="dot"></span><h1>YY Integration Hub — Live</h1>
+    <span class="upd" id="upd">เชื่อมต่อ realtime…</span>
+    <button class="logout" id="logout">ออกจากระบบ</button></header>
+  <div class="wrap">
+    <div class="stats" id="stats"></div>
+    <div class="card"><h2>Recent Events (realtime)</h2><div id="events"></div></div>
+    <div class="grid2">
+      <div class="card"><h2>Branches</h2><div id="branches"></div></div>
+      <div class="card"><h2>Employees</h2><div id="employees"></div></div>
+      <div class="card"><h2>Prices</h2><div id="prices"></div></div>
+      <div class="card"><h2>Payments</h2><div id="payments"></div></div>
+      <div class="card"><h2>Appointments</h2><div id="appointments"></div></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL, ANON);
+const $=id=>document.getElementById(id);
+
+function tbl(rows,cols,flashFirst){if(!rows||!rows.length)return '<table><tr><td style="color:#9CA3AF">— ยังไม่มีข้อมูล —</td></tr></table>';
+ let h='<table><tr>'+cols.map(c=>'<th>'+c+'</th>').join('')+'</tr>';
+ rows.forEach((r,i)=>{h+='<tr'+(flashFirst&&i===0?' class="flash"':'')+'>'+cols.map(c=>{let v=r[c]==null?'':String(r[c]);
+   if(c==='status')v='<span class="b '+(r[c]||'')+'">'+v+'</span>';return '<td>'+v+'</td>';}).join('')+'</tr>';});
+ return h+'</table>';}
+
+async function loadAll(flash){
+ const q=(t,c,o={})=>sb.from(t).select(c).order(o.by||'updated_at',{ascending:false}).limit(o.lim||50);
+ const [ev,br,em,pr,pm,ap]=await Promise.all([
+  sb.from('events').select('seq,event_type,source,entity_id,status,received_at').order('seq',{ascending:false}).limit(15),
+  q('branches','branch_id,code,name',{by:'branch_id',lim:50}),
+  q('employees','employee_id,full_name,branch_id,position'),
+  q('prices','price_code,name,price,branch_id'),
+  q('payments','payment_id,amount,branch_id,status'),
+  q('appointments','appointment_id,service,branch_id,status'),
+ ]);
+ const d={events:ev.data||[],branches:br.data||[],employees:em.data||[],prices:pr.data||[],payments:pm.data||[],appointments:ap.data||[]};
+ const S=[['events',d.events.length],['branches',d.branches.length],['employees',d.employees.length],['prices',d.prices.length],['payments',d.payments.length],['appointments',d.appointments.length]];
+ $('stats').innerHTML=S.map(([l,n])=>'<div class="stat"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>').join('');
+ $('events').innerHTML=tbl(d.events,['seq','event_type','source','entity_id','status'],flash);
+ $('branches').innerHTML=tbl(d.branches,['branch_id','code','name']);
+ $('employees').innerHTML=tbl(d.employees,['employee_id','full_name','branch_id','position']);
+ $('prices').innerHTML=tbl(d.prices,['price_code','name','price','branch_id']);
+ $('payments').innerHTML=tbl(d.payments,['payment_id','amount','branch_id','status']);
+ $('appointments').innerHTML=tbl(d.appointments,['appointment_id','service','branch_id','status']);
+ $('upd').textContent='realtime ● อัปเดต '+new Date().toLocaleTimeString('th-TH');
+}
+
+function start(){
+ $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+ loadAll(false);
+ sb.channel('events-live').on('postgres_changes',{event:'INSERT',schema:'public',table:'events'},()=>loadAll(true)).subscribe();
+}
+$('btn').onclick=async()=>{ $('err').textContent='';
+ const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});
+ if(error){$('err').textContent='เข้าสู่ระบบไม่สำเร็จ: '+error.message;}else start();};
+$('pass').addEventListener('keydown',e=>{if(e.key==='Enter')$('btn').click();});
+$('logout').onclick=async()=>{await sb.auth.signOut();location.reload();};
+sb.auth.getSession().then(({data})=>{if(data.session)start();});
+</script></body></html>
