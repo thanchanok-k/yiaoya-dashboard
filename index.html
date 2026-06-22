@@ -127,7 +127,7 @@ async function loadAll(flash){
  const [ev,br,em,pr,pm,ap]=await Promise.all([
   sb.from('events').select('seq,event_type,source,entity_id,status').order('seq',{ascending:false}).limit(15),
   q('branches','branch_id,code,name',{by:'branch_id'}),
-  q('employees','employee_id,full_name,branch_id,position'),
+  q('employees','employee_id,full_name,branch_id,position',{lim:300}),
   q('prices','price_code,name,price,branch_id'),
   q('payments','payment_id,amount,branch_id,status'),
   q('appointments','appointment_id,service,branch_id,status'),
