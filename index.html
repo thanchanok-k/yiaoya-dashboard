@@ -173,7 +173,9 @@ async function loadAll(flash){
  ];
  $('stats').innerHTML=stats.map(s=>'<div class="acard"><div class="ic" style="background:'+s.bg+';color:'+s.fg+'"><i class="ti '+s.ic+'"></i></div><div class="n">'+s.n+'</div><div class="lb">'+s.lb+'</div></div>').join('');
  $('events').innerHTML=tbl(d.events,[{h:'#',k:'seq'},{h:'ประเภท',k:'event_type'},{h:'จาก',k:'source'},{h:'entity',k:'entity_id',t:'mono'},{h:'สถานะ',k:'status',t:'status'}],{flash});
- $('branches').innerHTML=tbl(d.branches,[{h:'รหัส',k:'branch_id',t:'mono'},{h:'code',k:'code'},{h:'ชื่อ',k:'name'}]);
+ const empByBr={}; d.employees.forEach(e=>{const b=e.branch_id||'-'; empByBr[b]=(empByBr[b]||0)+1;});
+ const brRows=d.branches.map(b=>Object.assign({},b,{emp:(empByBr[b.branch_id]||0)+' คน'}));
+ $('branches').innerHTML=tbl(brRows,[{h:'รหัส',k:'branch_id',t:'mono'},{h:'code',k:'code'},{h:'ชื่อ',k:'name'},{h:'พนักงาน',k:'emp'}]);
  $('employees').innerHTML=tbl(d.employees,[{h:'รหัส',k:'employee_id',t:'mono'},{h:'ชื่อ',k:'full_name'},{h:'สาขา',k:'branch_id'},{h:'ตำแหน่ง',k:'position'}]);
  $('prices').innerHTML=tbl(d.prices,[{h:'รหัส',k:'price_code',t:'mono'},{h:'รายการ',k:'name'},{h:'ราคา',k:'price'},{h:'สาขา',k:'branch_id'}],{empty:'⏳ รอเชื่อมต่อระบบ Pricing'});
  $('payments').innerHTML=tbl(d.payments,[{h:'รหัส',k:'payment_id',t:'mono'},{h:'จำนวน',k:'amount'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}],{empty:'⏳ รอเชื่อมต่อระบบ Accountant'});
