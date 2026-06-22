@@ -69,6 +69,12 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
 #login button{width:100%;margin-top:20px;padding:11px;background:var(--teal);color:#fff;border:1px solid var(--teal);border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
 #login button:hover{background:var(--teal-dark);border-color:var(--teal-dark)}
 #err{color:#B91C1C;font-size:12.5px;margin-top:10px;min-height:18px}
+.sys-wrap{padding:14px 16px;display:flex;gap:10px;flex-wrap:wrap}
+.sys{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--text)}
+.sys .d{width:9px;height:9px;border-radius:50%;flex:none}
+.sys.on{border-color:#A7F3D0;background:#F0FDFA}.sys.on .d{background:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.sys.off{color:var(--text-faint);background:#FBFCFE}.sys.off .d{background:#CBD5E1}
+.sys .ct{font-size:11px;color:var(--text-faint);font-weight:500}
 .hidden{display:none}
 </style></head><body>
 
@@ -93,6 +99,9 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
 
   <div class="stats" id="stats"></div>
 
+  <div class="sec"><span class="sec-bar"></span>สถานะการเชื่อมต่อระบบ (Ecosystem)<span class="sec-c" id="sysCount"></span></div>
+  <div class="sys-wrap card" id="integration"></div>
+
   <div class="sec"><span class="sec-bar"></span>เหตุการณ์ล่าสุด (Events)<span class="sec-c"><span class="dot"></span>realtime</span></div>
   <div class="card"><div id="events"></div></div>
 
@@ -112,8 +121,27 @@ const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
+const SYSTEMS=[
+ {k:'hr',lb:'HR',ic:'ti-users-group'},
+ {k:'fo',lb:'Front Office',ic:'ti-calendar-event'},
+ {k:'pricing',lb:'Pricing',ic:'ti-tag'},
+ {k:'accountant',lb:'Accountant',ic:'ti-cash'},
+ {k:'purchase',lb:'Purchase',ic:'ti-shopping-cart'},
+ {k:'jera',lb:'JERA',ic:'ti-cloud'},
+];
+function renderIntegration(sources){
+ const counts={}; sources.forEach(s=>{counts[s]=(counts[s]||0)+1;});
+ let on=0;
+ $('integration').innerHTML=SYSTEMS.map(sy=>{
+  const c=counts[sy.k]||0, isOn=c>0; if(isOn)on++;
+  return '<div class="sys '+(isOn?'on':'off')+'"><span class="d"></span><i class="ti '+sy.ic+'"></i>'+sy.lb+
+   (isOn?'<span class="ct">'+c+' events</span>':'<span class="ct">รอเชื่อมต่อ</span>')+'</div>';
+ }).join('');
+ $('sysCount').textContent=on+'/'+SYSTEMS.length+' ระบบเชื่อมต่อแล้ว';
+}
+
 function tbl(rows,cols,opt={}){
- if(!rows||!rows.length)return '<table><tr><td class="empty-td">— ยังไม่มีข้อมูล —</td></tr></table>';
+ if(!rows||!rows.length)return '<table><tr><td class="empty-td">'+(opt.empty||'— ยังไม่มีข้อมูล —')+'</td></tr></table>';
  let h='<table><thead><tr>'+cols.map(c=>'<th>'+c.h+'</th>').join('')+'</tr></thead><tbody>';
  rows.forEach((r,i)=>{h+='<tr'+(opt.flash&&i===0?' class="flash"':'')+'>'+cols.map(c=>{
    let v=esc(r[c.k]);
@@ -124,14 +152,16 @@ function tbl(rows,cols,opt={}){
 
 async function loadAll(flash){
  const q=(t,c,o={})=>sb.from(t).select(c).order(o.by||'updated_at',{ascending:false}).limit(o.lim||50);
- const [ev,br,em,pr,pm,ap]=await Promise.all([
+ const [ev,br,em,pr,pm,ap,src]=await Promise.all([
   sb.from('events').select('seq,event_type,source,entity_id,status').order('seq',{ascending:false}).limit(15),
   q('branches','branch_id,code,name',{by:'branch_id'}),
   q('employees','employee_id,full_name,branch_id,position',{lim:300}),
   q('prices','price_code,name,price,branch_id'),
   q('payments','payment_id,amount,branch_id,status'),
   q('appointments','appointment_id,service,branch_id,status'),
+  sb.from('events').select('source').order('seq',{ascending:false}).limit(1000),
  ]);
+ renderIntegration((src.data||[]).map(r=>r.source));
  const d={events:ev.data||[],branches:br.data||[],employees:em.data||[],prices:pr.data||[],payments:pm.data||[],appointments:ap.data||[]};
  const stats=[
   {k:'events',n:d.events.length,lb:'Events',ic:'ti-activity',bg:'#EFF6FF',fg:'#1D4ED8'},
@@ -145,9 +175,9 @@ async function loadAll(flash){
  $('events').innerHTML=tbl(d.events,[{h:'#',k:'seq'},{h:'ประเภท',k:'event_type'},{h:'จาก',k:'source'},{h:'entity',k:'entity_id',t:'mono'},{h:'สถานะ',k:'status',t:'status'}],{flash});
  $('branches').innerHTML=tbl(d.branches,[{h:'รหัส',k:'branch_id',t:'mono'},{h:'code',k:'code'},{h:'ชื่อ',k:'name'}]);
  $('employees').innerHTML=tbl(d.employees,[{h:'รหัส',k:'employee_id',t:'mono'},{h:'ชื่อ',k:'full_name'},{h:'สาขา',k:'branch_id'},{h:'ตำแหน่ง',k:'position'}]);
- $('prices').innerHTML=tbl(d.prices,[{h:'รหัส',k:'price_code',t:'mono'},{h:'รายการ',k:'name'},{h:'ราคา',k:'price'},{h:'สาขา',k:'branch_id'}]);
- $('payments').innerHTML=tbl(d.payments,[{h:'รหัส',k:'payment_id',t:'mono'},{h:'จำนวน',k:'amount'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}]);
- $('appointments').innerHTML=tbl(d.appointments,[{h:'รหัส',k:'appointment_id',t:'mono'},{h:'บริการ',k:'service'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}]);
+ $('prices').innerHTML=tbl(d.prices,[{h:'รหัส',k:'price_code',t:'mono'},{h:'รายการ',k:'name'},{h:'ราคา',k:'price'},{h:'สาขา',k:'branch_id'}],{empty:'⏳ รอเชื่อมต่อระบบ Pricing'});
+ $('payments').innerHTML=tbl(d.payments,[{h:'รหัส',k:'payment_id',t:'mono'},{h:'จำนวน',k:'amount'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}],{empty:'⏳ รอเชื่อมต่อระบบ Accountant'});
+ $('appointments').innerHTML=tbl(d.appointments,[{h:'รหัส',k:'appointment_id',t:'mono'},{h:'บริการ',k:'service'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}],{empty:'⏳ รอเชื่อมต่อระบบ Front Office'});
  $('upd').textContent='realtime · อัปเดต '+new Date().toLocaleTimeString('th-TH');
 }
 
