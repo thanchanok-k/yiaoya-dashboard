@@ -13,18 +13,52 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
-.wrap{padding:24px 28px 60px;max-width:1280px;margin:0 auto}
 
-/* ===== GREETING HEADER (gradient) ===== */
-.head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px}
-.greeting{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;border-radius:12px;padding:16px 22px;flex:1;display:flex;align-items:center;gap:14px}
+/* ===== SIDEBAR (ตาม HR _sidebar) ===== */
+.shell{display:flex;min-height:100vh}
+.sb{background:var(--navy);color:#fff;width:220px;position:fixed;top:0;left:0;height:100vh;z-index:40;display:flex;flex-direction:column}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:16px 14px;border-bottom:1px solid rgba(255,255,255,.08);flex:none}
+.sb-brand .ic{width:32px;height:32px;border-radius:8px;background:rgba(61,197,183,.2);color:var(--teal);display:grid;place-items:center;font-size:18px;flex:none}
+.sb-brand .nm{font-size:14px;font-weight:600;line-height:1.2}.sb-brand .vr{font-size:10px;color:rgba(255,255,255,.5)}
+.sb-nav{flex:1;overflow-y:auto;padding:8px 0}
+.sb-nav::-webkit-scrollbar{width:6px}.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px}
+.sb-label{padding:10px 14px 5px;font-size:9.5px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 14px;color:rgba(255,255,255,.75);cursor:pointer;border-left:3px solid transparent;font-weight:500;font-size:13px}
+.sb-item i{font-size:17px;width:18px;text-align:center;flex:none}
+.sb-item:hover{background:rgba(255,255,255,.05);color:#fff}
+.sb-item.active{background:rgba(61,197,183,.16);color:#fff;border-left-color:var(--teal)}
+.sb-item.active i{color:var(--teal)}
+.sb-item .ct{margin-left:auto;font-size:10px;color:rgba(255,255,255,.45);font-weight:500}
+.sb-foot{padding:12px 14px;border-top:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.15);flex:none}
+.sb-user{display:flex;align-items:center;gap:9px}
+.sb-av{width:30px;height:30px;border-radius:50%;background:var(--teal);color:#042822;display:grid;place-items:center;font-size:11px;font-weight:600;flex:none}
+.sb-uname{font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-urole{font-size:9.5px;color:rgba(255,255,255,.5)}
+.sb-out{display:flex;align-items:center;gap:7px;margin-top:9px;padding:7px 9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);border-radius:7px;font-size:11.5px;color:rgba(255,255,255,.8);cursor:pointer;transition:.12s}
+.sb-out:hover{background:rgba(239,68,68,.2);color:#fff}.sb-out i{font-size:15px}
+.main{flex:1;margin-left:220px;min-width:0}
+.sb-toggle{display:none;position:fixed;top:12px;left:12px;z-index:100;width:38px;height:38px;background:var(--navy);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:19px;align-items:center;justify-content:center}
+.sb-ov{display:none;position:fixed;inset:0;background:rgba(13,47,79,.45);z-index:38}
+@media(max-width:768px){
+ .sb{transform:translateX(-100%);transition:transform .18s;width:264px}
+ .sb.open{transform:translateX(0);box-shadow:4px 0 16px rgba(0,0,0,.3)}
+ .sb.open ~ .sb-ov{display:block}
+ .main{margin-left:0}
+ .sb-toggle{display:flex}
+}
+.view{display:none}.view.active{display:block}
+
+.wrap{padding:24px 28px 60px;max-width:1280px;margin:0 auto}
+@media(max-width:768px){.wrap{padding:60px 16px 40px}}
+
+/* ===== GREETING HEADER ===== */
+.head{margin-bottom:22px}
+.greeting{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;border-radius:12px;padding:16px 22px;display:flex;align-items:center;gap:14px}
 .greeting .logo{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.14);display:grid;place-items:center;font-size:22px;flex:none}
 .greeting h1{font-size:18px;font-weight:600;letter-spacing:-.01em}
 .greeting .sub{font-size:12px;opacity:.82;display:flex;align-items:center;gap:7px;margin-top:3px}
-.greeting .dot{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 3px rgba(61,197,183,.25);animation:pulse 1.8s infinite}
+.greeting .dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 1.8s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(61,197,183,.45)}70%{box-shadow:0 0 0 7px rgba(61,197,183,0)}100%{box-shadow:0 0 0 0 rgba(61,197,183,0)}}
-.logout{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:8px 14px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.15s}
-.logout:hover{background:rgba(255,255,255,.2)}.logout i{font-size:16px}
 
 /* ===== STAT CARDS ===== */
 .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:6px}
@@ -36,16 +70,13 @@ body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,syste
 .acard .n{font-size:25px;font-weight:700;line-height:1;margin-top:10px;letter-spacing:-.02em}
 .acard .lb{margin-top:7px;font-size:12.5px;color:var(--text-muted);font-weight:500}
 
-/* ===== SECTION ===== */
+/* ===== SECTION / TABLE ===== */
 .sec{display:flex;align-items:center;gap:8px;margin:22px 2px 11px;font-size:14.5px;font-weight:600;color:var(--navy)}
+.sec:first-child{margin-top:0}
 .sec-bar{width:4px;height:16px;border-radius:2px;background:var(--teal)}
 .sec-c{margin-left:auto;color:var(--text-faint);font-weight:500;font-size:12.5px;display:inline-flex;align-items:center;gap:5px}
 .sec-c .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 1.8s infinite}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:13px;overflow:hidden}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media(max-width:900px){.grid2{grid-template-columns:1fr}}
-
-/* ===== TABLE ===== */
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;color:var(--text-muted);font-weight:500;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;padding:11px 16px;border-bottom:1px solid var(--border);background:#FBFCFE}
 td{padding:11px 16px;border-bottom:1px solid #F1F4F8;color:var(--text)}
@@ -54,9 +85,15 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
 .mono{font-family:'SF Mono',Consolas,monospace;font-size:11.5px;color:var(--text-muted)}
 .empty-td{color:var(--text-faint);padding:22px 16px;text-align:center}
 .pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:10px;font-weight:600;text-transform:capitalize}
-.pill.dispatched{background:var(--success-bg);color:var(--success)}
-.pill.logged{background:#F1F5F9;color:var(--text-muted)}
+.pill.dispatched{background:var(--success-bg);color:var(--success)}.pill.logged{background:#F1F5F9;color:var(--text-muted)}
+.pill.posted{background:var(--success-bg);color:var(--success)}.pill.booked{background:var(--info-bg);color:var(--info)}
 .flash{animation:fl 1.8s}@keyframes fl{0%{background:#FFF7CC}100%{background:transparent}}
+.sys-wrap{padding:14px 16px;display:flex;gap:10px;flex-wrap:wrap}
+.sys{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--text)}
+.sys .d{width:9px;height:9px;border-radius:50%;flex:none}
+.sys.on{border-color:#A7F3D0;background:#F0FDFA}.sys.on .d{background:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.sys.off{color:var(--text-faint);background:#FBFCFE}.sys.off .d{background:#CBD5E1}
+.sys .ct{font-size:11px;color:var(--text-faint);font-weight:500}
 
 /* ===== LOGIN ===== */
 #login{max-width:360px;margin:9vh auto 0;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:30px 28px;box-shadow:0 8px 30px rgba(13,47,79,.07)}
@@ -69,12 +106,6 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
 #login button{width:100%;margin-top:20px;padding:11px;background:var(--teal);color:#fff;border:1px solid var(--teal);border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
 #login button:hover{background:var(--teal-dark);border-color:var(--teal-dark)}
 #err{color:#B91C1C;font-size:12.5px;margin-top:10px;min-height:18px}
-.sys-wrap{padding:14px 16px;display:flex;gap:10px;flex-wrap:wrap}
-.sys{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--text)}
-.sys .d{width:9px;height:9px;border-radius:50%;flex:none}
-.sys.on{border-color:#A7F3D0;background:#F0FDFA}.sys.on .d{background:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
-.sys.off{color:var(--text-faint);background:#FBFCFE}.sys.off .d{background:#CBD5E1}
-.sys .ct{font-size:11px;color:var(--text-faint);font-weight:500}
 .hidden{display:none}
 </style></head><body>
 
@@ -87,32 +118,79 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
   <div id="err"></div>
 </div>
 
-<div id="app" class="hidden"><div class="wrap">
-  <div class="head">
-    <div class="greeting">
-      <div class="logo"><i class="ti ti-topology-star-3"></i></div>
-      <div><h1>YY Integration Hub</h1>
-        <div class="sub"><span class="dot"></span><span id="upd">กำลังเชื่อมต่อ realtime…</span></div></div>
+<div id="app" class="hidden">
+ <button class="sb-toggle" id="sbToggle"><i class="ti ti-menu-2"></i></button>
+ <div class="shell">
+  <aside class="sb" id="sidebar">
+    <div class="sb-brand"><div class="ic"><i class="ti ti-topology-star-3"></i></div>
+      <div><div class="nm">YY Integration Hub</div><div class="vr">Ecosystem · v1</div></div></div>
+    <nav class="sb-nav" id="sbnav">
+      <div class="sb-label">เมนู</div>
+      <div class="sb-item active" data-view="overview"><i class="ti ti-layout-dashboard"></i>ภาพรวม</div>
+      <div class="sb-label">ข้อมูล (Entities)</div>
+      <div class="sb-item" data-view="employees"><i class="ti ti-users-group"></i>พนักงาน<span class="ct" id="ct-employees"></span></div>
+      <div class="sb-item" data-view="branches"><i class="ti ti-building-store"></i>สาขา<span class="ct" id="ct-branches"></span></div>
+      <div class="sb-item" data-view="prices"><i class="ti ti-tag"></i>ราคา<span class="ct" id="ct-prices"></span></div>
+      <div class="sb-item" data-view="payments"><i class="ti ti-cash"></i>การชำระเงิน<span class="ct" id="ct-payments"></span></div>
+      <div class="sb-item" data-view="appointments"><i class="ti ti-calendar-event"></i>นัดหมาย<span class="ct" id="ct-appointments"></span></div>
+      <div class="sb-label">ระบบ</div>
+      <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
+      <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-user"><div class="sb-av" id="sbAv">AD</div>
+        <div style="min-width:0"><div class="sb-uname" id="sbName">admin</div><div class="sb-urole">ผู้ดูแลระบบ</div></div></div>
+      <div class="sb-out" id="logout"><i class="ti ti-logout"></i> ออกจากระบบ</div>
     </div>
-    <button class="logout" id="logout"><i class="ti ti-logout"></i> ออกจากระบบ</button>
-  </div>
+  </aside>
+  <div class="sb-ov" id="sbOv"></div>
 
-  <div class="stats" id="stats"></div>
+  <div class="main"><div class="wrap">
+    <div class="head"><div class="greeting">
+      <div class="logo"><i class="ti ti-topology-star-3"></i></div>
+      <div><h1 id="viewTitle">ภาพรวม</h1>
+        <div class="sub"><span class="dot"></span><span id="upd">กำลังเชื่อมต่อ realtime…</span></div></div>
+    </div></div>
 
-  <div class="sec"><span class="sec-bar"></span>สถานะการเชื่อมต่อระบบ (Ecosystem)<span class="sec-c" id="sysCount"></span></div>
-  <div class="sys-wrap card" id="integration"></div>
+    <section class="view active" data-view="overview">
+      <div class="stats" id="stats"></div>
+      <div class="sec"><span class="sec-bar"></span>สถานะการเชื่อมต่อระบบ (Ecosystem)<span class="sec-c" id="sysCount"></span></div>
+      <div class="sys-wrap card" id="integration"></div>
+      <div class="sec"><span class="sec-bar"></span>เหตุการณ์ล่าสุด<span class="sec-c"><span class="dot"></span>realtime</span></div>
+      <div class="card"><div id="events"></div></div>
+    </section>
 
-  <div class="sec"><span class="sec-bar"></span>เหตุการณ์ล่าสุด (Events)<span class="sec-c"><span class="dot"></span>realtime</span></div>
-  <div class="card"><div id="events"></div></div>
-
-  <div class="grid2">
-    <div><div class="sec"><span class="sec-bar"></span>สาขา (Branches)</div><div class="card"><div id="branches"></div></div></div>
-    <div><div class="sec"><span class="sec-bar"></span>พนักงาน (Employees)</div><div class="card"><div id="employees"></div></div></div>
-    <div><div class="sec"><span class="sec-bar"></span>ราคา (Prices)</div><div class="card"><div id="prices"></div></div></div>
-    <div><div class="sec"><span class="sec-bar"></span>การชำระเงิน (Payments)</div><div class="card"><div id="payments"></div></div></div>
-    <div><div class="sec"><span class="sec-bar"></span>นัดหมาย (Appointments)</div><div class="card"><div id="appointments"></div></div></div>
-  </div>
-</div></div>
+    <section class="view" data-view="employees">
+      <div class="sec"><span class="sec-bar"></span>พนักงาน (Employees)</div>
+      <div class="card"><div id="employees"></div></div>
+    </section>
+    <section class="view" data-view="branches">
+      <div class="sec"><span class="sec-bar"></span>สาขา (Branches)</div>
+      <div class="card"><div id="branches"></div></div>
+    </section>
+    <section class="view" data-view="prices">
+      <div class="sec"><span class="sec-bar"></span>ราคา (Prices)</div>
+      <div class="card"><div id="prices"></div></div>
+    </section>
+    <section class="view" data-view="payments">
+      <div class="sec"><span class="sec-bar"></span>การชำระเงิน (Payments)</div>
+      <div class="card"><div id="payments"></div></div>
+    </section>
+    <section class="view" data-view="appointments">
+      <div class="sec"><span class="sec-bar"></span>นัดหมาย (Appointments)</div>
+      <div class="card"><div id="appointments"></div></div>
+    </section>
+    <section class="view" data-view="events">
+      <div class="sec"><span class="sec-bar"></span>เหตุการณ์ทั้งหมด<span class="sec-c"><span class="dot"></span>realtime</span></div>
+      <div class="card"><div id="eventsAll"></div></div>
+    </section>
+    <section class="view" data-view="ecosystem">
+      <div class="sec"><span class="sec-bar"></span>สถานะการเชื่อมต่อระบบ<span class="sec-c" id="sysCount2"></span></div>
+      <div class="sys-wrap card" id="integration2"></div>
+    </section>
+  </div></div>
+ </div>
+</div>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -120,24 +198,28 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
+
+function showView(v){
+ document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
+ document.querySelectorAll('.sb-item').forEach(i=>i.classList.toggle('active',i.dataset.view===v));
+ $('viewTitle').textContent=VIEW_TITLE[v]||'ภาพรวม';
+ $('sidebar').classList.remove('open');
+ window.scrollTo(0,0);
+}
 
 const SYSTEMS=[
- {k:'hr',lb:'HR',ic:'ti-users-group'},
- {k:'fo',lb:'Front Office',ic:'ti-calendar-event'},
- {k:'pricing',lb:'Pricing',ic:'ti-tag'},
- {k:'accountant',lb:'Accountant',ic:'ti-cash'},
- {k:'purchase',lb:'Purchase',ic:'ti-shopping-cart'},
- {k:'jera',lb:'JERA',ic:'ti-cloud'},
+ {k:'hr',lb:'HR',ic:'ti-users-group'},{k:'fo',lb:'Front Office',ic:'ti-calendar-event'},
+ {k:'pricing',lb:'Pricing',ic:'ti-tag'},{k:'accountant',lb:'Accountant',ic:'ti-cash'},
+ {k:'purchase',lb:'Purchase',ic:'ti-shopping-cart'},{k:'jera',lb:'JERA',ic:'ti-cloud'},
 ];
 function renderIntegration(sources){
- const counts={}; sources.forEach(s=>{counts[s]=(counts[s]||0)+1;});
- let on=0;
- $('integration').innerHTML=SYSTEMS.map(sy=>{
-  const c=counts[sy.k]||0, isOn=c>0; if(isOn)on++;
+ const counts={}; sources.forEach(s=>{counts[s]=(counts[s]||0)+1;}); let on=0;
+ const html=SYSTEMS.map(sy=>{const c=counts[sy.k]||0,isOn=c>0;if(isOn)on++;
   return '<div class="sys '+(isOn?'on':'off')+'"><span class="d"></span><i class="ti '+sy.ic+'"></i>'+sy.lb+
-   (isOn?'<span class="ct">'+c+' events</span>':'<span class="ct">รอเชื่อมต่อ</span>')+'</div>';
- }).join('');
- $('sysCount').textContent=on+'/'+SYSTEMS.length+' ระบบเชื่อมต่อแล้ว';
+   (isOn?'<span class="ct">'+c+' events</span>':'<span class="ct">รอเชื่อมต่อ</span>')+'</div>';}).join('');
+ $('integration').innerHTML=html; $('integration2').innerHTML=html;
+ const t=on+'/'+SYSTEMS.length+' ระบบเชื่อมต่อแล้ว'; $('sysCount').textContent=t; $('sysCount2').textContent=t;
 }
 
 function tbl(rows,cols,opt={}){
@@ -152,7 +234,7 @@ function tbl(rows,cols,opt={}){
 
 async function loadAll(flash){
  const q=(t,c,o={})=>sb.from(t).select(c).order(o.by||'updated_at',{ascending:false}).limit(o.lim||50);
- const [ev,br,em,pr,pm,ap,src]=await Promise.all([
+ const [ev,br,em,pr,pm,ap,src,evAll]=await Promise.all([
   sb.from('events').select('seq,event_type,source,entity_id,status').order('seq',{ascending:false}).limit(15),
   q('branches','branch_id,code,name',{by:'branch_id'}),
   q('employees','employee_id,full_name,branch_id,position',{lim:300}),
@@ -160,19 +242,22 @@ async function loadAll(flash){
   q('payments','payment_id,amount,branch_id,status'),
   q('appointments','appointment_id,service,branch_id,status'),
   sb.from('events').select('source').order('seq',{ascending:false}).limit(1000),
+  sb.from('events').select('seq,event_type,source,entity_id,status').order('seq',{ascending:false}).limit(100),
  ]);
  renderIntegration((src.data||[]).map(r=>r.source));
  const d={events:ev.data||[],branches:br.data||[],employees:em.data||[],prices:pr.data||[],payments:pm.data||[],appointments:ap.data||[]};
  const stats=[
-  {k:'events',n:d.events.length,lb:'Events',ic:'ti-activity',bg:'#EFF6FF',fg:'#1D4ED8'},
-  {k:'branches',n:d.branches.length,lb:'Branches',ic:'ti-building-store',bg:'#E6F7F5',fg:'#0F766E'},
-  {k:'employees',n:d.employees.length,lb:'Employees',ic:'ti-users-group',bg:'#F5F3FF',fg:'#6D28D9'},
-  {k:'prices',n:d.prices.length,lb:'Prices',ic:'ti-tag',bg:'#FFF7ED',fg:'#C2410C'},
-  {k:'payments',n:d.payments.length,lb:'Payments',ic:'ti-cash',bg:'#ECFDF5',fg:'#047857'},
-  {k:'appointments',n:d.appointments.length,lb:'Appointments',ic:'ti-calendar-event',bg:'#FEF2F2',fg:'#B91C1C'},
+  {n:d.events.length,lb:'Events',ic:'ti-activity',bg:'#EFF6FF',fg:'#1D4ED8'},
+  {n:d.branches.length,lb:'Branches',ic:'ti-building-store',bg:'#E6F7F5',fg:'#0F766E'},
+  {n:d.employees.length,lb:'Employees',ic:'ti-users-group',bg:'#F5F3FF',fg:'#6D28D9'},
+  {n:d.prices.length,lb:'Prices',ic:'ti-tag',bg:'#FFF7ED',fg:'#C2410C'},
+  {n:d.payments.length,lb:'Payments',ic:'ti-cash',bg:'#ECFDF5',fg:'#047857'},
+  {n:d.appointments.length,lb:'Appointments',ic:'ti-calendar-event',bg:'#FEF2F2',fg:'#B91C1C'},
  ];
  $('stats').innerHTML=stats.map(s=>'<div class="acard"><div class="ic" style="background:'+s.bg+';color:'+s.fg+'"><i class="ti '+s.ic+'"></i></div><div class="n">'+s.n+'</div><div class="lb">'+s.lb+'</div></div>').join('');
- $('events').innerHTML=tbl(d.events,[{h:'#',k:'seq'},{h:'ประเภท',k:'event_type'},{h:'จาก',k:'source'},{h:'entity',k:'entity_id',t:'mono'},{h:'สถานะ',k:'status',t:'status'}],{flash});
+ const evCols=[{h:'#',k:'seq'},{h:'ประเภท',k:'event_type'},{h:'จาก',k:'source'},{h:'entity',k:'entity_id',t:'mono'},{h:'สถานะ',k:'status',t:'status'}];
+ $('events').innerHTML=tbl(d.events,evCols,{flash});
+ $('eventsAll').innerHTML=tbl(evAll.data||[],evCols);
  const empByBr={}; d.employees.forEach(e=>{const b=e.branch_id||'-'; empByBr[b]=(empByBr[b]||0)+1;});
  const brRows=d.branches.map(b=>Object.assign({},b,{emp:(empByBr[b.branch_id]||0)+' คน'}));
  $('branches').innerHTML=tbl(brRows,[{h:'รหัส',k:'branch_id',t:'mono'},{h:'code',k:'code'},{h:'ชื่อ',k:'name'},{h:'พนักงาน',k:'emp'}]);
@@ -180,11 +265,18 @@ async function loadAll(flash){
  $('prices').innerHTML=tbl(d.prices,[{h:'รหัส',k:'price_code',t:'mono'},{h:'รายการ',k:'name'},{h:'ราคา',k:'price'},{h:'สาขา',k:'branch_id'}],{empty:'⏳ รอเชื่อมต่อระบบ Pricing'});
  $('payments').innerHTML=tbl(d.payments,[{h:'รหัส',k:'payment_id',t:'mono'},{h:'จำนวน',k:'amount'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}],{empty:'⏳ รอเชื่อมต่อระบบ Accountant'});
  $('appointments').innerHTML=tbl(d.appointments,[{h:'รหัส',k:'appointment_id',t:'mono'},{h:'บริการ',k:'service'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}],{empty:'⏳ รอเชื่อมต่อระบบ Front Office'});
+ $('ct-employees').textContent=d.employees.length; $('ct-branches').textContent=d.branches.length;
+ $('ct-prices').textContent=d.prices.length||''; $('ct-payments').textContent=d.payments.length||'';
+ $('ct-appointments').textContent=d.appointments.length||''; $('ct-events').textContent=(evAll.data||[]).length;
  $('upd').textContent='realtime · อัปเดต '+new Date().toLocaleTimeString('th-TH');
 }
 
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+ sb.auth.getUser().then(({data})=>{const e=(data&&data.user&&data.user.email)||'admin'; $('sbName').textContent=e; $('sbAv').textContent=e.substring(0,2).toUpperCase();});
+ document.querySelectorAll('.sb-item').forEach(i=>i.onclick=()=>showView(i.dataset.view));
+ $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
+ $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
  loadAll(false);
  sb.channel('events-live').on('postgres_changes',{event:'INSERT',schema:'public',table:'events'},()=>loadAll(true)).subscribe();
 }
