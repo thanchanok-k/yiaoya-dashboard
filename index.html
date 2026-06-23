@@ -137,8 +137,8 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="appointments"><i class="ti ti-calendar-event"></i>นัดหมาย<span class="ct" id="ct-appointments"></span></div>
       <div class="sb-label">HR</div>
       <div class="sb-item" data-view="leaves"><i class="ti ti-calendar-off"></i>การลา<span class="ct" id="ct-leaves"></span></div>
-      <div class="sb-item" data-view="ot"><i class="ti ti-clock"></i>OT</div>
-      <div class="sb-item" data-view="kpi"><i class="ti ti-chart-bar"></i>KPI</div>
+      <div class="sb-item" data-view="ot"><i class="ti ti-clock"></i>OT<span class="ct" id="ct-ot"></span></div>
+      <div class="sb-item" data-view="kpi"><i class="ti ti-chart-bar"></i>KPI<span class="ct" id="ct-kpi"></span></div>
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
@@ -271,9 +271,11 @@ async function loadAll(flash){
   sb.from('events').select('seq,event_type,source,entity_id,status').order('seq',{ascending:false}).limit(100),
  ]);
  renderIntegration((src.data||[]).map(r=>r.source));
- const [empsRich, leaves] = await Promise.all([
+ const [empsRich, leaves, ots, kpis] = await Promise.all([
    latestByEntity('employee.updated','employee_id',1500),
    latestByEntity('leave.updated','request_id',500),
+   latestByEntity('ot.updated','request_id',400),
+   latestByEntity('kpi.scored','score_id',400),
  ]);
  const d={events:ev.data||[],branches:br.data||[],employees:em.data||[],prices:pr.data||[],payments:pm.data||[],appointments:ap.data||[]};
  const stats=[
@@ -293,9 +295,9 @@ async function loadAll(flash){
  $('branches').innerHTML=tbl(brRows,[{h:'รหัส',k:'branch_id',t:'mono'},{h:'code',k:'code'},{h:'ชื่อ',k:'name'},{h:'พนักงาน',k:'emp'}]);
  $('employees').innerHTML=tbl(empsRich.length?empsRich:d.employees,[{h:'รหัส',k:'employee_id',t:'mono'},{h:'ชื่อ',k:'full_name'},{h:'ชื่อเล่น',k:'nickname'},{h:'แผนก',k:'department_th'},{h:'ตำแหน่ง',k:'position'},{h:'สาขา',k:'branch_id'},{h:'อีเมล',k:'email'},{h:'เบอร์',k:'phone'},{h:'เริ่มงาน',k:'start_date'},{h:'สถานะ',k:'status',t:'status'}]);
  $('leaves').innerHTML=tbl(leaves,[{h:'รหัสคำขอ',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'ประเภท',k:'leave_type'},{h:'เริ่ม',k:'start_date'},{h:'ถึง',k:'end_date'},{h:'วัน',k:'days'},{h:'สถานะ',k:'status',t:'status'},{h:'เหตุผล',k:'reason'}],{empty:'⏳ ยังไม่มีข้อมูลลา'});
- $('ot').innerHTML=tbl([],[{h:'รหัส',k:'id'}],{empty:'⏳ แท็บ OT ยังว่าง (ยังไม่มีคำขอ OT ในชีท)'});
- $('kpi').innerHTML=tbl([],[{h:'รหัส',k:'id'}],{empty:'⏳ แท็บ KPI ยังว่าง (ยังไม่มีคะแนนในชีท)'});
- $('ct-leaves').textContent=leaves.length||'';
+ $('ot').innerHTML=tbl(ots,[{h:'รหัส',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'วันที่',k:'date'},{h:'เริ่ม',k:'start_time'},{h:'ถึง',k:'end_time'},{h:'ชม.',k:'hours'},{h:'สถานะ',k:'status',t:'status'}],{empty:'⏳ ยังไม่มี OT'});
+ $('kpi').innerHTML=tbl(kpis,[{h:'รหัส',k:'score_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'Template',k:'tpl_id'},{h:'เป้า',k:'target'},{h:'จริง',k:'raw_score'},{h:'คะแนน',k:'weighted_score'},{h:'สาขา',k:'branch_id'}],{empty:'⏳ ยังไม่มี KPI'});
+ $('ct-leaves').textContent=leaves.length||''; $('ct-ot').textContent=ots.length||''; $('ct-kpi').textContent=kpis.length||'';
  $('prices').innerHTML=tbl(d.prices,[{h:'รหัส',k:'price_code',t:'mono'},{h:'รายการ',k:'name'},{h:'ราคา',k:'price'},{h:'สาขา',k:'branch_id'}],{empty:'⏳ รอเชื่อมต่อระบบ Pricing'});
  $('payments').innerHTML=tbl(d.payments,[{h:'รหัส',k:'payment_id',t:'mono'},{h:'จำนวน',k:'amount'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}],{empty:'⏳ รอเชื่อมต่อระบบ Accountant'});
  $('appointments').innerHTML=tbl(d.appointments,[{h:'รหัส',k:'appointment_id',t:'mono'},{h:'บริการ',k:'service'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}],{empty:'⏳ รอเชื่อมต่อระบบ Front Office'});
