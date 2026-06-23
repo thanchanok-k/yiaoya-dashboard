@@ -2301,8 +2301,11 @@ function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
  sb.auth.getUser().then(({data})=>{
    const e=(data&&data.user&&data.user.email)||'admin';
-   $('sbName').textContent=e; $('sbAv').textContent=e.substring(0,2).toUpperCase();
-   const role=ROLE_MAP[e.toLowerCase()]||'director';   // unknown → director (full), nothing breaks
+   // ลำดับความสำคัญ: ตัวตนจาก LINE (ถ้าล็อกอินผ่าน LINE) → ROLE_MAP อีเมล → director
+   const who=(LINE_ID&&(LINE_ID.employee_name||LINE_ID.display_name))||e;
+   $('sbName').textContent=who; $('sbAv').textContent=who.substring(0,2).toUpperCase();
+   const lineRole=(LINE_ID&&LINE_ID.role&&VIEWS_BY_ROLE[LINE_ID.role])?LINE_ID.role:null;
+   const role=lineRole||ROLE_MAP[e.toLowerCase()]||'director';
    const sel=$('viewAs'); if(sel) sel.value=role;
    applyRole(role);
  });
@@ -2340,6 +2343,14 @@ $('otpBtn').onclick=async()=>{ $('err').textContent='';
 };
 $('pass').addEventListener('keydown',e=>{if(e.key==='Enter')$('btn').click();});
 $('email').addEventListener('keydown',e=>{if(e.key==='Enter'&&!$('pass').value)$('otpBtn').click();});
-$('logout').onclick=async()=>{await sb.auth.signOut();location.reload();};
-sb.auth.getSession().then(({data})=>{if(data.session)start();});
+$('logout').onclick=async()=>{localStorage.removeItem('yy_line_id');LINE_ID=null;await sb.auth.signOut();location.reload();};
+/* LINE-login-first: เปิด LINE_FIRST=true เมื่อเสียบ LIFF ID + ตั้ง LINE_CHANNEL_ID_PUR แล้ว
+   → ทั้งระบบ (HR/บัญชี/จัดซื้อ) บังคับเข้าผ่าน LINE ก่อน · email/OTP เหลือไว้สำหรับแอดมิน (?admin=1) */
+const LINE_FIRST=false;
+function _validLine(){ return !!(LINE_ID&&LINE_ID.uid&&LINE_ID.employee_id); }
+const _adminBypass=/[?&]admin=1/.test(location.search);
+sb.auth.getSession().then(({data})=>{
+  if(LINE_FIRST && !_validLine() && !_adminBypass){ location.replace('login.html'); return; }
+  if(data.session) start();
+});
 </script></body></html>
