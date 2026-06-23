@@ -256,6 +256,13 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-label">โฆษณา · Ad Ops</div>
       <div class="sb-item" data-view="adops"><i class="ti ti-target-arrow"></i>โฆษณา · ROAS<span class="ct" id="ct-adops"></span></div>
       <div class="sb-item" data-view="adcreative"><i class="ti ti-movie"></i>ครีเอทีฟ · คลิป<span class="ct" id="ct-adcreative"></span></div>
+            <div class="sb-label">จัดการ HR · Native</div>
+      <div class="sb-item" data-view="employeemgr"><i class="ti ti-users"></i>พนักงาน (จัดการ)<span class="ct" id="ct-employeemgr"></span></div>
+      <div class="sb-item" data-view="kpimgr"><i class="ti ti-target-arrow"></i>KPI (จัดการ)<span class="ct" id="ct-kpimgr"></span></div>
+      <div class="sb-item" data-view="onboard"><i class="ti ti-user-plus"></i>Onboarding<span class="ct" id="ct-onboard"></span></div>
+      <div class="sb-item" data-view="offboard"><i class="ti ti-user-minus"></i>Offboarding<span class="ct" id="ct-offboard"></span></div>
+      <div class="sb-item" data-view="payrollmgr"><i class="ti ti-cash-banknote"></i>เงินเดือน<span class="ct" id="ct-payrollmgr"></span></div>
+      <div class="sb-item" data-view="calendar"><i class="ti ti-calendar-month"></i>ปฏิทิน<span class="ct" id="ct-calendar"></span></div>
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
@@ -644,6 +651,12 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sec"><span class="sec-bar"></span>รายได้ตามแผนก · 4 แผนก<span class="sec-c">Native Supabase · JERA course+service · dept_sales</span></div>
       <div id="deptWrap"></div>
     </section>
+        <section class="view" data-view="employeemgr"><div class="sec"><span class="sec-bar"></span>พนักงาน · จัดการ<span class="sec-c">Native</span></div><div id="wrap-employeemgr"></div></section>
+    <section class="view" data-view="kpimgr"><div class="sec"><span class="sec-bar"></span>KPI · จัดการ<span class="sec-c">Native</span></div><div id="wrap-kpimgr"></div></section>
+    <section class="view" data-view="onboard"><div class="sec"><span class="sec-bar"></span>Onboarding<span class="sec-c">Native</span></div><div id="wrap-onboard"></div></section>
+    <section class="view" data-view="offboard"><div class="sec"><span class="sec-bar"></span>Offboarding<span class="sec-c">Native</span></div><div id="wrap-offboard"></div></section>
+    <section class="view" data-view="payrollmgr"><div class="sec"><span class="sec-bar"></span>เงินเดือน<span class="sec-c">Native</span></div><div id="wrap-payrollmgr"></div></section>
+    <section class="view" data-view="calendar"><div class="sec"><span class="sec-bar"></span>ปฏิทิน<span class="sec-c">Native</span></div><div id="wrap-calendar"></div></section>
     <section class="view" data-view="events">
       <div class="sec"><span class="sec-bar"></span>เหตุการณ์ทั้งหมด<span class="sec-c"><span class="dot"></span>realtime</span></div>
       <div class="card"><div id="eventsAll"></div></div>
@@ -662,7 +675,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',dept:'รายได้ตามแผนก'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',dept:'รายได้ตามแผนก'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -1560,9 +1573,9 @@ async function xpSubmit(){ const emp=$('xp-emp').value.trim(); const amt=parseFl
 /* ===== ported pages: lazy-load จาก _ported/*.js ===== */
 window.sb=sb; window.esc=esc; window.$=$; try{window.tbl=tbl;}catch(e){} try{window.NUM=NUM;}catch(e){}
 try{ window.mountExpense=mountExpense; }catch(e){}
-const PORTED_FN={leavereq:'mountLeavereq',otreq:'mountOtreq',pinfo:'mountPinfo',incident:'mountIncident',oneonone:'mountOneonone',probreview:'mountProbreview',survey:'mountSurvey',announce:'mountAnnounceP',expense:'mountExpense'};
-const PORTED_SCRIPT={leavereq:'_ported/leavereq.js',otreq:'_ported/otreq.js',pinfo:'_ported/pinfo.js',incident:'_ported/incident.js',oneonone:'_ported/oneonone.js',probreview:'_ported/probreview.js',survey:'_ported/survey.js',announce:'_ported/announce.js'};
-const PORTED_WRAP={leavereq:'wrap-leavereq',otreq:'wrap-otreq',pinfo:'wrap-pinfo',incident:'wrap-incident',oneonone:'wrap-oneonone',probreview:'wrap-probreview',survey:'wrap-survey',announce:'wrap-announce_p',expense:'wrap-expense'};
+const PORTED_FN={leavereq:'mountLeavereq',otreq:'mountOtreq',pinfo:'mountPinfo',incident:'mountIncident',oneonone:'mountOneonone',probreview:'mountProbreview',survey:'mountSurvey',announce:'mountAnnounceP',expense:'mountExpense',employeemgr:'mountEmployeemgr',kpimgr:'mountKpimgr',onboard:'mountOnboard',offboard:'mountOffboard',payrollmgr:'mountPayrollmgr',calendar:'mountCalendar'};
+const PORTED_SCRIPT={leavereq:'_ported/leavereq.js',otreq:'_ported/otreq.js',pinfo:'_ported/pinfo.js',incident:'_ported/incident.js',oneonone:'_ported/oneonone.js',probreview:'_ported/probreview.js',survey:'_ported/survey.js',announce:'_ported/announce.js',employeemgr:'_ported/employeemgr.js',kpimgr:'_ported/kpimgr.js',onboard:'_ported/onboard.js',offboard:'_ported/offboard.js',payrollmgr:'_ported/payrollmgr.js',calendar:'_ported/calendar.js'};
+const PORTED_WRAP={leavereq:'wrap-leavereq',otreq:'wrap-otreq',pinfo:'wrap-pinfo',incident:'wrap-incident',oneonone:'wrap-oneonone',probreview:'wrap-probreview',survey:'wrap-survey',announce:'wrap-announce_p',expense:'wrap-expense',employeemgr:'wrap-employeemgr',kpimgr:'wrap-kpimgr',onboard:'wrap-onboard',offboard:'wrap-offboard',payrollmgr:'wrap-payrollmgr',calendar:'wrap-calendar'};
 const _portedLoaded={};
 function _loadPorted(src){return new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=src+'?v='+Date.now();sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});}
 async function mountPortedView(v){
