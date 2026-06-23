@@ -611,8 +611,10 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
     <section class="view" data-view="adops">
       <div class="sec"><span class="sec-bar"></span>โฆษณา · Ad Ops<span class="sec-c">Native Supabase · ad_daily × jera_daily_sales</span></div>
       <div id="adStat"></div>
+      <div id="adFunnel"></div>
+      <div id="adBrand"></div>
+      <div id="adPlatform"></div>
       <div id="adRoasWrap"></div>
-      <div id="adBreak"></div>
     </section>
     <section class="view" data-view="adcreative">
       <div class="sec"><span class="sec-bar"></span>ครีเอทีฟ · คลิป<span class="sec-c">Native Supabase · ad_creative · engagement + video retention</span></div>
@@ -2071,71 +2073,82 @@ function mountAdops(){
  if(!$('adStat'))return;
  const B=n=>'฿'+Number(n||0).toLocaleString('th-TH',{maximumFractionDigits:0});
  const N=n=>Number(n||0).toLocaleString('th-TH');
- $('adStat').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลดข้อมูลโฆษณา…</span></div>';
- Promise.all([sb.functions.invoke('ad_roas',{body:{days:21}}),sb.functions.invoke('ad_summary')]).then(([rr,sr])=>{
-  const R=(rr&&rr.data)||{},S=(sr&&sr.data)||{};
-  const days=R.by_day||[];
-  const byPlat=S.by_platform||[];
-  const imp=byPlat.reduce((a,p)=>a+(p.impressions||0),0);
-  const clk=byPlat.reduce((a,p)=>a+(p.clicks||0),0);
-  const spend=R.total_spend||S.total_spend||0;
-  const ctr=imp?(clk/imp*100):0,cpc=clk?(spend/clk):0;
-  const last7=days.length?days[days.length-1].roas_7d:null;
-  const card=(l,v,sub,c)=>'<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+(c||'var(--teal)')+'"></div><div style="font-size:11px;color:var(--text-muted,#64748B);font-weight:600;text-transform:uppercase;letter-spacing:.04em">'+l+'</div><div style="font-size:24px;font-weight:800;color:var(--navy,#0D2F4F);margin-top:4px">'+v+'</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-top:2px">'+(sub||'')+'</div></div>';
-  $('adStat').innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">'
-   +card('ค่าโฆษณา (21วัน)',B(spend),'Meta + Google','#3DC5B7')
-   +card('ยอดขาย (JERA)',B(R.total_sales),days.length+' วัน · รวมทุกแบรนด์','#185FA5')
-   +card('ROAS รวม',(R.roas!=null?R.roas+'x':'—'),'ยอดขาย ÷ ค่าแอด','#0D2F4F')
-   +card('ROAS 7 วันล่าสุด',(last7!=null?last7+'x':'—'),'ตัวเลขที่เชื่อถือได้','#3DC5B7')
-   +card('Impressions',N(imp),'การมองเห็น','#64748B')
-   +card('Clicks',N(clk),'CTR '+ctr.toFixed(2)+'%','#64748B')
-   +card('CPC',B(cpc),'ต้นทุน/คลิก','#64748B')
-   +card('หลังหักค่าแอด',B(R.after_ad_cost),'ยอดขาย − ค่าแอด','#185FA5')
-   +'</div>';
+ const card=(l,v,sub,c)=>'<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:13px 15px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+(c||'var(--teal)')+'"></div><div style="font-size:10.5px;color:var(--text-muted,#64748B);font-weight:600;text-transform:uppercase">'+l+'</div><div style="font-size:22px;font-weight:800;color:var(--navy,#0D2F4F);margin-top:3px">'+v+'</div><div style="font-size:10.5px;color:var(--text-muted,#64748B);margin-top:2px">'+(sub||'')+'</div></div>';
+ $('adStat').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลด…</span></div>';
+ Promise.all([sb.functions.invoke('ad_roas',{body:{days:21}}),sb.functions.invoke('ad_summary'),sb.functions.invoke('ad_creative')]).then(([rr,sr,cr])=>{
+  const R=(rr&&rr.data)||{},S=(sr&&sr.data)||{},C=((cr&&cr.data)||{}).rows||[];
+  const days=R.by_day||[]; const plats=S.by_platform||[];
+  const imp=plats.reduce((a,p)=>a+(p.impressions||0),0); const clk=plats.reduce((a,p)=>a+(p.clicks||0),0);
+  const spend=R.total_spend||S.total_spend||0; const last7=days.length?days[days.length-1].roas_7d:null;
+  const bills=days.reduce((a,d)=>a+(d.bills||0),0);
+  const msgs=C.reduce((a,r)=>a+(r.messages||0),0); const linkc=C.reduce((a,r)=>a+(r.link_clicks||0),0);
+  $('adStat').innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">'
+   +card('ค่าโฆษณา 21วัน',B(spend),'Meta + Google','#3DC5B7')
+   +card('ยอดขาย',B(R.total_sales),'รวมทุกแบรนด์','#185FA5')
+   +card('ROAS',(R.roas!=null?R.roas+'x':'—'),'7วัน '+(last7!=null?last7+'x':'—'),'#0D2F4F')
+   +card('ทักแชท (lead)',N(msgs),'฿/แชท '+(msgs?B(spend/msgs):'—'),'#C2410C')
+   +card('บิลขาย',N(bills),'ปิดการขาย','#0F766E')
+   +card('Impressions',N(imp),'CTR '+(imp?(clk/imp*100).toFixed(2):0)+'%','#64748B')+'</div>';
+  const fstep=(label,val,base,color,sub)=>{const p=base?Math.round(val/base*100):100;return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--navy,#0D2F4F);font-weight:600">'+label+'</span><span style="color:var(--navy)"><b>'+N(val)+'</b> <span style="color:var(--text-muted,#64748B);font-size:11px">'+(sub||'')+'</span></span></div><div style="height:22px;background:#EEF2F6;border-radius:6px;overflow:hidden"><div style="width:'+Math.max(p,3)+'%;height:100%;background:'+color+';display:flex;align-items:center;padding-left:8px;color:#fff;font-size:10px;font-weight:700">'+p+'%</div></div></div>';};
+  $('adFunnel').innerHTML='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:3px">เส้นทางลูกค้า (Funnel) — แอด → ทักแชท → ขาย</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:12px">% = สัดส่วนจากขั้นก่อนหน้า · เชื่อม Meta + JERA</div>'
+   +fstep('เห็นโฆษณา (Impressions)',imp,imp,'#3DC5B7','')
+   +fstep('คลิก (link clicks)',linkc,imp,'#1F9E94','')
+   +fstep('ทักแชท (conversations)',msgs,linkc,'#185FA5','฿'+(msgs?Math.round(spend/msgs):0)+'/แชท')
+   +fstep('บิลขาย (JERA)',bills,msgs,'#0D2F4F','')
+   +'<div style="font-size:11px;color:var(--text-muted,#64748B);margin-top:8px">⚠️ บิลขาย = ทั้งองค์กร (รวมช่องทางอื่น) ไม่ใช่จากแชทล้วน — ดูภาพรวม</div></div>';
+  const bg={}; C.forEach(r=>{const b=r.adset_name||'อื่นๆ';const o=bg[b]||(bg[b]={spend:0,imp:0,msg:0});o.spend+=r.spend||0;o.imp+=r.impressions||0;o.msg+=r.messages||0;});
+  const brows=Object.entries(bg).sort((a,b)=>b[1].spend-a[1].spend).map(([b,o])=>'<tr><td style="padding:8px 10px;font-size:12px;font-weight:600;color:var(--navy,#0D2F4F)">'+esc(b)+'</td><td style="padding:8px 10px;text-align:right;font-size:12px">'+B(o.spend)+'</td><td style="padding:8px 10px;text-align:right;font-size:12px">'+(spend?Math.round(o.spend/spend*100):0)+'%</td><td style="padding:8px 10px;text-align:right;font-size:12px">'+N(o.imp)+'</td><td style="padding:8px 10px;text-align:right;font-size:12px;font-weight:700">'+N(o.msg)+'</td><td style="padding:8px 10px;text-align:right;font-size:12px;font-weight:800;color:'+(o.msg&&o.spend/o.msg<250?'#0F766E':o.msg?'#C2410C':'#64748B')+'">'+(o.msg?B(o.spend/o.msg):'—')+'</td></tr>').join('');
+  $('adBrand').innerHTML='<div class="card" style="padding:0;overflow:hidden;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);padding:14px 16px 8px">แยกตามแบรนด์ · ต้นทุนต่อ 1 แชท</div><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#F8FAFC;text-align:left"><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B)">แบรนด์</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">ค่าแอด</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">%งบ</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">เห็น</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">ทักแชท</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">฿/แชท</th></tr></thead><tbody>'+brows+'</tbody></table></div>';
+  const psum=plats.reduce((a,p)=>a+(p.spend||0),0)||1;
+  const prow=plats.sort((a,b)=>b.spend-a.spend).map(p=>{const pc=p.key==='meta'?'#1877F2':p.key==='google'?'#EA4335':'#64748B';const pn=p.key==='meta'?'Meta (FB/IG)':p.key==='google'?'Google Ads':p.key;return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:var(--navy,#0D2F4F)">'+pn+'</span><span>'+B(p.spend)+' · '+Math.round(p.spend/psum*100)+'%</span></div><div style="height:8px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+(p.spend/psum*100)+'%;height:100%;background:'+pc+'"></div></div></div>';}).join('');
+  $('adPlatform').innerHTML='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">ค่าโฆษณาแยกแพลตฟอร์ม</div>'+prow+'</div>';
   const mx=Math.max.apply(null,days.map(d=>d.roas_7d||0).concat([1]));
-  const bars=days.map(d=>{const h=Math.round((d.roas_7d||0)/mx*100);const dd=esc(String(d.date).slice(5));return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0"><div style="font-size:9px;color:var(--navy,#0D2F4F);font-weight:700">'+(d.roas_7d!=null?d.roas_7d:'')+'</div><div style="width:100%;max-width:26px;height:'+h+'px;background:linear-gradient(180deg,#3DC5B7,#185FA5);border-radius:4px 4px 0 0;min-height:2px"></div><div style="font-size:8.5px;color:var(--text-muted,#64748B);white-space:nowrap">'+dd+'</div></div>';}).join('');
-  $('adRoasWrap').innerHTML='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:600;color:var(--navy,#0D2F4F);margin-bottom:2px">ROAS เฉลี่ย 7 วัน (rolling)</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-bottom:12px">⚠️ ยอดคลินิกเด้งเป็นลัมป์ (คอร์สก้อนใหญ่) — ROAS รายวันหลอกตา ใช้เส้นเฉลี่ย 7 วันนี้แทน</div><div style="display:flex;align-items:flex-end;gap:3px;height:130px">'+bars+'</div></div>';
-  const camps=(S.by_campaign||[]).slice().sort((a,b)=>b.spend-a.spend).slice(0,8);
-  const rows=camps.map(c=>'<tr><td style="padding:8px 10px;font-size:12px;color:var(--navy,#0D2F4F)">'+esc(c.key)+'</td><td style="padding:8px 10px;text-align:right;font-size:12px">'+B(c.spend)+'</td><td style="padding:8px 10px;text-align:right;font-size:12px">'+N(c.clicks)+'</td><td style="padding:8px 10px;text-align:right;font-size:12px">'+(c.ctr||0)+'%</td><td style="padding:8px 10px;text-align:right;font-size:12px">'+B(c.cpc)+'</td></tr>').join('');
-  $('adBreak').innerHTML='<div class="card" style="padding:0;overflow:hidden"><div style="font-weight:600;color:var(--navy,#0D2F4F);padding:14px 16px 8px">ค่าโฆษณาแยกตามแคมเปญ (Top 8)</div><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#F8FAFC;text-align:left"><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B)">แคมเปญ</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">ค่าแอด</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">คลิก</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">CTR</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">CPC</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-  const ct=$('ct-adops');if(ct)ct.textContent=days.length;
- }).catch(e=>{console.error('adops',e);$('adStat').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดข้อมูลโฆษณาไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
+  const bars=days.map(d=>{const h=Math.round((d.roas_7d||0)/mx*100);return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0"><div style="font-size:9px;color:var(--navy,#0D2F4F);font-weight:700">'+(d.roas_7d!=null?d.roas_7d:'')+'</div><div style="width:100%;max-width:26px;height:'+h+'px;background:linear-gradient(180deg,#3DC5B7,#185FA5);border-radius:4px 4px 0 0;min-height:2px"></div><div style="font-size:8.5px;color:var(--text-muted,#64748B);white-space:nowrap">'+esc(String(d.date).slice(5))+'</div></div>';}).join('');
+  $('adRoasWrap').innerHTML='<div class="card" style="padding:16px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:2px">ROAS เฉลี่ย 7 วัน (rolling)</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:12px">⚠️ ยอดคลินิกเด้งเป็นลัมป์ — ใช้เส้นเฉลี่ย 7 วัน</div><div style="display:flex;align-items:flex-end;gap:3px;height:120px">'+bars+'</div></div>';
+ }).catch(e=>{console.error('adops',e);$('adStat').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
 }
 function mountAdCreative(){
  if(!$('acGrid'))return;
  const B=n=>'฿'+Number(n||0).toLocaleString('th-TH',{maximumFractionDigits:0});
- const N=n=>Number(n||0).toLocaleString('th-TH');
- const pct=(a,b)=>b?Math.round(a/b*100):0;
+ const N=n=>Number(n||0).toLocaleString('th-TH'); const pct=(a,b)=>b?Math.round(a/b*100):0;
  $('acGrid').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลดครีเอทีฟ…</span></div>';
  sb.functions.invoke('ad_creative').then(({data})=>{
-  const rows=(data&&data.rows)||[];
+  let rows=((data&&data.rows)||[]).slice();
   if(!rows.length){$('acGrid').innerHTML='<div class="empty-card"><i class="ti ti-photo-off"></i><span>ยังไม่มีข้อมูลครีเอทีฟ</span></div>';return;}
+  rows.sort((a,b)=>(b.messages||0)-(a.messages||0)||(b.spend||0)-(a.spend||0));
   const bcol=b=>b==='Yiaoya'?'#185FA5':b==='KneeCare'?'#0D2F4F':b==='นางฟ้า'?'#C2410C':'#64748B';
-  const bar=(l,v,vv,c)=>{const p=pct(v,vv);return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="font-size:10px;color:var(--text-muted,#64748B);width:30px">'+l+'</span><div style="flex:1;height:7px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+c+'"></div></div><span style="font-size:10px;color:var(--navy,#0D2F4F);font-weight:700;width:30px;text-align:right">'+p+'%</span></div>';};
+  const bg={}; rows.forEach(r=>{const b=r.adset_name||'อื่นๆ';const o=bg[b]||(bg[b]={spend:0,msg:0,n:0});o.spend+=r.spend||0;o.msg+=r.messages||0;o.n++;});
+  const chips=Object.entries(bg).sort((a,b)=>b[1].spend-a[1].spend).map(([b,o])=>'<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-left:3px solid '+bcol(b)+';border-radius:10px;padding:10px 14px;min-width:148px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(b)+'</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-top:2px">'+B(o.spend)+' · '+o.n+' คลิป</div><div style="font-size:13px;font-weight:700;color:'+bcol(b)+';margin-top:2px">'+N(o.msg)+' แชท · '+(o.msg?B(o.spend/o.msg):'—')+'/แชท</div></div>').join('');
+  const summary='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">'+chips+'</div>';
+  const bar=(l,v,vv,c)=>{const p=pct(v,vv);return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="font-size:10px;color:var(--text-muted,#64748B);width:30px">'+l+'</span><div style="flex:1;height:6px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+c+'"></div></div><span style="font-size:10px;color:var(--navy,#0D2F4F);font-weight:700;width:30px;text-align:right">'+p+'%</span></div>';};
   const card=r=>{
-   const code=r.creative_id||''; const ig=r.ig_permalink||r.permalink||'#';
+   const code=r.creative_id||'';const ig=r.ig_permalink||r.permalink||'#';
    const thumb=code?'https://www.instagram.com/p/'+code+'/media/?size=l':'';
-   const engR=pct(r.post_engagement,r.impressions); const bc=bcol(r.adset_name);
-   const prev='<a href="'+ig+'" target="_blank" rel="noopener" style="display:block;position:relative;height:150px;border-radius:13px 13px 0 0;overflow:hidden;background:linear-gradient(135deg,'+bc+',#3DC5B7);text-decoration:none">'
+   const engR=pct(r.post_engagement,r.impressions);const bc=bcol(r.adset_name);
+   const cpmsg=r.messages?B(r.spend/r.messages):'—';
+   const prev='<a href="'+ig+'" target="_blank" rel="noopener" style="display:block;position:relative;height:144px;border-radius:13px 13px 0 0;overflow:hidden;background:linear-gradient(135deg,'+bc+',#3DC5B7);text-decoration:none">'
      +(thumb?'<img src="'+thumb+'" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'">':'')
      +'<span style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">'+esc(r.adset_name||'')+'</span>'
-     +'<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;color:'+bc+'"><i class="ti ti-player-play-filled" style="font-size:22px"></i></span></span></a>';
+     +(r.messages?'<span style="position:absolute;top:8px;right:8px;background:#C2410C;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">'+N(r.messages)+' แชท</span>':'')
+     +'<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;color:'+bc+'"><i class="ti ti-player-play-filled" style="font-size:21px"></i></span></span></a>';
    return '<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:14px;overflow:hidden;display:flex;flex-direction:column">'+prev
     +'<div style="padding:12px 14px;flex:1;display:flex;flex-direction:column;gap:8px">'
     +'<div style="font-size:12.5px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.3;min-height:32px">'+esc(r.ad_name||'')+'</div>'
-    +'<div style="display:flex;gap:6px;align-items:flex-end"><span style="font-size:18px;font-weight:800;color:var(--navy,#0D2F4F)">'+B(r.spend)+'</span><span style="font-size:11px;color:var(--text-muted,#64748B)">งบ 14 วัน</span></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px">'
+    +'<div style="display:flex;gap:8px">'
+      +'<div style="flex:1;background:#F8FAFC;border-radius:8px;padding:7px 9px"><div style="font-size:10px;color:var(--text-muted,#64748B)">ค่าแอด</div><div style="font-size:15px;font-weight:800;color:var(--navy,#0D2F4F)">'+B(r.spend)+'</div></div>'
+      +'<div style="flex:1;background:#FFF7ED;border-radius:8px;padding:7px 9px"><div style="font-size:10px;color:#9A3412">ทักแชท</div><div style="font-size:15px;font-weight:800;color:#C2410C">'+N(r.messages)+' <span style="font-size:9.5px;font-weight:600">('+cpmsg+')</span></div></div></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;font-size:10.5px;text-align:center">'
       +'<div><div style="color:var(--text-muted,#64748B)">เห็น</div><b>'+N(r.impressions)+'</b></div>'
-      +'<div><div style="color:var(--text-muted,#64748B)">Eng</div><b>'+engR+'%</b></div>'
-      +'<div><div style="color:var(--text-muted,#64748B)">CPC</div><b>'+B(r.cpc)+'</b></div></div>'
-    +(r.video_views?'<div style="margin-top:2px"><div style="font-size:10px;color:var(--text-muted,#64748B);margin-bottom:3px">ดูวิดีโอถึง (จาก '+N(r.video_views)+' views)</div>'
+      +'<div><div style="color:var(--text-muted,#64748B)">CTR</div><b>'+(r.ctr||0)+'%</b></div>'
+      +'<div><div style="color:var(--text-muted,#64748B)">ความถี่</div><b>'+(r.frequency||0)+'</b></div>'
+      +'<div><div style="color:var(--text-muted,#64748B)">Eng</div><b>'+engR+'%</b></div></div>'
+    +(r.video_views?'<div style="margin-top:2px"><div style="font-size:10px;color:var(--text-muted,#64748B);margin-bottom:3px">ดูวิดีโอถึง (จาก '+N(r.video_views)+' · hook '+pct(r.v_p25,r.video_views)+'%)</div>'
        +bar('25%',r.v_p25,r.video_views,'#3DC5B7')+bar('50%',r.v_p50,r.video_views,'#1F9E94')+bar('75%',r.v_p75,r.video_views,'#185FA5')+bar('จบ',r.v_p100,r.video_views,'#0D2F4F')+'</div>':'')
-    +'<div style="display:flex;gap:10px;font-size:11px;color:var(--text-muted,#64748B);margin-top:2px">'
-      +'<span><i class="ti ti-thumb-up"></i> '+N(r.reactions)+'</span><span><i class="ti ti-message-circle"></i> '+N(r.comments)+'</span><span><i class="ti ti-bookmark"></i> '+N(r.saves)+'</span><span><i class="ti ti-click"></i> '+N(r.link_clicks)+'</span></div>'
+    +'<div style="display:flex;gap:9px;font-size:11px;color:var(--text-muted,#64748B);margin-top:2px;flex-wrap:wrap"><span><i class="ti ti-thumb-up"></i> '+N(r.reactions)+'</span><span><i class="ti ti-message-circle"></i> '+N(r.comments)+'</span><span><i class="ti ti-bookmark"></i> '+N(r.saves)+'</span><span><i class="ti ti-eye"></i> '+N(r.reach)+'</span></div>'
     +'<a href="'+ig+'" target="_blank" rel="noopener" style="margin-top:auto;text-align:center;background:var(--teal,#3DC5B7);color:#04342C;font-weight:700;font-size:12px;padding:9px;border-radius:8px;text-decoration:none"><i class="ti ti-player-play"></i> ดูคลิปจริง</a>'
     +'</div></div>';
   };
-  $('acGrid').innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">'+rows.map(card).join('')+'</div>';
+  $('acGrid').innerHTML=summary+'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px">'+rows.map(card).join('')+'</div>';
   const ct=$('ct-adcreative');if(ct)ct.textContent=rows.length;
  }).catch(e=>{console.error('adcreative',e);$('acGrid').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดครีเอทีฟไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
 }
