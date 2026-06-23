@@ -214,6 +214,8 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="anniv"><i class="ti ti-confetti"></i>ครบรอบงาน<span class="ct" id="ct-anniv"></span></div>
       <div class="sb-item" data-view="leaveana"><i class="ti ti-chart-pie"></i>วิเคราะห์ลา</div>
       <div class="sb-item" data-view="otsum"><i class="ti ti-clock-hour-4"></i>สรุป OT</div>
+      <div class="sb-label">จัดการ · เขียนได้ (Native)</div>
+      <div class="sb-item" data-view="announce"><i class="ti ti-speakerphone"></i>ประกาศ<span class="ct" id="ct-announce"></span></div>
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
@@ -301,6 +303,22 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sec"><span class="sec-bar"></span>สรุป OT<span class="sec-c">Supabase</span></div>
       <div class="card"><div id="otsum"></div></div>
     </section>
+    <section class="view" data-view="announce">
+      <div class="sec"><span class="sec-bar"></span>ประกาศ · เขียนได้<span class="sec-c">Native Supabase · เร็ว</span></div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:10px;color:var(--navy)">สร้างประกาศใหม่</div>
+        <input id="annTitle" placeholder="หัวข้อประกาศ" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px">
+        <textarea id="annBody" placeholder="รายละเอียด (ไม่บังคับ)" rows="3" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:8px"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="annAudience" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+            <option>ทั้งบริษัท</option><option>เฉพาะ HR</option><option>หัวหน้างาน</option><option>เฉพาะหน้าบ้าน</option>
+          </select>
+          <button onclick="postAnnounce()" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">โพสต์ประกาศ</button>
+          <span id="annMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+      </div>
+      <div id="announceList"></div>
+    </section>
     <section class="view" data-view="events">
       <div class="sec"><span class="sec-bar"></span>เหตุการณ์ทั้งหมด<span class="sec-c"><span class="dot"></span>realtime</span></div>
       <div class="card"><div id="eventsAll"></div></div>
@@ -319,7 +337,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -517,6 +535,31 @@ async function renderHrFunctions(){
  }catch(e){ console.error('hr fn',e); $('digest').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดฟังก์ชันไม่ได้: '+esc(e.message)+'</span></div>'; }
 }
 
+// ประกาศ (native เขียน/อ่าน ผ่าน edge function hr_announce)
+function annCard(a){
+ return '<div class="card" style="padding:14px;margin-bottom:10px;border-left:3px solid var(--teal)">'
+  +'<div style="font-weight:600;color:var(--navy);font-size:14px">'+esc(a.title)+'</div>'
+  +(a.body?'<div style="color:#475569;margin:6px 0;white-space:pre-wrap;font-size:13px">'+esc(a.body)+'</div>':'')
+  +'<div style="font-size:11px;color:var(--text-faint);margin-top:6px">'+esc(a.audience||'')+' · '+esc(String(a.posted_at||'').slice(0,16).replace("T"," "))+(a.posted_by?' · '+esc(a.posted_by):'')+'</div></div>';
+}
+async function loadAnnounce(){
+ try{
+  const {data}=await sb.functions.invoke('hr_announce');
+  const items=(data&&data.announcements)||[];
+  $('announceList').innerHTML=items.length?items.map(annCard).join(''):'<div class="empty-td" style="padding:18px">ยังไม่มีประกาศ</div>';
+  $('ct-announce').textContent=items.length||'';
+ }catch(e){ console.error('announce',e); }
+}
+async function postAnnounce(){
+ const t=$('annTitle').value.trim(); if(!t){$('annMsg').textContent='กรุณาใส่หัวข้อ';return;}
+ const btn=event&&event.target; if(btn)btn.disabled=true; $('annMsg').textContent='กำลังโพสต์…';
+ const {data,error}=await sb.functions.invoke('hr_announce',{body:{title:t,body:$('annBody').value,audience:$('annAudience').value}});
+ if(btn)btn.disabled=false;
+ if(error||(data&&data.error)){$('annMsg').textContent='ผิดพลาด: '+((data&&data.error)||error.message);return;}
+ $('annTitle').value='';$('annBody').value='';$('annMsg').textContent='โพสต์แล้ว ✓';
+ loadAnnounce();
+}
+
 async function loadAll(flash){
  const q=(t,c,o={})=>sb.from(t).select(c).order(o.by||'updated_at',{ascending:false}).limit(o.lim||50);
  const [ev,br,em,pr,pm,ap,src,evAll]=await Promise.all([
@@ -537,6 +580,7 @@ async function loadAll(flash){
    latestByEntity('kpi.scored','score_id',400),
  ]);
  renderHrFunctions();
+ loadAnnounce();
  const d={events:ev.data||[],branches:br.data||[],employees:em.data||[],prices:pr.data||[],payments:pm.data||[],appointments:ap.data||[]};
  const stats=[
   {n:d.events.length,lb:'Events',ic:'ti-activity',bg:'#EFF6FF',fg:'#1D4ED8'},
