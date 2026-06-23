@@ -10409,7 +10409,7 @@ function mountAdops(){
   const card=(l,v,sub,c)=>'<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+(c||'var(--teal)')+'"></div><div style="font-size:11px;color:var(--text-muted,#64748B);font-weight:600;text-transform:uppercase;letter-spacing:.04em">'+l+'</div><div style="font-size:24px;font-weight:800;color:var(--navy,#0D2F4F);margin-top:4px">'+v+'</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-top:2px">'+(sub||'')+'</div></div>';
   $('adStat').innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">'
    +card('ค่าโฆษณา (21วัน)',B(spend),'Meta + Google','#3DC5B7')
-   +card('ยอดขาย (JERA)',B(R.total_sales),days.length+' วัน · สาขา SLY','#185FA5')
+   +card('ยอดขาย (JERA)',B(R.total_sales),days.length+' วัน · รวมทุกแบรนด์','#185FA5')
    +card('ROAS รวม',(R.roas!=null?R.roas+'x':'—'),'ยอดขาย ÷ ค่าแอด','#0D2F4F')
    +card('ROAS 7 วันล่าสุด',(last7!=null?last7+'x':'—'),'ตัวเลขที่เชื่อถือได้','#3DC5B7')
    +card('Impressions',N(imp),'การมองเห็น','#64748B')
