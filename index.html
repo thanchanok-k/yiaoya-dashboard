@@ -6,8 +6,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
 <style>
 :root{
-  --navy:#0D2F4F; --navy-2:#185FA5; --teal:#3DC5B7; --teal-dark:#2BA89B; --teal-ink:#0F766E;
-  --bg:#FAFBFC; --surface:#FFFFFF; --border:#E8ECF1; --border-strong:#CBD5E1;
+  --navy:#0D2F4F; --navy-2:#1E4A73; --teal:#3DC5B7; --teal-dark:#2BA89B; --teal-ink:#0F766E;
+  --bg:#F8FAFC; --surface:#FFFFFF; --border:#E2E8F0; --border-strong:#CBD5E1;
   --text:#0F172A; --text-muted:#64748B; --text-faint:#94A3B8;
   --success:#047857; --success-bg:#ECFDF5; --info:#1D4ED8; --info-bg:#EFF6FF;
 }
@@ -37,7 +37,7 @@ body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,syste
 .sb-out{display:flex;align-items:center;gap:7px;margin-top:9px;padding:7px 9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);border-radius:7px;font-size:11.5px;color:rgba(255,255,255,.8);cursor:pointer;transition:.12s}
 .sb-out:hover{background:rgba(239,68,68,.2);color:#fff}.sb-out i{font-size:15px}
 .main{flex:1;margin-left:220px;min-width:0}
-.sb-toggle{display:none;position:fixed;top:12px;left:12px;z-index:100;width:38px;height:38px;background:var(--navy);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:19px;align-items:center;justify-content:center}
+.sb-toggle{display:none;position:fixed;top:12px;left:12px;z-index:100;width:38px;height:38px;background:var(--teal);color:#04342C;border:none;border-radius:8px;cursor:pointer;font-size:19px;align-items:center;justify-content:center}
 .sb-ov{display:none;position:fixed;inset:0;background:rgba(13,47,79,.45);z-index:38}
 @media(max-width:768px){
  .sb{transform:translateX(-100%);transition:transform .18s;width:264px}
@@ -53,8 +53,9 @@ body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,syste
 
 /* ===== GREETING HEADER ===== */
 .head{margin-bottom:22px}
-.greeting{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;border-radius:12px;padding:16px 22px;display:flex;align-items:center;gap:14px}
+.greeting{background:linear-gradient(135deg,var(--navy) 0%,var(--teal-dark) 100%);color:#fff;border-radius:12px;padding:16px 22px;display:flex;align-items:center;gap:14px}
 .greeting .logo{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.14);display:grid;place-items:center;font-size:22px;flex:none}
+.g-eb{font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--teal);text-transform:uppercase;margin-bottom:3px}
 .greeting h1{font-size:18px;font-weight:600;letter-spacing:-.01em}
 .greeting .sub{font-size:12px;opacity:.82;display:flex;align-items:center;gap:7px;margin-top:3px}
 .greeting .dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 1.8s infinite}
@@ -244,7 +245,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
   <div class="main"><div class="wrap">
     <div class="head"><div class="greeting">
       <div class="logo"><i class="ti ti-topology-star-3"></i></div>
-      <div><h1 id="viewTitle">ภาพรวม</h1>
+      <div><div class="g-eb">YIAOYA · HR PORTAL</div><h1 id="viewTitle">ภาพรวม</h1>
         <div class="sub"><span class="dot"></span><span id="upd">กำลังเชื่อมต่อ realtime…</span></div></div>
     </div></div>
 
@@ -331,7 +332,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
           </select>
           <input id="annEffective" type="date" title="วันมีผลบังคับใช้" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
           <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="annAck" style="width:16px;height:16px"> ต้องกดรับทราบ</label>
-          <button id="annPost" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">โพสต์ประกาศ</button>
+          <button id="annPost" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">โพสต์ประกาศ</button>
           <span id="annMsg" style="font-size:12px;color:var(--text-muted)"></span>
         </div>
       </div>
@@ -375,7 +376,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
         </div>
         <input id="expNote" placeholder="หมายเหตุ (ไม่บังคับ)" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px">
         <div style="display:flex;gap:8px;align-items:center">
-          <button id="expPost" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึกรายจ่าย</button>
+          <button id="expPost" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึกรายจ่าย</button>
           <span id="expMsg" style="font-size:12px;color:var(--text-muted)"></span>
         </div>
       </div>
@@ -398,7 +399,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
         </div>
         <input id="prNotes" placeholder="หมายเหตุ (ไม่บังคับ)" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px">
         <div style="display:flex;gap:8px;align-items:center">
-          <button id="prPost" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ส่งคำขอ</button>
+          <button id="prPost" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ส่งคำขอ</button>
           <span id="prMsg" style="font-size:12px;color:var(--text-muted)"></span>
         </div>
       </div>
@@ -418,7 +419,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
           <input id="peCategory" placeholder="หมวด" style="grid-column:1/3;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button id="pePost" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึกรายการ</button>
+          <button id="pePost" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึกรายการ</button>
           <span id="peMsg" style="font-size:12px;color:var(--text-muted)"></span>
         </div>
       </div>
@@ -427,7 +428,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
           <input id="pcBranch" placeholder="สาขา" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
           <input id="pcMonth" placeholder="YYYY-MM" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;width:110px">
           <input id="pcOpening" type="number" placeholder="ยอดยกมา" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;width:120px">
-          <button id="pcPost" style="padding:9px 16px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">เปิดรอบ</button>
+          <button id="pcPost" style="padding:9px 16px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">เปิดรอบ</button>
           <span id="pcMsg" style="font-size:12px;color:var(--text-muted)"></span>
         </div>
       </details>
@@ -447,7 +448,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
           <input id="dsBrief" type="number" placeholder="Morning brief" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button id="dsPost" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึกยอด</button>
+          <button id="dsPost" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึกยอด</button>
           <span id="dsMsg" style="font-size:12px;color:var(--text-muted)"></span>
         </div>
       </div>
@@ -723,7 +724,7 @@ function mountWrite(key){ const c=WFORMS[key]; if(!$('wrap-'+key))return;
   +c.fields.map(f=>{ const wide=(f.ta||f.cb)?' style="grid-column:1/-1"':'';
     if(f.cb)return '<div'+wide+'>'+wfInput(key,f)+'</div>';
     return '<div'+wide+'><div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">'+f.lb+(f.req?' *':'')+'</div>'+wfInput(key,f)+'</div>'; }).join('')
-  +'</div><div style="display:flex;gap:8px;align-items:center;margin-top:12px"><button id="wfbtn_'+key+'" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึก</button><span id="wfmsg_'+key+'" style="font-size:12px;color:var(--text-muted)"></span></div></div>'
+  +'</div><div style="display:flex;gap:8px;align-items:center;margin-top:12px"><button id="wfbtn_'+key+'" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึก</button><span id="wfmsg_'+key+'" style="font-size:12px;color:var(--text-muted)"></span></div></div>'
   +'<div id="wflist_'+key+'"></div>';
  $('wfbtn_'+key).onclick=()=>submitWrite(key);
  loadWriteList(key);
