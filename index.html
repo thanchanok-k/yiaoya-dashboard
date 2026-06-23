@@ -1057,6 +1057,20 @@ function downloadCsv(filename,csv){
  const b=new Blob(['﻿'+(csv||'')],{type:'text/csv;charset=utf-8'});
  const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=filename||'export.csv';a.click();URL.revokeObjectURL(u);
 }
+function downloadPdf(filename,b64){
+ const bin=atob(b64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+ const url=URL.createObjectURL(new Blob([u8],{type:'application/pdf'}));const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+}
+async function plDownloadSlip(pay_id,btn){
+ if(btn){btn.disabled=true;var _t=btn.textContent;btn.textContent='กำลังสร้าง…';}
+ try{
+  const {data,error}=await sb.functions.invoke('acc_pdf',{body:{action:'payslip',pay_id}});
+  if(error||(data&&data.error)||!(data&&data.pdf_base64)){if(btn)btn.textContent='ผิดพลาด';return;}
+  downloadPdf(data.filename||('payslip-'+pay_id+'.pdf'),data.pdf_base64);
+  if(btn)btn.textContent=_t;
+ }catch(e){console.error('payslip',e);if(btn)btn.textContent='ผิดพลาด';}
+ finally{if(btn)btn.disabled=false;}
+}
 // shared employee picker filler (ดึงจาก HR roster)
 async function fillEmpSel(selId,placeholder){
  const sel=$(selId); if(!sel)return; const cur=sel.value;
@@ -1150,7 +1164,7 @@ async function loadPayroll(){
    {h:'รหัส',k:'pay_id',t:'mono'},{h:'พนักงาน',k:'full_name'},{h:'งวด',k:'period'},
    {h:'Gross',k:'gross',render:r=>_baht(r.gross)},{h:'Net',k:'net',render:r=>_baht(r.net)},
    {h:'สถานะ',render:r=>'<span class="pill '+(r.status==='paid'?'posted':'pending')+'">'+(r.status==='paid'?'จ่ายแล้ว':'คำนวณแล้ว')+'</span>'},
-   {h:'จัดการ',render:r=>r.status==='paid'?'<span class="mono">'+esc(String(r.paid_at||'').slice(0,10))+'</span>':'<button class="wf-appr ok" style="background:#ECFDF5;color:#047857;padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" data-paypaid="'+esc(r.pay_id)+'">จ่ายแล้ว</button>'}
+   {h:'จัดการ',render:r=>(r.status==='paid'?'<span class="mono">'+esc(String(r.paid_at||'').slice(0,10))+'</span>':'<button class="wf-appr ok" style="background:#ECFDF5;color:#047857;padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" data-paypaid="'+esc(r.pay_id)+'">จ่ายแล้ว</button>')+' <button style="background:#EFF6FF;color:#1D4ED8;padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" data-payslip="'+esc(r.pay_id)+'"><i class="ti ti-file-type-pdf"></i> สลิป PDF</button>'}
   ],{empty:'ยังไม่มีรายการเงินเดือนงวดนี้'})
    +(t.count?'<div style="padding:11px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);display:flex;gap:18px;flex-wrap:wrap"><span>รวม Gross: <b>'+_baht(t.total_gross)+'</b></span><span>รวม SSO: <b>'+_baht(t.total_sso)+'</b></span><span>รวม WHT: <b>'+_baht(t.total_wht)+'</b></span><span>รวม Net: <b style="color:var(--teal-ink)">'+_baht(t.total_net)+'</b></span></div>':'')
    +'</div>';
@@ -1336,16 +1350,23 @@ async function xpSubmit(){ const emp=$('xp-emp').value.trim(); const amt=parseFl
 }
 
 /* ===== ported: leavereq ===== */
-// _ported/leavereq.js — native port of leave_request_form.html (HR Announcement)
-// ลอก markup + CSS เดิม · scoped ใต้ #lv · ทุก element id prefix lv-
-// ใช้ global sb + esc (มีอยู่แล้วใน index.html) — ห้าม redeclare
-// edge fn: hr_leave_request · create=invoke(body) · list=invoke() คืน {items:[...]}
+// _ported/leavereq.js — native port of desktop leave_manager.html (HR Announcement admin)
+// ลอก markup + CSS เดิม · scoped ทั้งหมดใต้ #lv (กันชน CSS dashboard) · element id prefix lv-
+// ใช้ global sb + esc + $ (มีอยู่แล้วใน index.html · module scope) — ห้าม redeclare
+// backend: hr_leave_request → {items:[...]} (list) · hr_approve {request_id,decision} (approve/reject)
+//
+// โครงหน้า desktop ที่ลอกมา:
+//   - tab toggle: รออนุมัติ / ประวัติ  (tab "ยอดลาคงเหลือ" ของเดิมต้อง query แยก → ตัดออก)
+//   - stats cards (5): คำนวณ client-side จาก items
+//   - filters: ค้นหา / สาขา / ประเภทลา (client-side filter)
+//   - data-table รายการลา + status pill + ปุ่ม "ดู"
+//   - detail modal + ปุ่ม Approve / Reject (เฉพาะ pending)
 
-// 12 leave types (ตรงกับ edge fn)
+// ประเภทการลา (label ไทย + สีจากของเดิม lt-*)
 const LV_TYPES = [
-  { key: 'annual',          label: 'ลาพักร้อน' },
   { key: 'sick',            label: 'ลาป่วย' },
   { key: 'personal',        label: 'ลากิจ' },
+  { key: 'annual',          label: 'ลาพักร้อน' },
   { key: 'maternity',       label: 'ลาคลอด' },
   { key: 'paternity',       label: 'ลาเลี้ยงดูบุตร' },
   { key: 'ordination',      label: 'ลาบวช' },
@@ -1359,245 +1380,452 @@ const LV_TYPES = [
 
 // state เฉพาะหน้านี้ (prefix lv)
 let _lvState = {
-  leave_type: 'annual',
-  submitting: false,
+  tab: 'pending',        // 'pending' | 'history'
+  items: [],             // raw items จาก backend
+  filterSearch: '',
+  filterBranch: '',
+  filterType: '',
+  acting: false,         // กัน double-click approve/reject
 };
+
+function lvTypeLabel(key) {
+  const t = LV_TYPES.find(x => x.key === key);
+  return t ? t.label : (key || '');
+}
 
 function mountLeavereq() {
   const wrap = document.getElementById('wrap-leavereq');
   if (!wrap) return;
 
-  const typeChips = LV_TYPES.map(t =>
-    '<span class="chip ' + (_lvState.leave_type === t.key ? 'act' : '') +
-    '" data-lvtype="' + t.key + '">' + esc(t.label) + '</span>'
+  const typeOpts = LV_TYPES.map(t =>
+    '<option value="' + t.key + '">' + esc(t.key) + ' — ' + esc(t.label) + '</option>'
   ).join('');
 
   wrap.innerHTML = `
 <style>
-#lv{--navy:#0D2F4F;--teal:#3DC5B7;--teal-light:#E6F7F5;--teal-dark:#0F766E;--bg:#FAFBFC;--muted:#6B7280;--border:#E5E7EB;--error:#DC2626;--success:#16A34A;max-width:480px;margin:0 auto;font-size:15px;line-height:1.5;color:var(--navy)}
-#lv .hint-box{background:var(--teal-light);border-left:3px solid var(--teal);border-radius:7px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--teal-dark);line-height:1.5}
-#lv .section{background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:10px}
-#lv .section-h{display:flex;align-items:center;gap:9px;margin-bottom:10px}
-#lv .section-num{width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
-#lv .section-t{font-size:15px;font-weight:600;color:var(--navy)}
-#lv .req::after{content:"*";color:var(--error);margin-left:3px}
-#lv .field-l{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
-#lv .field-i{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;color:var(--navy);background:#fff;box-sizing:border-box}
-#lv .field-i:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(61,197,183,0.15)}
-#lv .ta{width:100%;min-height:72px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:15px;resize:vertical;color:var(--navy);background:#fff;box-sizing:border-box}
-#lv .ta:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(61,197,183,0.15)}
-#lv .row2{display:flex;gap:10px}
-#lv .row2 > div{flex:1}
-#lv .chip-row{display:flex;gap:7px;flex-wrap:wrap}
-#lv .chip{padding:7px 13px;border-radius:16px;font-size:13px;background:#fff;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-weight:500}
-#lv .chip.act{background:var(--navy);color:#fff;border-color:var(--navy)}
-#lv .half-row{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:8px}
-#lv .half-row input{width:18px;height:18px;accent-color:var(--teal);cursor:pointer;flex-shrink:0}
-#lv .half-row label{font-size:13px;cursor:pointer;flex:1}
-#lv .lv-cta{margin:14px 0}
-#lv .lv-cta button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--teal);color:#04342C;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
-#lv .lv-cta button:disabled{background:#CBD5E1;color:#fff;cursor:not-allowed}
-#lv .lv-cta svg{width:18px;height:18px}
-#lv .lv-hint{font-size:13px;color:#9CA3AF;text-align:center;margin-top:6px}
-#lv .ok-box{background:#DCFCE7;color:var(--success);border-radius:10px;margin:12px 0;padding:18px 14px;text-align:center;font-size:15px;line-height:1.5}
-#lv .ok-box .ok-id{font-weight:600;font-size:14px;margin-top:8px;color:#15803D}
-#lv .lv-list .lv-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:.5px solid var(--border)}
-#lv .lv-list .lv-row:last-child{border-bottom:0}
-#lv .lv-pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:#FAEEDA;color:#854F0B}
-#lv .lv-pill.ap{background:#E6F7F5;color:#0F766E}
-#lv .lv-pill.rj{background:#FCEBEB;color:#791F1F}
-#lv .lv-empty{color:var(--muted);font-size:13px;text-align:center;padding:14px}
+#lv{--navy:#0D2F4F;--navy-2:#1E4A73;--teal:#3DC5B7;--teal-dark:#2BA89B;--surface:#fff;--border:#E2E8F0;--border-strong:#CBD5E1;--text:#0F172A;--text-muted:#64748B;--text-faint:#94A3B8;--danger:#B91C1C;--danger-bg:#FEF2F2;--danger-border:#FEE2E2;--success:#047857;--success-bg:#ECFDF5;--warning:#B45309;--warning-bg:#FFFBEB;--info:#1D4ED8;--info-bg:#EFF6FF;--c-public:#047857;--c-public-bg:#ECFDF5;--c-branch:#C2410C;--c-branch-bg:#FFF7ED;--c-religious:#1D4ED8;--c-religious-bg:#EFF6FF;color:var(--text);font-size:13px}
+
+/* tab toggle */
+#lv .tab-row{display:flex;gap:6px;padding:4px;background:#F1F5F9;border-radius:8px;margin-bottom:14px;width:fit-content}
+#lv .tab-btn{padding:7px 14px;border:none;background:transparent;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+#lv .tab-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.05)}
+#lv .tab-btn .count{font-size:10px;padding:1px 7px;border-radius:8px;background:var(--text-faint);color:#fff;font-weight:600}
+#lv .tab-btn.active .count{background:var(--navy)}
+
+/* stats */
+#lv .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+#lv .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;position:relative;overflow:hidden}
+#lv .stat-stripe{position:absolute;left:0;top:0;bottom:0;width:3px}
+#lv .stat-label{font-size:10px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+#lv .stat-value{font-size:22px;font-weight:700;color:var(--text);margin-top:4px;line-height:1}
+#lv .stat-sub{font-size:10px;color:var(--text-faint);margin-top:4px}
+@media (max-width:900px){#lv .stats{grid-template-columns:repeat(2,1fr)}}
+
+/* filters */
+#lv .filters{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap}
+#lv .filter{display:flex;flex-direction:column;gap:4px}
+#lv .filter label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+#lv .filter select,#lv .filter input[type=search]{height:34px;padding:0 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);min-width:160px;box-sizing:border-box}
+#lv .filter select:focus,#lv .filter input:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(13,47,79,.08)}
+
+/* section */
+#lv .section{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+#lv .section-header{display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(180deg,#F8FAFC 0%,var(--surface) 100%);border-bottom:1px solid var(--border)}
+#lv .section-icon{width:30px;height:30px;border-radius:8px;background:var(--info-bg);color:var(--info);display:flex;align-items:center;justify-content:center}
+#lv .section-icon svg{width:16px;height:16px}
+#lv .section-title{font-size:13px;font-weight:600;color:var(--text)}
+#lv .section-sub{font-size:11px;color:var(--text-muted)}
+
+/* data table */
+#lv .data-table{width:100%;border-collapse:collapse;font-size:13px}
+#lv .data-table thead th{background:#F8FAFC;padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+#lv .data-table tbody td{padding:12px 14px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+#lv .data-table tbody tr{border-left:3px solid transparent;transition:background .15s;cursor:pointer}
+#lv .data-table tbody tr:hover{background:#FAFBFC}
+#lv .data-table tbody tr.backdated{border-left-color:var(--danger)}
+
+/* leave-type pills */
+#lv .leave-type-pill{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+#lv .lt-sick{background:var(--danger-bg);color:var(--danger)}
+#lv .lt-annual{background:var(--c-public-bg);color:var(--c-public)}
+#lv .lt-personal{background:var(--c-religious-bg);color:var(--c-religious)}
+#lv .lt-maternity,#lv .lt-paternity{background:#FCE7F3;color:#BE185D}
+#lv .lt-ordination,#lv .lt-military{background:var(--c-branch-bg);color:var(--c-branch)}
+#lv .lt-emergency,#lv .lt-special_holiday,#lv .lt-birthday,#lv .lt-reward,#lv .lt-other{background:#F1F5F9;color:var(--text-muted)}
+
+#lv .days-badge{display:inline-block;padding:2px 8px;border-radius:10px;background:var(--info-bg);color:var(--info);font-size:12px;font-weight:600;font-family:monospace}
+#lv .flag-pill{padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;margin-left:4px}
+#lv .flag-half{background:#DBEAFE;color:#1E40AF}
+#lv .flag-back{background:var(--danger-bg);color:var(--danger)}
+
+/* status pills */
+#lv .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600}
+#lv .pill-success{background:var(--success-bg);color:var(--success)}
+#lv .pill-danger{background:var(--danger-bg);color:var(--danger)}
+#lv .pill-warning{background:var(--warning-bg);color:var(--warning)}
+#lv .pill-info{background:var(--info-bg);color:var(--info)}
+
+/* buttons */
+#lv .btn{padding:7px 14px;border:1px solid var(--border-strong);border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:border .15s}
+#lv .btn:hover{border-color:var(--navy)}
+#lv .btn-sm{padding:5px 10px;font-size:12px}
+#lv .btn-primary{background:var(--teal);color:#fff;border-color:var(--teal)}
+#lv .btn-primary:hover{background:var(--teal-dark);border-color:var(--teal-dark)}
+#lv .btn-danger{background:var(--danger-bg);color:var(--danger);border-color:var(--danger-border)}
+#lv .btn-danger:hover{border-color:var(--danger)}
+#lv .btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* empty / loading */
+#lv .empty{text-align:center;padding:40px 20px;color:var(--text-muted)}
+#lv .empty-icon{width:48px;height:48px;border-radius:12px;background:#F1F5F9;color:var(--text-faint);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px}
+#lv .empty-icon svg{width:24px;height:24px}
+#lv .empty-title{font-size:14px;font-weight:600;color:var(--text)}
+#lv .loading{padding:30px;text-align:center;color:var(--text-muted)}
+
+/* detail grid */
+#lv .detail-grid{display:grid;grid-template-columns:120px 1fr;gap:8px 14px;font-size:13px}
+#lv .detail-label{color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+#lv .detail-value{color:var(--text)}
+
+/* modal */
+#lv .lv-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9000;align-items:center;justify-content:center;padding:20px}
+#lv .lv-modal-bg.active{display:flex}
+#lv .lv-modal{background:var(--surface);border-radius:12px;width:100%;max-width:600px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+#lv .lv-modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border)}
+#lv .lv-modal-header h2{font-size:16px;font-weight:600;color:var(--navy);margin:0}
+#lv .lv-modal-header p{font-size:12px;color:var(--text-muted);margin:4px 0 0;font-family:monospace}
+#lv .lv-modal-body{padding:20px 24px;flex:1;overflow-y:auto}
+#lv .lv-modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
 </style>
 <div id="lv">
-  <div class="hint-box">ยื่นใบลา → ระบบส่งให้หัวหน้า/HR พิจารณาทุกใบ · ได้รับแจ้งผลกลับทาง LINE</div>
 
-  <div class="section">
-    <div class="section-h"><span class="section-num">1</span><span class="section-t req">ผู้ขอลา</span></div>
-    <label class="field-l">รหัสพนักงาน</label>
-    <input class="field-i" id="lv-emp" placeholder="YY-XNU-013">
+  <div class="tab-row">
+    <button class="tab-btn active" id="lv-tab-pending">รออนุมัติ <span class="count" id="lv-cnt-pending">—</span></button>
+    <button class="tab-btn" id="lv-tab-history">ประวัติ <span class="count" id="lv-cnt-history">—</span></button>
   </div>
 
-  <div class="section">
-    <div class="section-h"><span class="section-num">2</span><span class="section-t req">ประเภทการลา</span></div>
-    <div class="chip-row" id="lv-chips">${typeChips}</div>
-  </div>
+  <div class="stats" id="lv-stats"></div>
 
-  <div class="section">
-    <div class="section-h"><span class="section-num">3</span><span class="section-t req">ช่วงวันที่</span></div>
-    <div class="row2">
-      <div><label class="field-l">วันเริ่ม</label><input type="date" class="field-i" id="lv-start"></div>
-      <div><label class="field-l">วันสิ้นสุด</label><input type="date" class="field-i" id="lv-end"></div>
+  <div class="filters">
+    <div class="filter">
+      <label>ค้นหา</label>
+      <input type="search" id="lv-f-search" placeholder="รหัส / พนักงาน">
     </div>
-    <div class="half-row">
-      <input type="checkbox" id="lv-half">
-      <label for="lv-half">ลาครึ่งวัน (นับ 0.5 วัน · ใช้กับวันเดียว)</label>
+    <div class="filter">
+      <label>สาขา</label>
+      <select id="lv-f-branch"><option value="">ทุกสาขา</option></select>
+    </div>
+    <div class="filter">
+      <label>ประเภทลา</label>
+      <select id="lv-f-type"><option value="">ทุกประเภท</option>${typeOpts}</select>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-h"><span class="section-num">4</span><span class="section-t">เหตุผล</span></div>
-    <textarea class="ta" id="lv-reason" maxlength="500" placeholder="เช่น พาผู้ปกครองไปหาหมอ"></textarea>
+    <div class="section-header">
+      <div class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+      <div style="flex:1">
+        <div class="section-title" id="lv-sec-title">รออนุมัติ</div>
+        <div class="section-sub" id="lv-sec-sub">คำขอลาที่รอการอนุมัติจากหัวหน้า/HR</div>
+      </div>
+      <button class="btn btn-sm" id="lv-refresh">รีเฟรช</button>
+    </div>
+    <div id="lv-content" class="loading">กำลังโหลด...</div>
   </div>
 
-  <div class="section">
-    <div class="section-h"><span class="section-num">5</span><span class="section-t">ผู้รับมอบงานแทน</span></div>
-    <input class="field-i" id="lv-replace" placeholder="รหัสผู้รับมอบงาน (ไม่บังคับ) · YY-...">
+  <!-- Detail Modal -->
+  <div class="lv-modal-bg" id="lv-modal-bg">
+    <div class="lv-modal">
+      <div class="lv-modal-header">
+        <h2 id="lv-modal-title">รายละเอียดคำขอลา</h2>
+        <p id="lv-modal-sub"></p>
+      </div>
+      <div class="lv-modal-body" id="lv-modal-body"></div>
+      <div class="lv-modal-footer" id="lv-modal-footer">
+        <button class="btn" id="lv-modal-close">ปิด</button>
+      </div>
+    </div>
   </div>
 
-  <div class="section">
-    <div class="section-h"><span class="section-num">6</span><span class="section-t">แนบใบรับรองแพทย์ (ทางเลือก)</span></div>
-    <label class="field-l">ลาป่วยตั้งแต่ 3 วัน รบกวนแนบลิงก์ไฟล์ใบรับรอง (ถ้ามี)</label>
-    <input class="field-i" id="lv-attach" placeholder="วางลิงก์ไฟล์ (ไม่บังคับ)">
-  </div>
-
-  <div class="lv-cta">
-    <button id="lv-btn" disabled>
-      <span id="lv-btntext">ส่งใบลา</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" x2="19" y1="12" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-    </button>
-    <div class="lv-hint" id="lv-cta-hint">เลือกประเภท + วันที่ ก่อนส่ง</div>
-  </div>
-
-  <div class="section">
-    <div class="section-h"><span class="section-num">＋</span><span class="section-t">ประวัติการลา</span></div>
-    <div class="lv-list" id="lv-hist"><div class="lv-empty">กำลังโหลด...</div></div>
-  </div>
 </div>`;
 
-  // bind chips (ประเภทการลา)
-  Array.prototype.forEach.call(wrap.querySelectorAll('[data-lvtype]'), el => {
-    el.onclick = () => lvPickType(el.getAttribute('data-lvtype'));
-  });
-  // bind inputs → validate ปุ่ม
-  ['lv-start', 'lv-end'].forEach(id => { const e = document.getElementById(id); if (e) e.onchange = lvOnChange; });
-  ['lv-emp', 'lv-reason', 'lv-replace', 'lv-attach'].forEach(id => { const e = document.getElementById(id); if (e) e.oninput = lvOnChange; });
-  const half = document.getElementById('lv-half'); if (half) half.onchange = lvOnChange;
-  document.getElementById('lv-btn').onclick = lvSubmit;
+  // bind tabs
+  $('lv-tab-pending').onclick = () => lvSetTab('pending');
+  $('lv-tab-history').onclick = () => lvSetTab('history');
+  // bind filters (client-side)
+  $('lv-f-search').oninput  = () => { _lvState.filterSearch = $('lv-f-search').value; lvRender(); };
+  $('lv-f-branch').onchange = () => { _lvState.filterBranch = $('lv-f-branch').value; lvRender(); };
+  $('lv-f-type').onchange   = () => { _lvState.filterType = $('lv-f-type').value; lvRender(); };
+  $('lv-refresh').onclick   = () => lvLoad();
+  // modal
+  $('lv-modal-close').onclick = lvCloseModal;
+  $('lv-modal-bg').onclick = (e) => { if (e.target === $('lv-modal-bg')) lvCloseModal(); };
 
-  lvOnChange();
   lvLoad();
 }
 
-function lvPickType(key) {
-  _lvState.leave_type = key;
-  Array.prototype.forEach.call(document.querySelectorAll('#lv-chips [data-lvtype]'), el => {
-    el.classList.toggle('act', el.getAttribute('data-lvtype') === key);
-  });
-  lvOnChange();
-}
-
-function lvOnChange() {
-  const start = (document.getElementById('lv-start') || {}).value || '';
-  const half = !!((document.getElementById('lv-half') || {}).checked);
-  // ลาครึ่งวัน → ล็อกวันสิ้นสุด = วันเริ่ม
-  const endEl = document.getElementById('lv-end');
-  if (half && start && endEl) { endEl.value = start; endEl.disabled = true; }
-  else if (endEl) { endEl.disabled = false; }
-  const end = (document.getElementById('lv-end') || {}).value || '';
-  const emp = ((document.getElementById('lv-emp') || {}).value || '').trim();
-
-  const btn = document.getElementById('lv-btn');
-  const hint = document.getElementById('lv-cta-hint');
-  if (!btn || !hint) return;
-  let ok = !!emp && !!_lvState.leave_type && !!start && !!end;
-  let msg = 'กดเพื่อส่งใบลาให้หัวหน้า/HR';
-  if (ok && end < start) { ok = false; msg = 'วันสิ้นสุดต้องไม่ก่อนวันเริ่ม'; }
-  if (!ok && !(end && start && end < start)) msg = 'กรอกรหัสพนักงาน + ประเภท + วันเริ่ม + วันสิ้นสุด ก่อนส่ง';
-  btn.disabled = !ok;
-  hint.textContent = msg;
+function lvSetTab(tab) {
+  _lvState.tab = tab;
+  $('lv-tab-pending').classList.toggle('active', tab === 'pending');
+  $('lv-tab-history').classList.toggle('active', tab === 'history');
+  $('lv-sec-title').textContent = tab === 'pending' ? 'รออนุมัติ' : 'ประวัติการลา';
+  $('lv-sec-sub').textContent = tab === 'pending'
+    ? 'คำขอลาที่รอการอนุมัติจากหัวหน้า/HR'
+    : 'รายการที่ตัดสินแล้ว — approved / rejected';
+  lvRender();
 }
 
 async function lvLoad() {
+  const content = $('lv-content');
+  if (content) { content.className = 'loading'; content.textContent = 'กำลังโหลด...'; }
   try {
     const { data } = await sb.functions.invoke('hr_leave_request');
-    const items = (data && data.items) || [];
-    const host = document.getElementById('lv-hist');
-    if (host) {
-      host.innerHTML = items.length
-        ? items.map(x => {
-            const st = x.status || '';
-            const cls = st === 'approved' ? 'ap' : st === 'rejected' ? 'rj' : '';
-            return '<div class="lv-row"><div><div>' + esc(lvTypeLabel(x.leave_type)) + '</div>'
-              + '<div style="font-size:11px;color:#6B7280">' + esc(x.start_date || '') + (x.end_date && x.end_date !== x.start_date ? ' → ' + esc(x.end_date) : '') + ' · ' + esc(String(x.days != null ? x.days : '')) + ' วัน</div></div>'
-              + '<div style="text-align:right"><div style="font-size:11px;color:#6B7280">' + esc(x.request_id || '') + '</div>'
-              + '<span class="lv-pill ' + cls + '">' + esc(st) + '</span></div></div>';
-          }).join('')
-        : '<div class="lv-empty">ยังไม่มีคำขอลา</div>';
+    _lvState.items = (data && data.items) || [];
+  } catch (e) {
+    console.error('lvLoad', e);
+    _lvState.items = [];
+    if (content) { content.className = 'empty'; content.textContent = 'โหลดข้อมูลไม่สำเร็จ'; }
+  }
+  lvPopulateBranches();
+  lvRender();
+}
+
+function lvPopulateBranches() {
+  const sel = $('lv-f-branch');
+  if (!sel || sel.children.length > 1) return;
+  const seen = {};
+  _lvState.items.forEach(r => {
+    const b = (r.branch_id || '').trim();
+    if (b && !seen[b]) { seen[b] = true; }
+  });
+  Object.keys(seen).sort().forEach(b => {
+    const o = document.createElement('option');
+    o.value = b; o.textContent = b;
+    sel.appendChild(o);
+  });
+}
+
+// แยก pending / history จาก items + apply filters
+function lvFiltered() {
+  const status = (r) => String(r.status || '').toLowerCase();
+  const tabFn = _lvState.tab === 'pending'
+    ? (r) => status(r) === 'pending' || status(r) === ''
+    : (r) => status(r) !== 'pending' && status(r) !== '';
+
+  const q = _lvState.filterSearch.trim().toLowerCase();
+  return _lvState.items.filter(r => {
+    if (!tabFn(r)) return false;
+    if (_lvState.filterBranch && (r.branch_id || '') !== _lvState.filterBranch) return false;
+    if (_lvState.filterType && (r.leave_type || '') !== _lvState.filterType) return false;
+    if (q) {
+      const hay = (String(r.request_id || '') + ' ' + String(r.employee_id || '') + ' ' +
+                   String(r.employee_name || '')).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
     }
-    const ct = document.getElementById('ct-leavereq');
-    if (ct) ct.textContent = items.length || '';
-  } catch (e) { console.error('lvLoad', e); }
+    return true;
+  });
 }
 
-function lvTypeLabel(key) {
-  const t = LV_TYPES.find(t => t.key === key);
-  return t ? t.label : (key || '');
+function lvRender() {
+  // counts ทุก tab (ก่อน filter ประเภท/สาขา — ใช้ status ล้วน)
+  const st = (r) => String(r.status || '').toLowerCase();
+  const pendingCount = _lvState.items.filter(r => st(r) === 'pending' || st(r) === '').length;
+  const historyCount = _lvState.items.filter(r => st(r) !== 'pending' && st(r) !== '').length;
+  if ($('lv-cnt-pending')) $('lv-cnt-pending').textContent = pendingCount;
+  if ($('lv-cnt-history')) $('lv-cnt-history').textContent = historyCount;
+  // sidebar badge = จำนวน pending
+  const ct = document.getElementById('ct-leavereq');
+  if (ct) ct.textContent = pendingCount || '';
+
+  const rows = lvFiltered();
+  lvRenderStats(rows);
+  lvRenderTable(rows);
 }
 
-async function lvSubmit() {
-  if (_lvState.submitting) return;
-  const btn = document.getElementById('lv-btn');
-  if (!btn || btn.disabled) return;
+function lvStatCard(label, value, sub, color) {
+  return '<div class="stat"><div class="stat-stripe" style="background:' + color + '"></div>' +
+    '<div class="stat-label">' + esc(label) + '</div>' +
+    '<div class="stat-value">' + (value || 0) + '</div>' +
+    '<div class="stat-sub">' + esc(sub) + '</div></div>';
+}
 
-  const emp = ((document.getElementById('lv-emp') || {}).value || '').trim();
-  const start = (document.getElementById('lv-start') || {}).value || '';
-  const end = (document.getElementById('lv-end') || {}).value || '';
-  const half = !!((document.getElementById('lv-half') || {}).checked);
-  if (!emp) { alert('กรอกรหัสพนักงาน'); return; }
-  if (!start || !end) { alert('เลือกช่วงวันที่'); return; }
-  if (end < start) { alert('วันสิ้นสุดต้องไม่ก่อนวันเริ่ม'); return; }
+function lvRenderStats(rows) {
+  const by = (k) => rows.filter(r => (r.leave_type || '') === k).length;
+  const other = rows.length - by('sick') - by('annual') - by('personal');
+  const subLabel = _lvState.tab === 'pending' ? 'รออนุมัติ' : 'ประวัติ';
+  $('lv-stats').innerHTML = [
+    lvStatCard('รวม', rows.length, subLabel, 'var(--navy)'),
+    lvStatCard('Sick', by('sick'), 'ป่วย', 'var(--danger)'),
+    lvStatCard('Annual', by('annual'), 'พักร้อน', 'var(--c-public)'),
+    lvStatCard('Personal', by('personal'), 'กิจ', 'var(--c-religious)'),
+    lvStatCard('Other', other, 'อื่นๆ', 'var(--c-branch)'),
+  ].join('');
+}
 
-  _lvState.submitting = true;
-  btn.disabled = true;
-  document.getElementById('lv-btntext').textContent = 'กำลังส่ง...';
-  const hint = document.getElementById('lv-cta-hint');
-  if (hint) hint.textContent = 'กำลังส่ง...';
+function lvRenderTable(rows) {
+  const content = $('lv-content');
+  if (!rows || rows.length === 0) {
+    content.className = '';
+    content.innerHTML = '<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="empty-title">ไม่มีคำขอ</div></div>';
+    return;
+  }
+  content.className = '';
 
-  const body = {
-    employee_id:             emp,
-    leave_type:              _lvState.leave_type,
-    start_date:              start,
-    end_date:                end,
-    days:                    half ? 0.5 : undefined,
-    half_day:                half,
-    reason:                  ((document.getElementById('lv-reason')  || {}).value || '').trim(),
-    replacement_employee_id: ((document.getElementById('lv-replace') || {}).value || '').trim(),
-    attachment_url:          ((document.getElementById('lv-attach')  || {}).value || '').trim(),
-  };
+  const showActions = _lvState.tab === 'pending';
+
+  const trs = rows.map(r => {
+    const lt = r.leave_type || 'other';
+    const flags = [
+      r.half_day ? '<span class="flag-pill flag-half">½</span>' : '',
+      r.backdated ? '<span class="flag-pill flag-back">y/back</span>' : '',
+    ].join('');
+    const trClass = r.backdated ? 'backdated' : '';
+    const sameDate = r.start_date === r.end_date || !r.end_date;
+    const dateStr = esc(r.start_date || '—') + (sameDate ? '' : ' – ' + esc(r.end_date));
+    const empName = r.employee_name || r.employee_id || '—';
+
+    let actions;
+    if (showActions) {
+      actions = '<button class="btn btn-sm" data-lv-view="' + esc(r.request_id || '') + '">ดู</button>';
+    } else {
+      const s = String(r.status || '').toLowerCase();
+      const pill = s === 'approved' ? '<span class="pill pill-success">approved</span>'
+        : s === 'auto_approved' ? '<span class="pill pill-success">auto</span>'
+        : s === 'rejected' ? '<span class="pill pill-danger">rejected</span>'
+        : '<span class="pill pill-warning">' + esc(r.status || '—') + '</span>';
+      actions = pill;
+    }
+
+    return [
+      '<tr class="' + trClass + '" data-lv-row="' + esc(r.request_id || '') + '">',
+        '<td>',
+          '<div style="font-weight:500">' + esc(empName) + '</div>',
+          '<div style="font-size:10px;color:var(--text-faint);font-family:monospace">' + esc(r.employee_id || '') + (r.branch_id ? ' · ' + esc(r.branch_id) : '') + '</div>',
+        '</td>',
+        '<td><span class="leave-type-pill lt-' + esc(lt) + '">' + esc(lt) + '</span>' + flags + '</td>',
+        '<td><div style="font-weight:500">' + dateStr + '</div></td>',
+        '<td><span class="days-badge">' + esc(String(r.days != null ? r.days : '—')) + '</span></td>',
+        '<td style="font-size:11px;color:var(--text-muted)">' + esc(r.reason || '—') + '</td>',
+        '<td data-lv-stop="1" style="text-align:right">' + actions + '</td>',
+      '</tr>',
+    ].join('');
+  }).join('');
+
+  content.innerHTML = [
+    '<div style="overflow-x:auto"><table class="data-table">',
+      '<thead><tr>',
+        '<th>พนักงาน</th><th>ประเภท</th><th>วันที่</th>',
+        '<th style="width:70px">วัน</th><th>เหตุผล</th>',
+        '<th style="width:110px;text-align:right">' + (showActions ? 'Action' : 'Status') + '</th>',
+      '</tr></thead>',
+      '<tbody>' + trs + '</tbody>',
+    '</table></div>',
+  ].join('');
+
+  // bind row click → detail
+  Array.prototype.forEach.call(content.querySelectorAll('[data-lv-row]'), tr => {
+    tr.onclick = (e) => {
+      if (e.target.closest('[data-lv-stop]')) return;
+      lvOpenDetail(tr.getAttribute('data-lv-row'));
+    };
+  });
+  Array.prototype.forEach.call(content.querySelectorAll('[data-lv-view]'), btn => {
+    btn.onclick = () => lvOpenDetail(btn.getAttribute('data-lv-view'));
+  });
+}
+
+function lvFind(requestId) {
+  return _lvState.items.find(r => String(r.request_id) === String(requestId));
+}
+
+function lvOpenDetail(requestId) {
+  const d = lvFind(requestId);
+  if (!d) { alert('ไม่พบคำขอลา'); return; }
+
+  $('lv-modal-title').textContent = 'คำขอลา · ' + (d.employee_name || d.employee_id || '');
+  $('lv-modal-sub').textContent = (d.request_id || '') + (d.submitted_at ? ' · ส่งเมื่อ ' + d.submitted_at : '');
+
+  const lt = d.leave_type || 'other';
+  const flags = [
+    d.half_day ? '<span class="flag-pill flag-half">half-day</span>' : '',
+    d.backdated ? '<span class="flag-pill flag-back">backdated</span>' : '',
+  ].join(' ');
+  const sameDate = d.start_date === d.end_date || !d.end_date;
+
+  let attachmentHtml = '';
+  if (d.attachment_url) {
+    attachmentHtml = '<a href="' + esc(d.attachment_url) + '" target="_blank" class="btn btn-sm">ดูเอกสารแนบ</a>';
+  }
+
+  $('lv-modal-body').innerHTML = [
+    '<div class="detail-grid">',
+      '<div class="detail-label">พนักงาน</div><div class="detail-value">' + esc(d.employee_name || d.employee_id || '—') + (d.employee_id ? ' (' + esc(d.employee_id) + ')' : '') + '</div>',
+      d.branch_id ? '<div class="detail-label">สาขา</div><div class="detail-value">' + esc(d.branch_id) + '</div>' : '',
+      '<div class="detail-label">ประเภทลา</div><div class="detail-value"><span class="leave-type-pill lt-' + esc(lt) + '">' + esc(lt) + '</span> ' + flags + '</div>',
+      '<div class="detail-label">ช่วงเวลา</div><div class="detail-value">' + esc(d.start_date || '—') + (sameDate ? '' : ' ถึง ' + esc(d.end_date)) + '</div>',
+      '<div class="detail-label">จำนวน</div><div class="detail-value"><span class="days-badge">' + esc(String(d.days != null ? d.days : '—')) + ' วัน</span></div>',
+      '<div class="detail-label">เหตุผล</div><div class="detail-value">' + esc(d.reason || '—') + '</div>',
+      d.replacement_employee_id ? '<div class="detail-label">ผู้รับมอบงาน</div><div class="detail-value">' + esc(d.replacement_name || d.replacement_employee_id) + '</div>' : '',
+      '<div class="detail-label">สถานะ</div><div class="detail-value"><span class="pill pill-info">' + esc(d.status || '—') + '</span></div>',
+      d.attachment_url ? '<div class="detail-label">เอกสารแนบ</div><div class="detail-value">' + attachmentHtml + '</div>' : '',
+      d.approved_at ? '<div class="detail-label">อนุมัติเมื่อ</div><div class="detail-value">' + esc(d.approved_at) + '</div>' : '',
+    '</div>',
+  ].join('');
+
+  const isPending = String(d.status || '').toLowerCase() === 'pending' || !d.status;
+  if (isPending) {
+    $('lv-modal-footer').innerHTML = [
+      '<button class="btn" id="lv-m-close2">ปิด</button>',
+      '<button class="btn btn-danger" id="lv-m-reject">Reject</button>',
+      '<button class="btn btn-primary" id="lv-m-approve">Approve</button>',
+    ].join('');
+    $('lv-m-close2').onclick = lvCloseModal;
+    $('lv-m-reject').onclick = () => lvDecide(d.request_id, 'rejected');
+    $('lv-m-approve').onclick = () => lvDecide(d.request_id, 'approved');
+  } else {
+    $('lv-modal-footer').innerHTML = '<button class="btn" id="lv-m-close2">ปิด</button>';
+    $('lv-m-close2').onclick = lvCloseModal;
+  }
+
+  $('lv-modal-bg').classList.add('active');
+}
+
+function lvCloseModal() {
+  const bg = $('lv-modal-bg');
+  if (bg) bg.classList.remove('active');
+}
+
+async function lvDecide(requestId, decision) {
+  if (_lvState.acting) return;
+  const label = decision === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ';
+  if (!confirm(label + 'คำขอลานี้?')) return;
+
+  _lvState.acting = true;
+  const aBtn = $('lv-m-approve'), rBtn = $('lv-m-reject');
+  if (aBtn) aBtn.disabled = true;
+  if (rBtn) rBtn.disabled = true;
 
   try {
-    const { data, error } = await sb.functions.invoke('hr_leave_request', { body });
-    _lvState.submitting = false;
-    btn.disabled = false;
-    document.getElementById('lv-btntext').textContent = 'ส่งใบลา';
+    const { data, error } = await sb.functions.invoke('hr_approve', {
+      body: { request_id: requestId, decision },
+    });
     if (error || (data && data.error)) {
-      const m = (data && (data.error || (data.errors && data.errors.join(', ')))) || (error && error.message) || 'ส่งไม่สำเร็จ';
-      if (hint) hint.textContent = 'แก้ไขแล้วลองส่งอีกครั้ง';
-      alert('ไม่สำเร็จ: ' + m);
-      lvOnChange();
+      alert('ผิดพลาด: ' + ((data && data.error) || (error && error.message) || 'ไม่สำเร็จ'));
+      _lvState.acting = false;
+      if (aBtn) aBtn.disabled = false;
+      if (rBtn) rBtn.disabled = false;
       return;
     }
-    // สำเร็จ → แสดงผล + เคลียร์ฟอร์ม + โหลด list ใหม่
-    const reqId = (data && (data.requestId || data.request_id)) || '';
-    ['lv-start', 'lv-end', 'lv-reason', 'lv-replace', 'lv-attach'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
-    const halfEl = document.getElementById('lv-half'); if (halfEl) { halfEl.checked = false; }
-    const endEl = document.getElementById('lv-end'); if (endEl) endEl.disabled = false;
-    _lvState.leave_type = 'annual';
-    Array.prototype.forEach.call(document.querySelectorAll('#lv-chips [data-lvtype]'), el => {
-      el.classList.toggle('act', el.getAttribute('data-lvtype') === 'annual');
-    });
-    if (hint) hint.innerHTML = 'ส่งใบลาเรียบร้อย · รออนุมัติจากหัวหน้า/HR' + (reqId ? ' · ' + esc(reqId) : '');
-    lvOnChange();
-    lvLoad();
+    _lvState.acting = false;
+    lvCloseModal();
+    await lvLoad();
   } catch (e) {
-    _lvState.submitting = false;
-    btn.disabled = false;
-    document.getElementById('lv-btntext').textContent = 'ส่งใบลา';
-    if (hint) hint.textContent = 'ส่งไม่สำเร็จ · ลองอีกครั้งค่ะ';
-    alert('ส่งไม่สำเร็จ: ' + (e && e.message || ''));
+    _lvState.acting = false;
+    if (aBtn) aBtn.disabled = false;
+    if (rBtn) rBtn.disabled = false;
+    alert('ผิดพลาด: ' + (e && e.message || ''));
   }
 }
-
 
 /* ===== ported: otreq ===== */
 // _ported/otreq.js · v1.10.176 port → native dashboard page "คำขอ OT"
