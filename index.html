@@ -323,25 +323,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="card"><div id="otsum"></div></div>
     </section>
     <section class="view" data-view="announce">
-      <div class="sec"><span class="sec-bar"></span>ประกาศ · เขียนได้<span class="sec-c">Native Supabase · เร็ว</span></div>
-      <div class="card" style="padding:16px;margin-bottom:14px">
-        <div style="font-weight:600;margin-bottom:10px;color:var(--navy)">สร้างประกาศใหม่</div>
-        <input id="annTitle" placeholder="หัวข้อประกาศ" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px">
-        <textarea id="annBody" placeholder="รายละเอียด (ไม่บังคับ)" rows="3" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:8px"></textarea>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select id="annCategory" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
-            <option value="general">ทั่วไป</option><option value="policy">นโยบาย</option><option value="welfare">สวัสดิการ</option><option value="activity">กิจกรรม/CSR</option><option value="urgent">ด่วน</option><option value="monthly">บอร์ดประจำเดือน</option><option value="permanent">บอร์ดถาวร</option>
-          </select>
-          <select id="annAudience" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
-            <option>ทั้งบริษัท</option><option>เฉพาะ HR</option><option>หัวหน้างาน</option><option>เฉพาะหน้าบ้าน</option>
-          </select>
-          <input id="annEffective" type="date" title="วันมีผลบังคับใช้" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
-          <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="annAck" style="width:16px;height:16px"> ต้องกดรับทราบ</label>
-          <button id="annPost" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">โพสต์ประกาศ</button>
-          <span id="annMsg" style="font-size:12px;color:var(--text-muted)"></span>
-        </div>
-      </div>
-      <div id="announceList"></div>
+      <div id="wrap-announce_p"></div>
     </section>
     <section class="view" data-view="leavereq">
       <div class="sec"><span class="sec-bar"></span>คำขอลา · เขียนได้<span class="sec-c">Native Supabase</span></div>
@@ -878,8 +860,7 @@ async function postAnnounce(){
  btn.disabled=false;
  if(error||(data&&data.error)){$('annMsg').textContent='ผิดพลาด: '+((data&&data.error)||error.message);return;}
  $('annTitle').value='';$('annBody').value='';$('annEffective').value='';$('annAck').checked=false;$('annMsg').textContent='โพสต์แล้ว ✓';
- loadAnnounce();
-}
+ }
 
 // คีย์รายจ่าย (native บัญชี · edge function acc_expense · ผู้ขอเบิกดึงจาก HR roster)
 async function fillReqOptions(){
@@ -1296,6 +1277,1727 @@ async function xpSubmit(){ const emp=$('xp-emp').value.trim(); const amt=parseFl
  if(error||(data&&data.error)){alert('ไม่สำเร็จ: '+((data&&data.error)||error.message));return;}
  $('xp-amount').value='';$('xp-desc').value=''; xpLoad();
 }
+
+/* ===== ported: leavereq ===== */
+// _ported/leavereq.js — native port of leave_request_form.html (HR Announcement)
+// ลอก markup + CSS เดิม · scoped ใต้ #lv · ทุก element id prefix lv-
+// ใช้ global sb + esc (มีอยู่แล้วใน index.html) — ห้าม redeclare
+// edge fn: hr_leave_request · create=invoke(body) · list=invoke() คืน {items:[...]}
+
+// 12 leave types (ตรงกับ edge fn)
+const LV_TYPES = [
+  { key: 'annual',          label: 'ลาพักร้อน' },
+  { key: 'sick',            label: 'ลาป่วย' },
+  { key: 'personal',        label: 'ลากิจ' },
+  { key: 'maternity',       label: 'ลาคลอด' },
+  { key: 'paternity',       label: 'ลาเลี้ยงดูบุตร' },
+  { key: 'ordination',      label: 'ลาบวช' },
+  { key: 'military',        label: 'ลาทหาร' },
+  { key: 'emergency',       label: 'ลาฉุกเฉิน' },
+  { key: 'special_holiday', label: 'ลาพิเศษ' },
+  { key: 'birthday',        label: 'ลาวันเกิด' },
+  { key: 'reward',          label: 'วันหยุดแถม' },
+  { key: 'other',           label: 'อื่นๆ' },
+];
+
+// state เฉพาะหน้านี้ (prefix lv)
+let _lvState = {
+  leave_type: 'annual',
+  submitting: false,
+};
+
+function mountLeavereq() {
+  const wrap = document.getElementById('wrap-leavereq');
+  if (!wrap) return;
+
+  const typeChips = LV_TYPES.map(t =>
+    '<span class="chip ' + (_lvState.leave_type === t.key ? 'act' : '') +
+    '" data-lvtype="' + t.key + '">' + esc(t.label) + '</span>'
+  ).join('');
+
+  wrap.innerHTML = `
+<style>
+#lv{--navy:#0D2F4F;--teal:#3DC5B7;--teal-light:#E6F7F5;--teal-dark:#0F766E;--bg:#FAFBFC;--muted:#6B7280;--border:#E5E7EB;--error:#DC2626;--success:#16A34A;max-width:480px;margin:0 auto;font-size:15px;line-height:1.5;color:var(--navy)}
+#lv .hint-box{background:var(--teal-light);border-left:3px solid var(--teal);border-radius:7px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--teal-dark);line-height:1.5}
+#lv .section{background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:10px}
+#lv .section-h{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+#lv .section-num{width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+#lv .section-t{font-size:15px;font-weight:600;color:var(--navy)}
+#lv .req::after{content:"*";color:var(--error);margin-left:3px}
+#lv .field-l{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+#lv .field-i{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;color:var(--navy);background:#fff;box-sizing:border-box}
+#lv .field-i:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(61,197,183,0.15)}
+#lv .ta{width:100%;min-height:72px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:15px;resize:vertical;color:var(--navy);background:#fff;box-sizing:border-box}
+#lv .ta:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(61,197,183,0.15)}
+#lv .row2{display:flex;gap:10px}
+#lv .row2 > div{flex:1}
+#lv .chip-row{display:flex;gap:7px;flex-wrap:wrap}
+#lv .chip{padding:7px 13px;border-radius:16px;font-size:13px;background:#fff;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-weight:500}
+#lv .chip.act{background:var(--navy);color:#fff;border-color:var(--navy)}
+#lv .half-row{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:8px}
+#lv .half-row input{width:18px;height:18px;accent-color:var(--teal);cursor:pointer;flex-shrink:0}
+#lv .half-row label{font-size:13px;cursor:pointer;flex:1}
+#lv .lv-cta{margin:14px 0}
+#lv .lv-cta button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--teal);color:#04342C;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+#lv .lv-cta button:disabled{background:#CBD5E1;color:#fff;cursor:not-allowed}
+#lv .lv-cta svg{width:18px;height:18px}
+#lv .lv-hint{font-size:13px;color:#9CA3AF;text-align:center;margin-top:6px}
+#lv .ok-box{background:#DCFCE7;color:var(--success);border-radius:10px;margin:12px 0;padding:18px 14px;text-align:center;font-size:15px;line-height:1.5}
+#lv .ok-box .ok-id{font-weight:600;font-size:14px;margin-top:8px;color:#15803D}
+#lv .lv-list .lv-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:.5px solid var(--border)}
+#lv .lv-list .lv-row:last-child{border-bottom:0}
+#lv .lv-pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:#FAEEDA;color:#854F0B}
+#lv .lv-pill.ap{background:#E6F7F5;color:#0F766E}
+#lv .lv-pill.rj{background:#FCEBEB;color:#791F1F}
+#lv .lv-empty{color:var(--muted);font-size:13px;text-align:center;padding:14px}
+</style>
+<div id="lv">
+  <div class="hint-box">ยื่นใบลา → ระบบส่งให้หัวหน้า/HR พิจารณาทุกใบ · ได้รับแจ้งผลกลับทาง LINE</div>
+
+  <div class="section">
+    <div class="section-h"><span class="section-num">1</span><span class="section-t req">ผู้ขอลา</span></div>
+    <label class="field-l">รหัสพนักงาน</label>
+    <input class="field-i" id="lv-emp" placeholder="YY-XNU-013">
+  </div>
+
+  <div class="section">
+    <div class="section-h"><span class="section-num">2</span><span class="section-t req">ประเภทการลา</span></div>
+    <div class="chip-row" id="lv-chips">${typeChips}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-h"><span class="section-num">3</span><span class="section-t req">ช่วงวันที่</span></div>
+    <div class="row2">
+      <div><label class="field-l">วันเริ่ม</label><input type="date" class="field-i" id="lv-start"></div>
+      <div><label class="field-l">วันสิ้นสุด</label><input type="date" class="field-i" id="lv-end"></div>
+    </div>
+    <div class="half-row">
+      <input type="checkbox" id="lv-half">
+      <label for="lv-half">ลาครึ่งวัน (นับ 0.5 วัน · ใช้กับวันเดียว)</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-h"><span class="section-num">4</span><span class="section-t">เหตุผล</span></div>
+    <textarea class="ta" id="lv-reason" maxlength="500" placeholder="เช่น พาผู้ปกครองไปหาหมอ"></textarea>
+  </div>
+
+  <div class="section">
+    <div class="section-h"><span class="section-num">5</span><span class="section-t">ผู้รับมอบงานแทน</span></div>
+    <input class="field-i" id="lv-replace" placeholder="รหัสผู้รับมอบงาน (ไม่บังคับ) · YY-...">
+  </div>
+
+  <div class="section">
+    <div class="section-h"><span class="section-num">6</span><span class="section-t">แนบใบรับรองแพทย์ (ทางเลือก)</span></div>
+    <label class="field-l">ลาป่วยตั้งแต่ 3 วัน รบกวนแนบลิงก์ไฟล์ใบรับรอง (ถ้ามี)</label>
+    <input class="field-i" id="lv-attach" placeholder="วางลิงก์ไฟล์ (ไม่บังคับ)">
+  </div>
+
+  <div class="lv-cta">
+    <button id="lv-btn" disabled>
+      <span id="lv-btntext">ส่งใบลา</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" x2="19" y1="12" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+    <div class="lv-hint" id="lv-cta-hint">เลือกประเภท + วันที่ ก่อนส่ง</div>
+  </div>
+
+  <div class="section">
+    <div class="section-h"><span class="section-num">＋</span><span class="section-t">ประวัติการลา</span></div>
+    <div class="lv-list" id="lv-hist"><div class="lv-empty">กำลังโหลด...</div></div>
+  </div>
+</div>`;
+
+  // bind chips (ประเภทการลา)
+  Array.prototype.forEach.call(wrap.querySelectorAll('[data-lvtype]'), el => {
+    el.onclick = () => lvPickType(el.getAttribute('data-lvtype'));
+  });
+  // bind inputs → validate ปุ่ม
+  ['lv-start', 'lv-end'].forEach(id => { const e = document.getElementById(id); if (e) e.onchange = lvOnChange; });
+  ['lv-emp', 'lv-reason', 'lv-replace', 'lv-attach'].forEach(id => { const e = document.getElementById(id); if (e) e.oninput = lvOnChange; });
+  const half = document.getElementById('lv-half'); if (half) half.onchange = lvOnChange;
+  document.getElementById('lv-btn').onclick = lvSubmit;
+
+  lvOnChange();
+  lvLoad();
+}
+
+function lvPickType(key) {
+  _lvState.leave_type = key;
+  Array.prototype.forEach.call(document.querySelectorAll('#lv-chips [data-lvtype]'), el => {
+    el.classList.toggle('act', el.getAttribute('data-lvtype') === key);
+  });
+  lvOnChange();
+}
+
+function lvOnChange() {
+  const start = (document.getElementById('lv-start') || {}).value || '';
+  const half = !!((document.getElementById('lv-half') || {}).checked);
+  // ลาครึ่งวัน → ล็อกวันสิ้นสุด = วันเริ่ม
+  const endEl = document.getElementById('lv-end');
+  if (half && start && endEl) { endEl.value = start; endEl.disabled = true; }
+  else if (endEl) { endEl.disabled = false; }
+  const end = (document.getElementById('lv-end') || {}).value || '';
+  const emp = ((document.getElementById('lv-emp') || {}).value || '').trim();
+
+  const btn = document.getElementById('lv-btn');
+  const hint = document.getElementById('lv-cta-hint');
+  if (!btn || !hint) return;
+  let ok = !!emp && !!_lvState.leave_type && !!start && !!end;
+  let msg = 'กดเพื่อส่งใบลาให้หัวหน้า/HR';
+  if (ok && end < start) { ok = false; msg = 'วันสิ้นสุดต้องไม่ก่อนวันเริ่ม'; }
+  if (!ok && !(end && start && end < start)) msg = 'กรอกรหัสพนักงาน + ประเภท + วันเริ่ม + วันสิ้นสุด ก่อนส่ง';
+  btn.disabled = !ok;
+  hint.textContent = msg;
+}
+
+async function lvLoad() {
+  try {
+    const { data } = await sb.functions.invoke('hr_leave_request');
+    const items = (data && data.items) || [];
+    const host = document.getElementById('lv-hist');
+    if (host) {
+      host.innerHTML = items.length
+        ? items.map(x => {
+            const st = x.status || '';
+            const cls = st === 'approved' ? 'ap' : st === 'rejected' ? 'rj' : '';
+            return '<div class="lv-row"><div><div>' + esc(lvTypeLabel(x.leave_type)) + '</div>'
+              + '<div style="font-size:11px;color:#6B7280">' + esc(x.start_date || '') + (x.end_date && x.end_date !== x.start_date ? ' → ' + esc(x.end_date) : '') + ' · ' + esc(String(x.days != null ? x.days : '')) + ' วัน</div></div>'
+              + '<div style="text-align:right"><div style="font-size:11px;color:#6B7280">' + esc(x.request_id || '') + '</div>'
+              + '<span class="lv-pill ' + cls + '">' + esc(st) + '</span></div></div>';
+          }).join('')
+        : '<div class="lv-empty">ยังไม่มีคำขอลา</div>';
+    }
+    const ct = document.getElementById('ct-leavereq');
+    if (ct) ct.textContent = items.length || '';
+  } catch (e) { console.error('lvLoad', e); }
+}
+
+function lvTypeLabel(key) {
+  const t = LV_TYPES.find(t => t.key === key);
+  return t ? t.label : (key || '');
+}
+
+async function lvSubmit() {
+  if (_lvState.submitting) return;
+  const btn = document.getElementById('lv-btn');
+  if (!btn || btn.disabled) return;
+
+  const emp = ((document.getElementById('lv-emp') || {}).value || '').trim();
+  const start = (document.getElementById('lv-start') || {}).value || '';
+  const end = (document.getElementById('lv-end') || {}).value || '';
+  const half = !!((document.getElementById('lv-half') || {}).checked);
+  if (!emp) { alert('กรอกรหัสพนักงาน'); return; }
+  if (!start || !end) { alert('เลือกช่วงวันที่'); return; }
+  if (end < start) { alert('วันสิ้นสุดต้องไม่ก่อนวันเริ่ม'); return; }
+
+  _lvState.submitting = true;
+  btn.disabled = true;
+  document.getElementById('lv-btntext').textContent = 'กำลังส่ง...';
+  const hint = document.getElementById('lv-cta-hint');
+  if (hint) hint.textContent = 'กำลังส่ง...';
+
+  const body = {
+    employee_id:             emp,
+    leave_type:              _lvState.leave_type,
+    start_date:              start,
+    end_date:                end,
+    days:                    half ? 0.5 : undefined,
+    half_day:                half,
+    reason:                  ((document.getElementById('lv-reason')  || {}).value || '').trim(),
+    replacement_employee_id: ((document.getElementById('lv-replace') || {}).value || '').trim(),
+    attachment_url:          ((document.getElementById('lv-attach')  || {}).value || '').trim(),
+  };
+
+  try {
+    const { data, error } = await sb.functions.invoke('hr_leave_request', { body });
+    _lvState.submitting = false;
+    btn.disabled = false;
+    document.getElementById('lv-btntext').textContent = 'ส่งใบลา';
+    if (error || (data && data.error)) {
+      const m = (data && (data.error || (data.errors && data.errors.join(', ')))) || (error && error.message) || 'ส่งไม่สำเร็จ';
+      if (hint) hint.textContent = 'แก้ไขแล้วลองส่งอีกครั้ง';
+      alert('ไม่สำเร็จ: ' + m);
+      lvOnChange();
+      return;
+    }
+    // สำเร็จ → แสดงผล + เคลียร์ฟอร์ม + โหลด list ใหม่
+    const reqId = (data && (data.requestId || data.request_id)) || '';
+    ['lv-start', 'lv-end', 'lv-reason', 'lv-replace', 'lv-attach'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+    const halfEl = document.getElementById('lv-half'); if (halfEl) { halfEl.checked = false; }
+    const endEl = document.getElementById('lv-end'); if (endEl) endEl.disabled = false;
+    _lvState.leave_type = 'annual';
+    Array.prototype.forEach.call(document.querySelectorAll('#lv-chips [data-lvtype]'), el => {
+      el.classList.toggle('act', el.getAttribute('data-lvtype') === 'annual');
+    });
+    if (hint) hint.innerHTML = 'ส่งใบลาเรียบร้อย · รออนุมัติจากหัวหน้า/HR' + (reqId ? ' · ' + esc(reqId) : '');
+    lvOnChange();
+    lvLoad();
+  } catch (e) {
+    _lvState.submitting = false;
+    btn.disabled = false;
+    document.getElementById('lv-btntext').textContent = 'ส่งใบลา';
+    if (hint) hint.textContent = 'ส่งไม่สำเร็จ · ลองอีกครั้งค่ะ';
+    alert('ส่งไม่สำเร็จ: ' + (e && e.message || ''));
+  }
+}
+
+
+/* ===== ported: otreq ===== */
+// _ported/otreq.js · v1.10.176 port → native dashboard page "คำขอ OT"
+// ลอกจาก HR Announcement/AppsScript/ot_request_liff.html มาเป็น native
+// - scoped CSS prefix #ot · element id prefix ot- · var/fn prefix ot
+// - ใช้ global sb + esc (ห้าม redeclare) · invoke แทน google.script.run
+// - แทน ?uid= ด้วย input "รหัสพนักงาน" #ot-emp
+// create: sb.functions.invoke('hr_ot_request',{body:{...}})
+// list:   sb.functions.invoke('hr_ot_request') → {items:[...]}
+
+// ── helper local (ไม่พึ่ง $ global) ──
+const otQ = id => document.getElementById(id);
+
+// ── ชุดเหตุผลคลินิก (กดเลือก) · "อื่นๆ" ต้องพิมพ์รายละเอียด ──
+const OT_REASONS = [
+  'เคลียร์เอกสาร/เวชระเบียนค้าง',
+  'รับผู้ป่วยเพิ่ม/คิวยาว',
+  'ช่วยงานสาขาอื่น',
+  'เตรียมงานอบรม/ประชุม',
+  'ปิดยอด/เช็คสต็อก',
+  'อื่นๆ',
+];
+
+function otTodayStr() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+
+const _otState = {
+  ot_date:    otTodayStr(),
+  start:      '',
+  end:        '',
+  minutes:    '',
+  minsAuto:   true,    // คำนวณนาทีอัตโนมัติจากเริ่ม/สิ้นสุด จนกว่าผู้ใช้แก้เอง
+  reasonChip: '',
+  reasonText: '',
+  submitting: false,
+};
+
+function mountOtreq() {
+  if (!otQ('wrap-otreq')) return;
+  otQ('wrap-otreq').innerHTML = `
+  <style>
+  #ot{--otnavy:#0D2F4F;--otteal:#3DC5B7;--ottealdk:#0F766E;--otline:#E5E7EB;--otmuted:#6B7280;--otfaint:#9CA3AF;--ottext:#1F2937;max-width:480px;margin:0 auto}
+  #ot .ot-head{position:relative;background:linear-gradient(135deg,var(--otnavy),var(--ottealdk));color:#fff;padding:16px;border-radius:12px;overflow:hidden}
+  #ot .ot-blob{position:absolute;width:120px;height:120px;border-radius:50%;background:#ffffff14;top:-44px;right:-36px}
+  #ot .ot-eb{font-size:12px;color:var(--otteal);font-weight:600;position:relative;letter-spacing:.05em}
+  #ot .ot-h1{font-size:18px;font-weight:600;margin:6px 0 0;position:relative}
+  #ot .ot-sub{font-size:12.5px;color:#FFFFFFCC;margin-top:5px;position:relative;line-height:1.45}
+  #ot .ot-card{background:#fff;border-radius:12px;border:.5px solid rgba(0,0,0,.1);margin:14px 0;padding:16px}
+  #ot .ot-sectitle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--otnavy);margin:0 0 11px}
+  #ot .ot-secnum{width:22px;height:22px;flex-shrink:0;border-radius:50%;background:var(--otteal);color:#04342C;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+  #ot .ot-secfaint{font-size:12px;color:var(--otfaint);font-weight:400}
+  #ot label{display:block;font-size:12px;color:var(--otmuted);margin:0 0 4px}
+  #ot input,#ot textarea{width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:8px;font-size:14px;background:#fff;font-family:inherit;color:var(--ottext)}
+  #ot textarea{min-height:60px;resize:vertical}
+  #ot .ot-hint{font-size:12px;color:var(--otfaint);margin-top:7px}
+  #ot .ot-hint b{color:var(--ottealdk);font-weight:600}
+  #ot .ot-timerow{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:end}
+  #ot .ot-to{padding-bottom:11px;font-size:13px;color:var(--otfaint)}
+  #ot .ot-mins{display:flex;align-items:center;gap:10px}
+  #ot .ot-mins input{max-width:130px;text-align:center;font-weight:600;font-size:18px}
+  #ot .ot-mins-unit{font-size:14px;color:var(--otmuted)}
+  #ot .ot-chiprow{display:flex;flex-wrap:wrap;gap:8px}
+  #ot .ot-chip{font-size:13px;padding:7px 13px;border-radius:999px;border:1px solid var(--otline);background:#fff;color:var(--ottext);cursor:pointer;user-select:none}
+  #ot .ot-chip.selected{background:#E6F7F5;border-color:var(--otteal);color:var(--ottealdk);font-weight:600}
+  #ot .ot-reason-text{margin-top:10px}
+  #ot .ot-cta button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--otteal);color:#04342C;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin:4px 0 6px}
+  #ot .ot-cta button:disabled{opacity:.5;cursor:not-allowed}
+  #ot .ot-ctah{font-size:13px;color:var(--otfaint);text-align:center;margin-bottom:10px}
+  #ot .ot-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:.5px solid var(--otline)}
+  #ot .ot-row:last-child{border-bottom:0}
+  #ot .ot-pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:#FAEEDA;color:#854F0B}
+  #ot .ot-pill.ap{background:#E6F7F5;color:#0F766E}#ot .ot-pill.rj{background:#FCEBEB;color:#791F1F}
+  #ot .ot-empty{color:var(--otmuted);font-size:13px;text-align:center;padding:14px}
+  #ot .ot-ok{text-align:center;padding:30px 16px}
+  #ot .ot-ok-icon{width:56px;height:56px;border-radius:50%;background:#16A34A;color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+  #ot .ot-ok-title{font-size:16px;font-weight:600;color:var(--ottext)}
+  #ot .ot-ok-sub{font-size:13px;color:var(--otmuted);margin-top:7px}
+  </style>
+  <div id="ot">
+   <div class="ot-head"><div class="ot-blob"></div>
+    <div class="ot-eb">OT REQUEST · คำขอทำงานล่วงเวลา</div>
+    <div class="ot-h1">ขอ OT / ดูประวัติ</div>
+    <div class="ot-sub">คำขอจะส่งให้หัวหน้าอนุมัติ · ระบบบันทึกเวลา ไม่คำนวณค่าตอบแทน</div>
+   </div>
+
+   <div class="ot-card" id="ot-form">
+    <label>รหัสพนักงาน *</label>
+    <input id="ot-emp" placeholder="YY-XNU-013">
+
+    <div class="ot-sectitle" style="margin-top:16px"><span class="ot-secnum">1</span>วันที่ทำ OT</div>
+    <input id="ot-date" type="date" max="${otTodayStr()}" value="${esc(_otState.ot_date)}">
+    <div class="ot-hint">ขอย้อนหลังได้ไม่เกินที่ HR กำหนด (ปกติ 7 วัน)</div>
+
+    <div class="ot-sectitle" style="margin-top:16px"><span class="ot-secnum">2</span>ช่วงเวลา</div>
+    <div class="ot-timerow">
+     <div><label>เริ่ม</label><input id="ot-start" type="time" value="${esc(_otState.start)}"></div>
+     <div class="ot-to">ถึง</div>
+     <div><label>สิ้นสุด</label><input id="ot-end" type="time" value="${esc(_otState.end)}"></div>
+    </div>
+
+    <div class="ot-sectitle" style="margin-top:16px"><span class="ot-secnum">3</span>จำนวนเวลา</div>
+    <div class="ot-mins">
+     <input id="ot-mins" type="number" min="0" max="1440" step="5" inputmode="numeric" value="${esc(_otState.minutes)}">
+     <span class="ot-mins-unit">นาที</span>
+    </div>
+    <div class="ot-hint" id="ot-mins-hint">คำนวณอัตโนมัติจากเวลาเริ่ม–สิ้นสุด · แก้เองได้</div>
+
+    <div class="ot-sectitle" style="margin-top:16px"><span class="ot-secnum">4</span>เหตุผล</div>
+    <div class="ot-chiprow" id="ot-reason-chips">
+     ${OT_REASONS.map(r => '<span class="ot-chip" data-r="' + esc(r) + '">' + esc(r) + '</span>').join('')}
+    </div>
+    <textarea id="ot-reason" class="ot-reason-text" maxlength="300" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี) · เช่น เคลียร์เวชระเบียนผู้ป่วยค้าง 12 ราย"></textarea>
+    <div class="ot-hint">กดเลือกหัวข้อ แล้วพิมพ์เพิ่มได้ · ระบุชัดช่วยให้อนุมัติเร็ว</div>
+   </div>
+
+   <div class="ot-cta"><button id="ot-btn" disabled><span id="ot-btn-text">ส่งคำขอ OT</span></button></div>
+   <div class="ot-ctah" id="ot-ctah">ยังขาด: รหัสพนักงาน · วันที่ · จำนวนเวลา · เหตุผล</div>
+
+   <div class="ot-card"><div class="ot-sectitle"><span class="ot-secnum" style="background:var(--otnavy);color:#fff">≡</span>ประวัติคำขอ OT</div><div id="ot-hist"><div class="ot-empty">กำลังโหลด...</div></div></div>
+  </div>`;
+
+  // ── bind events ──
+  otQ('ot-date').oninput  = e => { _otState.ot_date = e.target.value; otUpdateCta(); };
+  otQ('ot-start').oninput = e => { _otState.start = e.target.value; otRecomputeMins(); otUpdateCta(); };
+  otQ('ot-end').oninput   = e => { _otState.end = e.target.value; otRecomputeMins(); otUpdateCta(); };
+  otQ('ot-mins').oninput  = e => otSetMins(e.target.value);
+  otQ('ot-reason').oninput = e => { _otState.reasonText = e.target.value; otUpdateCta(); };
+  otQ('ot-emp').oninput   = () => otUpdateCta();
+  otQ('ot-reason-chips').addEventListener('click', e => {
+    const chip = e.target.closest('.ot-chip');
+    if (chip) otPickReason(chip.dataset.r);
+  });
+  otQ('ot-btn').onclick = otSubmit;
+
+  otLoad();
+}
+
+function otSetMins(v) {
+  _otState.minutes = v;
+  _otState.minsAuto = false;
+  const h = otQ('ot-mins-hint');
+  if (h) h.innerHTML = otMinsBreakdown(v) + ' · แก้ค่าเอง';
+  otUpdateCta();
+}
+
+function otMinsBreakdown(mins) {
+  const m = Number(mins);
+  if (!m || m <= 0) return 'คำนวณอัตโนมัติจากเวลาเริ่ม–สิ้นสุด · แก้เองได้';
+  const h = Math.floor(m / 60), r = m % 60;
+  let s = '≈ ';
+  if (h > 0) s += '<b>' + h + ' ชม.</b>';
+  if (r > 0) s += (h > 0 ? ' ' : '') + '<b>' + r + ' นาที</b>';
+  return s;
+}
+
+function otRecomputeMins() {
+  if (!_otState.minsAuto) return;            // ผู้ใช้คุมเอง
+  if (!_otState.start || !_otState.end) return;
+  const [sh, sm] = _otState.start.split(':').map(Number);
+  const [eh, em] = _otState.end.split(':').map(Number);
+  let mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins < 0) mins += 24 * 60;             // ข้ามเที่ยงคืน
+  _otState.minutes = mins ? String(mins) : '';
+  const fM = otQ('ot-mins');
+  if (fM) fM.value = _otState.minutes;
+  const h = otQ('ot-mins-hint');
+  if (h) h.innerHTML = otMinsBreakdown(_otState.minutes);
+}
+
+function otPickReason(r) {
+  _otState.reasonChip = (_otState.reasonChip === r) ? '' : r;
+  document.querySelectorAll('#ot-reason-chips .ot-chip').forEach(c => {
+    c.classList.toggle('selected', c.dataset.r === _otState.reasonChip);
+  });
+  otUpdateCta();
+}
+
+function otReasonValid() {
+  if (_otState.reasonChip && _otState.reasonChip !== 'อื่นๆ') return true;
+  return _otState.reasonText.trim().length > 0;   // "อื่นๆ" หรือไม่เลือก chip → ต้องมีข้อความ
+}
+
+function otFinalReason() {
+  const parts = [];
+  if (_otState.reasonChip && _otState.reasonChip !== 'อื่นๆ') parts.push(_otState.reasonChip);
+  if (_otState.reasonText.trim()) parts.push(_otState.reasonText.trim());
+  return parts.join(' — ');
+}
+
+function otCanSubmit() {
+  const emp = (otQ('ot-emp') ? otQ('ot-emp').value.trim() : '');
+  const mins = Number(_otState.minutes);
+  return !_otState.submitting && !!emp && !!_otState.ot_date && mins > 0 && mins <= 1440 && otReasonValid();
+}
+
+function otUpdateCta() {
+  const btn = otQ('ot-btn');
+  const hint = otQ('ot-ctah');
+  if (!btn) return;
+  const ok = otCanSubmit();
+  btn.disabled = !ok;
+  if (_otState.submitting) { if (hint) hint.textContent = 'กำลังส่ง...'; return; }
+  if (ok) { if (hint) hint.textContent = 'พร้อมส่งให้หัวหน้าอนุมัติ'; return; }
+  const miss = [];
+  const emp = (otQ('ot-emp') ? otQ('ot-emp').value.trim() : '');
+  if (!emp) miss.push('รหัสพนักงาน');
+  if (!_otState.ot_date) miss.push('วันที่');
+  if (!(Number(_otState.minutes) > 0)) miss.push('จำนวนเวลา');
+  if (!otReasonValid()) miss.push('เหตุผล');
+  if (hint) hint.textContent = 'ยังขาด: ' + miss.join(' · ');
+}
+
+async function otLoad() {
+  try {
+    const { data } = await sb.functions.invoke('hr_ot_request');
+    const items = (data && data.items) || [];
+    otQ('ot-hist').innerHTML = items.length ? items.map(x => {
+      const s = String(x.status || '').toLowerCase();
+      const cls = s === 'approved' ? 'ap' : (s === 'rejected' ? 'rj' : '');
+      const when = esc(x.ot_date || '') + (x.expected_start ? ' · ' + esc(x.expected_start) + '–' + esc(x.expected_end || '') : '');
+      const hrs = (x.expected_hours != null) ? (x.expected_hours + ' ชม.') : ((x.expected_minutes != null) ? (x.expected_minutes + ' นาที') : '');
+      return '<div class="ot-row"><div><div>' + when + '</div><div style="font-size:11px;color:#6B7280">' +
+        esc(x.reason || '') + '</div></div><div style="text-align:right"><div style="font-weight:600;color:#0D2F4F">' +
+        esc(hrs) + '</div><span class="ot-pill ' + cls + '">' + esc(x.status || '') + '</span></div></div>';
+    }).join('') : '<div class="ot-empty">ยังไม่มีคำขอ OT</div>';
+    const ct = otQ('ct-otreq'); if (ct) ct.textContent = items.length || '';
+  } catch (e) { console.error('ot load', e); }
+}
+
+async function otSubmit() {
+  if (!otCanSubmit()) return;
+  const emp = otQ('ot-emp').value.trim();
+  _otState.submitting = true;
+  otUpdateCta();
+  const btn = otQ('ot-btn'), bt = otQ('ot-btn-text');
+  if (btn) btn.disabled = true;
+  if (bt) bt.textContent = 'กำลังส่ง...';
+
+  const body = {
+    employee_id:      emp,
+    ot_date:          _otState.ot_date,
+    expected_start:   _otState.start,
+    expected_end:     _otState.end,
+    expected_minutes: Number(_otState.minutes),
+    reason:           otFinalReason(),
+  };
+
+  try {
+    const { data, error } = await sb.functions.invoke('hr_ot_request', { body });
+    _otState.submitting = false;
+    if (error || (data && data.error)) {
+      if (bt) bt.textContent = 'ส่งคำขอ OT';
+      otUpdateCta();
+      alert('ส่งคำขอไม่สำเร็จ: ' + ((data && data.error) || (error && error.message) || ''));
+      return;
+    }
+    otOnDone(data);
+  } catch (e) {
+    _otState.submitting = false;
+    if (bt) bt.textContent = 'ส่งคำขอ OT';
+    otUpdateCta();
+    alert('ส่งคำขอไม่สำเร็จ: ' + (e.message || ''));
+  }
+}
+
+function otOnDone(res) {
+  // เคลียร์ฟอร์ม
+  _otState.ot_date = otTodayStr();
+  _otState.start = ''; _otState.end = ''; _otState.minutes = '';
+  _otState.minsAuto = true; _otState.reasonChip = ''; _otState.reasonText = '';
+  _otState.submitting = false;
+
+  const f = otQ('ot-form');
+  const minsTh = (res && res.expected_minutes != null) ? (res.expected_minutes + ' นาที')
+              : ((res && res.expected_hours != null) ? (res.expected_hours + ' ชม.') : '');
+  const statusTh = (res && res.status === 'approved') ? 'อนุมัติอัตโนมัติแล้ว' : 'รออนุมัติจากหัวหน้า';
+  if (f) {
+    f.innerHTML =
+      '<div class="ot-ok">' +
+        '<div class="ot-ok-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+        '<div class="ot-ok-title">ส่งคำขอ OT แล้ว</div>' +
+        '<div class="ot-ok-sub">' + esc(minsTh) + ' · ' + esc(statusTh) + '</div>' +
+        ((res && res.request_id) ? '<div class="ot-ok-sub" style="margin-top:10px">เลขคำขอ: ' + esc(res.request_id) + '</div>' : '') +
+        '<div class="ot-ok-sub" style="margin-top:14px"><a href="#" id="ot-again" style="color:#0F766E;font-weight:600">+ ขอ OT อีกรายการ</a></div>' +
+      '</div>';
+    const again = otQ('ot-again');
+    if (again) again.onclick = ev => { ev.preventDefault(); mountOtreq(); };
+  }
+
+  otLoad();   // reload list + set ct-otreq
+}
+
+
+/* ===== ported: pinfo ===== */
+// _ported/pinfo.js — native port ของ "ขอแก้ข้อมูลส่วนตัว"
+// ลอกจาก HR Announcement/AppsScript/personal_info_request.html ให้ทำงานบน dashboard
+// pattern เดียวกับ mountExpense ใน index.html
+// globals ที่ใช้ (ห้าม redeclare): $  sb  esc
+// scoped CSS prefix: #pi · element id prefix: pi-
+// แทน ?uid= เดิม ด้วย input "รหัสพนักงาน" id pi-emp
+//
+// field map (7 ค่า):
+//   address           ที่อยู่ปัจจุบัน        (sensitive: ไม่ · แนบเอกสาร: ไม่)
+//   phone             เบอร์โทรศัพท์          (sensitive: ไม่ · แนบเอกสาร: ไม่)
+//   marital_status    สถานภาพสมรส           (sensitive: ไม่ · แนบเอกสาร: ใช่)
+//   dependent         ผู้อยู่ในอุปการะ       (sensitive: ไม่ · แนบเอกสาร: ไม่)
+//   emergency_contact ผู้ติดต่อฉุกเฉิน       (sensitive: ไม่ · แนบเอกสาร: ไม่)
+//   bank_account      บัญชีธนาคาร           (sensitive: ใช่ · แนบเอกสาร: ใช่)
+//   other             อื่นๆ                 (sensitive: ไม่ · แนบเอกสาร: ไม่)
+
+var PI_FIELDS = [
+  { key: 'address',           label: 'ที่อยู่ปัจจุบัน',  sensitive: false, attach: false, ph: 'เช่น 99/1 หมู่ 2 ต.บางรัก กทม. 10500' },
+  { key: 'phone',             label: 'เบอร์โทรศัพท์',    sensitive: false, attach: false, ph: '0812345678' },
+  { key: 'marital_status',    label: 'สถานภาพสมรส',     sensitive: false, attach: true,  ph: 'เช่น สมรส / โสด / หย่า' },
+  { key: 'dependent',         label: 'ผู้อยู่ในอุปการะ', sensitive: false, attach: false, ph: 'ชื่อ-สกุล · ความสัมพันธ์ · ปีเกิด' },
+  { key: 'emergency_contact', label: 'ผู้ติดต่อฉุกเฉิน', sensitive: false, attach: false, ph: 'ชื่อ-สกุล · ความสัมพันธ์ · เบอร์โทร' },
+  { key: 'bank_account',      label: 'บัญชีธนาคาร',     sensitive: true,  attach: true,  ph: 'ธนาคาร · เลขบัญชี · ชื่อบัญชี' },
+  { key: 'other',             label: 'อื่นๆ',           sensitive: false, attach: false, ph: 'ระบุข้อมูลที่ต้องการแก้' }
+];
+
+function piSelectedField() {
+  var v = $('pi-field') ? $('pi-field').value : '';
+  for (var i = 0; i < PI_FIELDS.length; i++) if (PI_FIELDS[i].key === v) return PI_FIELDS[i];
+  return PI_FIELDS[0];
+}
+
+function mountPinfo() {
+  if (!$('wrap-pinfo')) return;
+  $('wrap-pinfo').innerHTML = `
+ <style>
+ #pi{--pnavy:#0D2F4F;--pteal:#3DC5B7;--ptealdk:#0F766E;--ppurple:#7C3AED;--ppurpledk:#5B21B6;--pline:#E5E7EB;--pmuted:#6B7280;max-width:480px;margin:0 auto}
+ #pi .phead{position:relative;background:linear-gradient(135deg,var(--pnavy),var(--ptealdk));color:#fff;padding:16px;border-radius:12px;overflow:hidden}
+ #pi .pblob{position:absolute;width:120px;height:120px;border-radius:50%;background:#ffffff14;top:-44px;right:-36px}
+ #pi .peb{font-size:12px;color:var(--pteal);font-weight:600;position:relative}
+ #pi .ph1{font-size:18px;font-weight:600;margin:6px 0 0;position:relative}
+ #pi .pcard{background:#fff;border-radius:12px;border:.5px solid rgba(0,0,0,.1);margin:14px 0;padding:16px}
+ #pi .psec{font-size:13px;color:var(--pnavy);font-weight:600;margin:0 0 10px}
+ #pi label{display:block;font-size:12px;color:var(--pmuted);margin:10px 0 4px}
+ #pi select,#pi input,#pi textarea{width:100%;padding:10px;border:1px solid #CBD5E1;border-radius:8px;font-size:14px;background:#fff;font-family:inherit}
+ #pi textarea{min-height:60px;resize:vertical}
+ #pi .pinfo{background:#E6F7F5;border-left:3px solid var(--pteal);border-radius:8px;padding:10px;font-size:12px;color:var(--pnavy);line-height:1.5;margin-bottom:4px}
+ #pi .psens{background:#EDE9FE;border-left:3px solid var(--ppurple);border-radius:8px;padding:10px;font-size:12px;color:var(--pnavy);line-height:1.5;margin-top:10px;display:none}
+ #pi .pnote{background:#FEF3C7;border-radius:8px;padding:10px;font-size:12px;color:#854F0B;margin-top:10px}
+ #pi .pattach{display:none}
+ #pi .pattach.on{display:block}
+ #pi .preq::after{content:" *";color:#DC2626}
+ #pi .prow{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:.5px solid var(--pline)}
+ #pi .prow:last-child{border-bottom:0}
+ #pi .ppill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:#FAEEDA;color:#854F0B}
+ #pi .ppill.ap{background:#E6F7F5;color:#0F766E}#pi .ppill.rj{background:#FCEBEB;color:#791F1F}
+ #pi .pcta button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--pteal);color:#04342C;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin:4px 0 14px}
+ #pi .pcta button.sens{background:var(--ppurple);color:#fff}
+ #pi .pcta button:disabled{background:#9CA3AF;color:#fff;cursor:not-allowed}
+ #pi .pdiff{font-size:12px;color:var(--pmuted);margin-top:5px;word-break:break-word}
+ #pi .pempty{color:var(--pmuted);font-size:13px;text-align:center;padding:14px}
+ </style>
+ <div id="pi">
+  <div class="phead"><div class="pblob"></div><div class="peb">PERSONAL · ขอแก้ข้อมูลส่วนตัว</div><div class="ph1">ยื่นคำขอ / ดูประวัติ</div></div>
+  <div class="pcard">
+   <div class="pinfo"><b>คำขอจะส่งให้ HR review ก่อน</b> · ข้อมูลใน Sheet พนักงานจะไม่ถูกแก้ทันที · ใช้เวลา 1-2 วันทำการ</div>
+   <div class="psec" style="margin-top:14px">ยื่นคำขอใหม่</div>
+   <label class="preq">รหัสพนักงาน</label><input id="pi-emp" placeholder="YY-XNU-013">
+   <label class="preq">ต้องการเปลี่ยนข้อมูลอะไร</label>
+   <select id="pi-field">${PI_FIELDS.map(f => '<option value="' + f.key + '">' + esc(f.label) + (f.sensitive ? ' · sensitive' : f.attach ? ' · ต้องแนบเอกสาร' : '') + '</option>').join('')}</select>
+   <div class="psens" id="pi-sens"><b>ข้อมูล sensitive</b> · ตรวจสอบให้ละเอียดก่อนส่ง · ผิดพลาดอาจทำให้เงินเดือนเข้าผิดบัญชี · HR Manager เท่านั้นที่อนุมัติได้</div>
+   <label class="preq">ค่าใหม่</label><textarea id="pi-newval" placeholder="กรอกข้อมูลใหม่"></textarea>
+   <label>เหตุผล / หมายเหตุ</label><textarea id="pi-note" placeholder="ทำไมต้องเปลี่ยน · เช่น ย้ายที่อยู่, จดทะเบียนสมรส, เปลี่ยนธนาคาร"></textarea>
+   <div class="pattach" id="pi-attach-wrap">
+    <label class="preq">ลิงก์เอกสารแนบ</label>
+    <input id="pi-attach" type="url" placeholder="https://drive.google.com/...">
+    <div style="font-size:11px;color:var(--pmuted);margin-top:4px">URL Google Drive · เช่น สำเนาทะเบียนสมรส / หน้าสมุดบัญชี (ต้องเห็น เลขที่ + ชื่อบัญชี)</div>
+   </div>
+   <div class="pnote">คำขอ sensitive (บัญชีธนาคาร) ต้องผ่าน HR Manager · บางประเภทต้องแนบเอกสารยืนยัน</div>
+  </div>
+  <div class="pcta"><button id="pi-btn">ส่งคำขอ</button></div>
+  <div class="pcard"><div class="psec">คำขอที่ผ่านมา</div><div id="pi-hist"><div class="pempty">กำลังโหลด...</div></div></div>
+ </div>`;
+  $('pi-field').onchange = piOnFieldChange;
+  $('pi-btn').onclick = piSubmit;
+  piOnFieldChange();
+  piLoad();
+}
+
+function piOnFieldChange() {
+  var sel = piSelectedField();
+  var aw = $('pi-attach-wrap'); if (aw) aw.classList.toggle('on', !!sel.attach);
+  var sw = $('pi-sens'); if (sw) sw.style.display = sel.sensitive ? 'block' : 'none';
+  var btn = $('pi-btn'); if (btn) { btn.classList.toggle('sens', !!sel.sensitive); btn.textContent = sel.sensitive ? 'ส่งคำขอ (sensitive)' : 'ส่งคำขอ'; }
+  var nv = $('pi-newval'); if (nv) nv.placeholder = sel.ph || 'กรอกข้อมูลใหม่';
+}
+
+async function piLoad() {
+  try {
+    const { data } = await sb.functions.invoke('hr_personal_info_request');
+    const items = (data && data.items) || [];
+    const labelOf = function (k) { for (var i = 0; i < PI_FIELDS.length; i++) if (PI_FIELDS[i].key === k) return PI_FIELDS[i].label; return k || ''; };
+    $('pi-hist').innerHTML = items.length ? items.map(function (x) {
+      var st = x.status || '';
+      var pill = st === 'approved' ? 'ap' : st === 'rejected' ? 'rj' : '';
+      return '<div class="prow"><div style="flex:1;min-width:0">'
+        + '<div>' + esc(labelOf(x.field)) + '</div>'
+        + '<div class="pdiff">' + (x.old_value ? esc(String(x.old_value)) + ' &rarr; ' : '') + '<b>' + esc(String(x.new_value || '')) + '</b></div>'
+        + (x.note ? '<div style="font-size:11px;color:#6B7280;margin-top:3px">' + esc(String(x.note)) + '</div>' : '')
+        + (x.reviewer_notes ? '<div style="font-size:11px;color:#6B7280;margin-top:3px">HR: ' + esc(String(x.reviewer_notes)) + '</div>' : '')
+        + '</div><div style="text-align:right;margin-left:8px"><span class="ppill ' + pill + '">' + esc(st) + '</span></div></div>';
+    }).join('') : '<div class="pempty">ยังไม่มีคำขอ</div>';
+    const ct = $('ct-pinfo'); if (ct) ct.textContent = items.length || '';
+  } catch (e) { console.error('pi', e); }
+}
+
+async function piSubmit() {
+  var emp = $('pi-emp').value.trim();
+  var sel = piSelectedField();
+  var newval = $('pi-newval').value.trim();
+  var note = $('pi-note').value.trim();
+  var attach = $('pi-attach').value.trim();
+  if (!emp) { alert('กรอกรหัสพนักงาน'); return; }
+  if (!newval) { alert('กรอกค่าใหม่'); return; }
+  if (sel.attach && !attach) { alert('ข้อมูลประเภทนี้ต้องแนบเอกสารยืนยัน'); return; }
+  var btn = $('pi-btn'); var orig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'กำลังส่ง...';
+  const { data, error } = await sb.functions.invoke('hr_personal_info_request', {
+    body: { employee_id: emp, field: sel.key, new_value: newval, note: note, attachment_url: attach }
+  });
+  btn.disabled = false; btn.textContent = orig;
+  if (error || (data && data.error)) { alert('ไม่สำเร็จ: ' + ((data && data.error) || (error && error.message) || 'unknown')); return; }
+  $('pi-newval').value = ''; $('pi-note').value = ''; $('pi-attach').value = '';
+  piLoad();
+}
+
+
+/* ===== ported: incident ===== */
+// ===== หน้ารายงานเหตุการณ์ — ลอก incident_report.html เดิมเป๊ะ (scoped #ic) =====
+// ใช้ global เดิม: sb (supabase client), esc (html escape), $ (getElementById)
+// ห้าม redeclare sb / esc · var/fn ทุกตัว prefix ic
+// แทน ?uid= / line_uid เดิมด้วยฟิลด์ "ผู้รายงาน" มาจาก login อยู่แล้ว → ใช้ branch_id field แทน context
+//
+// category 6 ค่า: injury / near_miss / equipment_damage / security / patient_safety / other
+// severity 4 ค่า: minor / moderate / severe / critical
+// create: sb.functions.invoke('hr_incident',{body:{branch_id,category,severity,detail,
+//          incident_date,incident_time,incident_location,immediate_action,medical_attention}})
+// list:   sb.functions.invoke('hr_incident') -> {items:[...]}
+
+var IC_TYPES = [
+  { key: 'injury',           label: 'บาดเจ็บ' },
+  { key: 'near_miss',        label: 'เกือบเกิดเหตุ' },
+  { key: 'equipment_damage', label: 'อุปกรณ์เสียหาย' },
+  { key: 'security',         label: 'ความปลอดภัย' },
+  { key: 'patient_safety',   label: 'ความปลอดภัยผู้ป่วย' },
+  { key: 'other',            label: 'อื่น ๆ' }
+];
+var IC_SEVS = [
+  { key: 'minor',    label: 'เล็กน้อย', sub: 'ไม่ต้องรักษา' },
+  { key: 'moderate', label: 'ปานกลาง',  sub: 'ปฐมพยาบาล' },
+  { key: 'severe',   label: 'รุนแรง',   sub: 'ต้องพบแพทย์' },
+  { key: 'critical', label: 'วิกฤต',    sub: 'ฉุกเฉิน/หยุดงาน' }
+];
+
+var _icState = {
+  branch_id: 'BR00',
+  category: '',
+  severity: '',
+  detail: '',
+  incident_location: '',
+  incident_date: new Date().toISOString().slice(0, 10),
+  incident_time: '',
+  immediate_action: '',
+  medical_attention: false
+};
+
+function mountIncident() {
+  if (!document.getElementById('wrap-incident')) return;
+  document.getElementById('wrap-incident').innerHTML = `
+ <style>
+ #ic{--icnavy:#0D2F4F;--icteal:#3DC5B7;--icerr:#DC2626;--icwarn:#F59E0B;--iccrit:#991B1B;--icmuted:#6B7280;--icborder:#E5E7EB;--icbg:#F8F9FA;max-width:680px;margin:0 auto;color:var(--icnavy)}
+ #ic .ic-head{position:relative;background:#DC2626;color:#fff;padding:16px;border-radius:12px;overflow:hidden}
+ #ic .ic-head::after{content:"";position:absolute;top:-30px;right:-25px;width:90px;height:90px;border-radius:50%;background:#fff;opacity:.18}
+ #ic .ic-head>*{position:relative;z-index:1}
+ #ic .ic-eb{font-size:12px;color:rgba(255,255,255,.85);font-weight:600}
+ #ic .ic-h1{font-size:18px;font-weight:600;margin:4px 0 0}
+ #ic .ic-meta{font-size:11px;color:rgba(255,255,255,.85);margin-top:4px}
+ #ic .ic-warn{background:#FEF3C7;border-left:3px solid var(--icwarn);border-radius:7px;padding:10px 12px;margin:14px 0 10px;font-size:11px;color:#92400E;line-height:1.5}
+ #ic .ic-warn b{color:#92400E;font-weight:600}
+ #ic .ic-card{background:#fff;border:1px solid var(--icborder);border-radius:11px;padding:13px;margin-bottom:10px}
+ #ic .ic-t{font-size:12px;font-weight:600;margin-bottom:8px;letter-spacing:.3px;display:flex;gap:8px;align-items:center}
+ #ic .ic-n{background:#DC2626;color:#fff;font-size:10px;padding:2px 7px;border-radius:99px}
+ #ic .ic-req::after{content:"*";color:var(--icerr);margin-left:3px}
+ #ic label{display:block}
+ #ic .ic-lab{font-size:10px;color:var(--icmuted)}
+ #ic .ic-i{width:100%;padding:9px 11px;border:1px solid var(--icborder);border-radius:7px;font-size:13px;font-family:inherit;background:#fff}
+ #ic .ic-i:focus{outline:none;border-color:var(--icteal);box-shadow:0 0 0 3px rgba(61,197,183,.15)}
+ #ic textarea.ic-i{resize:vertical}
+ #ic .ic-type-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+ #ic .ic-type-c{padding:11px;border:1px solid var(--icborder);border-radius:9px;background:#fff;cursor:pointer;text-align:center;font-size:12px}
+ #ic .ic-type-c:hover{background:#E6F7F5}
+ #ic .ic-type-c.act{background:var(--icteal);color:#fff;border-color:var(--icteal);font-weight:500}
+ #ic .ic-sev-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+ #ic .ic-sev-c{padding:9px 4px;border:1px solid var(--icborder);border-radius:7px;background:#fff;cursor:pointer;text-align:center;font-size:11px;font-weight:500}
+ #ic .ic-sev-c .ic-sev-l{font-size:9px;color:var(--icmuted);margin-top:2px}
+ #ic .ic-sev-c.act.minor{background:#3DC5B7;color:#fff;border-color:#3DC5B7}
+ #ic .ic-sev-c.act.moderate{background:var(--icwarn);color:#fff;border-color:var(--icwarn)}
+ #ic .ic-sev-c.act.severe{background:var(--icerr);color:#fff;border-color:var(--icerr)}
+ #ic .ic-sev-c.act.critical{background:var(--iccrit);color:#fff;border-color:var(--iccrit)}
+ #ic .ic-sev-c.act .ic-sev-l{color:rgba(255,255,255,.85)}
+ #ic .ic-toggle{display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--icbg);border-radius:7px;font-size:12px;cursor:pointer}
+ #ic .ic-toggle input{width:auto}
+ #ic .ic-cta{margin-bottom:14px}
+ #ic .ic-cta button{width:100%;padding:12px;border:0;border-radius:9px;background:var(--icerr);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 0 0 3px rgba(220,38,38,.2)}
+ #ic .ic-cta button:disabled{background:#9CA3AF;cursor:not-allowed;box-shadow:none}
+ #ic .ic-cta-h{font-size:10px;color:var(--icmuted);text-align:center;margin-top:5px}
+ #ic .ic-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:.5px solid var(--icborder)}
+ #ic .ic-row:last-child{border-bottom:0}
+ #ic .ic-pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:#F1F5F9;color:#475569;text-transform:capitalize}
+ #ic .ic-pill.minor{background:#E6F7F5;color:#0F766E}
+ #ic .ic-pill.moderate{background:#FEF3C7;color:#92400E}
+ #ic .ic-pill.severe{background:#FEE2E2;color:#B91C1C}
+ #ic .ic-pill.critical{background:#FCE7E7;color:#991B1B}
+ #ic .ic-empty{color:var(--icmuted);font-size:13px;text-align:center;padding:14px}
+ </style>
+ <div id="ic">
+  <div class="ic-head">
+   <div class="ic-eb">INCIDENT · แจ้งเหตุการณ์</div>
+   <div class="ic-h1">รายงานเหตุการณ์</div>
+   <div class="ic-meta">ผู้รายงานมาจากบัญชีที่ล็อกอิน · severe/critical จะ alert ทันที</div>
+  </div>
+
+  <div class="ic-warn"><b>ข้อมูลสำคัญ:</b> เหตุการณ์ severe หรือ critical จะส่ง alert ทันทีให้ HR + Branch Manager · critical → Owner ด้วย</div>
+
+  <div class="ic-card">
+   <div class="ic-t"><span class="ic-n">1</span><span class="ic-req">ประเภทเหตุการณ์</span></div>
+   <div class="ic-type-row" id="ic-types">${IC_TYPES.map(t => `<div class="ic-type-c ${_icState.category === t.key ? 'act' : ''}" data-k="${esc(t.key)}">${esc(t.label)}</div>`).join('')}</div>
+  </div>
+
+  <div class="ic-card">
+   <div class="ic-t"><span class="ic-n">2</span><span class="ic-req">ระดับความรุนแรง</span></div>
+   <div class="ic-sev-row" id="ic-sevs">${IC_SEVS.map(s => `<div class="ic-sev-c ${s.key} ${_icState.severity === s.key ? 'act' : ''}" data-k="${esc(s.key)}">${esc(s.label)}<div class="ic-sev-l">${esc(s.sub)}</div></div>`).join('')}</div>
+  </div>
+
+  <div class="ic-card">
+   <div class="ic-t"><span class="ic-n">3</span><span class="ic-req">สาขา · วันที่ · สถานที่</span></div>
+   <label class="ic-lab">สาขา</label>
+   <select class="ic-i" id="ic-branch"><option value="BR00">BR00</option><option value="BR01">BR01</option></select>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:7px 0">
+    <div><label class="ic-lab">วันที่เหตุการณ์</label><input type="date" class="ic-i" id="ic-date" value="${esc(_icState.incident_date)}"></div>
+    <div><label class="ic-lab">เวลา</label><input type="time" class="ic-i" id="ic-time"></div>
+   </div>
+   <label class="ic-lab">สถานที่</label>
+   <input class="ic-i" id="ic-loc" placeholder="เช่น · ห้องทรีตเมนต์ 2 / โถงหน้าร้าน / Lab">
+  </div>
+
+  <div class="ic-card">
+   <div class="ic-t"><span class="ic-n">4</span><span class="ic-req">รายละเอียดเหตุการณ์</span></div>
+   <textarea class="ic-i" id="ic-detail" rows="3" placeholder="อะไรเกิดขึ้น · ใครเกี่ยวข้อง · เกิดขึ้นยังไง"></textarea>
+  </div>
+
+  <div class="ic-card">
+   <div class="ic-t"><span class="ic-n">5</span><span>การแก้ไขทันที</span></div>
+   <textarea class="ic-i" id="ic-action" rows="2" placeholder="สิ่งที่ทำทันทีเพื่อจัดการ · first aid / โทร 1669 / แจ้ง manager"></textarea>
+  </div>
+
+  <div class="ic-card">
+   <div class="ic-t"><span class="ic-n">6</span><span>การรักษาพยาบาล</span></div>
+   <label class="ic-toggle"><input type="checkbox" id="ic-med"><span>มีการรักษาพยาบาล (กท.16 / SSO)</span></label>
+  </div>
+
+  <div class="ic-cta">
+   <button id="ic-btn" disabled>แจ้งเหตุการณ์</button>
+   <div class="ic-cta-h" id="ic-ctah">กรอกข้อมูลครบก่อนส่ง</div>
+  </div>
+
+  <div class="ic-card"><div class="ic-t"><span class="ic-n">·</span><span>เหตุการณ์ล่าสุด</span></div><div id="ic-hist"><div class="ic-empty">กำลังโหลด...</div></div></div>
+ </div>`;
+
+  // type / severity pickers
+  document.getElementById('ic-types').onclick = function (e) {
+    var c = e.target.closest('.ic-type-c'); if (!c) return;
+    icSetType(c.dataset.k);
+  };
+  document.getElementById('ic-sevs').onclick = function (e) {
+    var c = e.target.closest('.ic-sev-c'); if (!c) return;
+    icSetSev(c.dataset.k);
+  };
+  // field bindings
+  document.getElementById('ic-branch').value = _icState.branch_id;
+  document.getElementById('ic-branch').oninput = function () { _icState.branch_id = this.value; };
+  document.getElementById('ic-date').oninput = function () { _icState.incident_date = this.value; };
+  document.getElementById('ic-time').oninput = function () { _icState.incident_time = this.value; };
+  document.getElementById('ic-loc').oninput = function () { _icState.incident_location = this.value; icUpdateCta(); };
+  document.getElementById('ic-detail').oninput = function () { _icState.detail = this.value; icUpdateCta(); };
+  document.getElementById('ic-action').oninput = function () { _icState.immediate_action = this.value; };
+  document.getElementById('ic-med').onchange = function () { _icState.medical_attention = this.checked; };
+  document.getElementById('ic-btn').onclick = icSubmit;
+
+  icUpdateCta();
+  icLoad();
+}
+
+function icSetType(k) {
+  _icState.category = k;
+  var nodes = document.querySelectorAll('#ic-types .ic-type-c');
+  for (var i = 0; i < nodes.length; i++) nodes[i].classList.toggle('act', nodes[i].dataset.k === k);
+  icUpdateCta();
+}
+
+function icSetSev(k) {
+  _icState.severity = k;
+  var nodes = document.querySelectorAll('#ic-sevs .ic-sev-c');
+  for (var i = 0; i < nodes.length; i++) nodes[i].classList.toggle('act', nodes[i].dataset.k === k);
+  icUpdateCta();
+}
+
+function icUpdateCta() {
+  var btn = document.getElementById('ic-btn'), h = document.getElementById('ic-ctah');
+  if (!btn) return;
+  var ok = _icState.category && _icState.severity && _icState.detail.trim() && _icState.incident_location.trim();
+  btn.disabled = !ok;
+  h.textContent = ok ? 'พร้อมส่ง · จะ noti HR + manager ทันที' : 'กรอกข้อมูลครบก่อนส่ง';
+}
+
+async function icLoad() {
+  try {
+    var res = await sb.functions.invoke('hr_incident');
+    var items = (res && res.data && res.data.items) || [];
+    var hist = document.getElementById('ic-hist');
+    if (!hist) return;
+    hist.innerHTML = items.length ? items.map(function (x) {
+      var sev = x.severity || '';
+      return '<div class="ic-row"><div><div>' + esc(icTypeLabel(x.category)) + '</div>'
+        + '<div style="font-size:11px;color:#6B7280">' + esc(x.incident_date || '') + (x.incident_location ? ' · ' + esc(x.incident_location) : '') + '</div></div>'
+        + '<div style="text-align:right"><div style="font-size:11px;color:#6B7280">' + esc(x.status || '') + '</div>'
+        + '<span class="ic-pill ' + esc(sev) + '">' + esc(sev) + '</span></div></div>';
+    }).join('') : '<div class="ic-empty">ยังไม่มีเหตุการณ์</div>';
+    var ct = document.getElementById('ct-incident'); if (ct) ct.textContent = items.length || '';
+  } catch (e) { console.error('incident load', e); }
+}
+
+function icTypeLabel(k) {
+  for (var i = 0; i < IC_TYPES.length; i++) if (IC_TYPES[i].key === k) return IC_TYPES[i].label;
+  return k || '';
+}
+
+async function icSubmit() {
+  var btn = document.getElementById('ic-btn'), h = document.getElementById('ic-ctah');
+  if (btn.disabled) return;
+  btn.disabled = true; h.textContent = 'กำลังส่ง...';
+  var body = {
+    branch_id: _icState.branch_id,
+    category: _icState.category,
+    severity: _icState.severity,
+    detail: _icState.detail,
+    incident_date: _icState.incident_date,
+    incident_time: _icState.incident_time,
+    incident_location: _icState.incident_location,
+    immediate_action: _icState.immediate_action,
+    medical_attention: _icState.medical_attention
+  };
+  var resp = await sb.functions.invoke('hr_incident', { body: body });
+  var data = resp && resp.data, error = resp && resp.error;
+  if (error || (data && data.error)) {
+    btn.disabled = false;
+    h.textContent = 'ส่งล้มเหลว · ' + ((data && data.error) || (error && error.message) || '');
+    return;
+  }
+  // เคลียร์ฟอร์ม + reset state
+  _icState.category = '';
+  _icState.severity = '';
+  _icState.detail = '';
+  _icState.incident_location = '';
+  _icState.incident_time = '';
+  _icState.immediate_action = '';
+  _icState.medical_attention = false;
+  // reload หน้า (mount ใหม่) + อัปเดต count
+  mountIncident();
+}
+
+
+/* ===== ported: oneonone ===== */
+/* _ported/oneonone.js
+ * Native port ของหน้า "1:1 Log" เดิม (Apps Script: one_on_one_manager.html)
+ * Pattern: เลียนแบบ mountExpense() ใน index.html — scoped CSS prefix #oo + id prefix oo-
+ * ใช้ global `sb` (supabase client) + `esc` (html escaper) ที่ index.html ประกาศไว้แล้ว (ห้าม redeclare)
+ * Mount เข้า #wrap-oneonone · set badge #ct-oneonone
+ *
+ * Edge Function:
+ *   create : sb.functions.invoke('hr_oneonone',{body:{employee_id,supervisor_id,session_date,
+ *            mode,topic,notes,action_items,sentiment,next_date}})  · mode = in_person|video|phone
+ *   list   : sb.functions.invoke('hr_oneonone') -> {items:[...]}
+ */
+
+function mountOneonone(){
+  if(typeof $!=='undefined'){ if(!$('wrap-oneonone'))return; }
+  var wrap=document.getElementById('wrap-oneonone'); if(!wrap)return;
+
+  wrap.innerHTML=`
+  <style>
+  #oo{--onavy:#0D2F4F;--oteal:#3DC5B7;--otealdk:#0F766E;--oline:#E5E7EB;--omuted:#6B7280;max-width:480px;margin:0 auto}
+  #oo .oo-head{position:relative;background:linear-gradient(135deg,var(--onavy),var(--otealdk));color:#fff;padding:16px;border-radius:12px;overflow:hidden}
+  #oo .oo-blob{position:absolute;width:120px;height:120px;border-radius:50%;background:#ffffff14;top:-44px;right:-36px}
+  #oo .oo-eb{font-size:12px;color:var(--oteal);font-weight:600;position:relative}
+  #oo .oo-h1{font-size:18px;font-weight:600;margin:6px 0 0;position:relative}
+  #oo .oo-card{background:#fff;border-radius:12px;border:.5px solid rgba(0,0,0,.1);margin:14px 0;padding:16px}
+  #oo .oo-sec{font-size:13px;color:var(--onavy);font-weight:600;margin:0 0 10px}
+  #oo label{display:block;font-size:12px;color:var(--omuted);margin:10px 0 4px}
+  #oo select,#oo input,#oo textarea{width:100%;padding:10px;border:1px solid #CBD5E1;border-radius:8px;font-size:14px;background:#fff;font-family:inherit;box-sizing:border-box}
+  #oo textarea{min-height:56px;resize:vertical}
+  #oo .oo-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #oo .oo-mode{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+  #oo .oo-mbtn{padding:10px 6px;border:1px solid #CBD5E1;border-radius:8px;background:#fff;text-align:center;font-size:13px;font-weight:500;color:var(--omuted);cursor:pointer}
+  #oo .oo-mbtn.sel{background:var(--onavy);color:#fff;border-color:var(--onavy)}
+  #oo .oo-sent{display:flex;gap:6px;margin-top:4px}
+  #oo .oo-sbtn{flex:1;padding:8px 4px;border:1px solid #CBD5E1;border-radius:8px;background:#fff;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+  #oo .oo-sbtn .n{font-size:16px;font-weight:600;color:var(--onavy);line-height:1}
+  #oo .oo-sbtn .l{font-size:9px;color:var(--omuted)}
+  #oo .oo-sbtn.sel{border-width:2px}
+  #oo .oo-sbtn[data-s="1"].sel{background:#FEE2E2;border-color:#B91C1C}
+  #oo .oo-sbtn[data-s="2"].sel{background:#FEF3C7;border-color:#B45309}
+  #oo .oo-sbtn[data-s="3"].sel{background:#F1F5F9;border-color:var(--onavy)}
+  #oo .oo-sbtn[data-s="4"].sel{background:#DBEAFE;border-color:#1D4ED8}
+  #oo .oo-sbtn[data-s="5"].sel{background:#D1FAE5;border-color:#047857}
+  #oo .oo-hint{font-size:11px;color:var(--omuted);margin-top:6px;line-height:1.45}
+  #oo .oo-cta button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--oteal);color:#04342C;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin:4px 0 14px}
+  #oo .oo-cta button:disabled{opacity:.55;cursor:default}
+  #oo .oo-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:.5px solid var(--oline)}
+  #oo .oo-row:last-child{border-bottom:0}
+  #oo .oo-pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:#FAEEDA;color:#854F0B}
+  #oo .oo-pill.ap{background:#E6F7F5;color:#0F766E}#oo .oo-pill.rj{background:#FCEBEB;color:#791F1F}
+  #oo .oo-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:600;color:#fff}
+  #oo .oo-badge[data-s="1"]{background:#B91C1C}#oo .oo-badge[data-s="2"]{background:#B45309}
+  #oo .oo-badge[data-s="3"]{background:var(--onavy)}#oo .oo-badge[data-s="4"]{background:#1D4ED8}
+  #oo .oo-badge[data-s="5"]{background:#047857}
+  #oo .oo-empty{color:var(--omuted);font-size:13px;text-align:center;padding:14px}
+  </style>
+  <div id="oo">
+   <div class="oo-head"><div class="oo-blob"></div><div class="oo-eb">1:1 LOG · บันทึก 1-on-1</div><div class="oo-h1">บันทึกการคุย / ดูประวัติ</div></div>
+   <div class="oo-card"><div class="oo-sec">บันทึกใหม่</div>
+    <div class="oo-grid2">
+     <div><label>รหัสพนักงาน</label><input id="oo-emp" placeholder="YY-XNU-013"></div>
+     <div><label>หัวหน้า</label><input id="oo-sup" placeholder="YY-..."></div>
+    </div>
+    <label>วันที่คุย</label><input id="oo-date" type="date">
+    <label>รูปแบบ</label>
+    <div class="oo-mode">
+     <div class="oo-mbtn sel" data-mode="in_person">พบเจอกัน</div>
+     <div class="oo-mbtn" data-mode="video">วิดีโอ</div>
+     <div class="oo-mbtn" data-mode="phone">โทรศัพท์</div>
+    </div>
+    <label>หัวข้อ / agenda</label><textarea id="oo-topic" placeholder="ติดตามงาน · ฟีดแบค · ปัญหาที่อยากคุย"></textarea>
+    <label>บันทึกการคุย / สรุปประเด็น</label><textarea id="oo-notes" placeholder="สรุปสิ่งที่คุยกัน"></textarea>
+    <label>Action items (สิ่งที่ต้องทำต่อ)</label><textarea id="oo-action" placeholder="follow-up tasks"></textarea>
+    <label>พนักงานรู้สึกยังไง? (ไม่บังคับ)</label>
+    <div class="oo-sent" id="oo-sent">
+     <div class="oo-sbtn" data-s="1"><span class="n">1</span><span class="l">เครียดมาก</span></div>
+     <div class="oo-sbtn" data-s="2"><span class="n">2</span><span class="l">ไม่ค่อยดี</span></div>
+     <div class="oo-sbtn" data-s="3"><span class="n">3</span><span class="l">ปกติ</span></div>
+     <div class="oo-sbtn" data-s="4"><span class="n">4</span><span class="l">ดี</span></div>
+     <div class="oo-sbtn" data-s="5"><span class="n">5</span><span class="l">ดีมาก</span></div>
+    </div>
+    <div class="oo-hint">ไม่กด = ไม่ระบุ (จะไม่เข้า average)</div>
+    <label>นัดครั้งถัดไป (ถ้ามี)</label><input id="oo-next" type="date">
+   </div>
+   <div class="oo-cta"><button id="oo-btn">บันทึก 1:1</button></div>
+   <div class="oo-card"><div class="oo-sec">ประวัติการคุย</div><div id="oo-hist"><div class="oo-empty">กำลังโหลด...</div></div></div>
+  </div>`;
+
+  // mode selector (var/fn prefix oo)
+  var ooMode='in_person';
+  Array.prototype.forEach.call(document.querySelectorAll('#oo .oo-mbtn'),function(b){
+    b.onclick=function(){
+      ooMode=b.getAttribute('data-mode');
+      Array.prototype.forEach.call(document.querySelectorAll('#oo .oo-mbtn'),function(x){ x.classList.toggle('sel',x===b); });
+    };
+  });
+
+  // sentiment selector (0 = ไม่ระบุ)
+  var ooSent=0;
+  Array.prototype.forEach.call(document.querySelectorAll('#oo .oo-sbtn'),function(b){
+    b.onclick=function(){
+      var v=Number(b.getAttribute('data-s'));
+      ooSent=(ooSent===v)?0:v;
+      Array.prototype.forEach.call(document.querySelectorAll('#oo .oo-sbtn'),function(x){
+        x.classList.toggle('sel',Number(x.getAttribute('data-s'))===ooSent);
+      });
+    };
+  });
+
+  // expose current selections + reset to submit handler (closure vars live here)
+  window.__ooGetMode=function(){ return ooMode; };
+  window.__ooGetSent=function(){ return ooSent; };
+  window.__ooResetSel=function(){
+    ooMode='in_person'; ooSent=0;
+    Array.prototype.forEach.call(document.querySelectorAll('#oo .oo-mbtn'),function(x){
+      x.classList.toggle('sel',x.getAttribute('data-mode')==='in_person');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#oo .oo-sbtn'),function(x){ x.classList.remove('sel'); });
+  };
+
+  document.getElementById('oo-btn').onclick=ooSubmit;
+  ooLoad();
+}
+
+async function ooLoad(){
+  try{
+    var res=await sb.functions.invoke('hr_oneonone');
+    var data=res&&res.data; var items=(data&&data.items)||[];
+    var host=document.getElementById('oo-hist'); if(!host)return;
+    host.innerHTML=items.length?items.map(function(x){
+      var st=x.status||'';
+      var pill=st==='approved'?'ap':(st==='rejected'?'rj':'');
+      var s=Number(x.sentiment||0);
+      var badge=(s>=1&&s<=5)?'<span class="oo-badge" data-s="'+s+'">'+s+'</span>':'';
+      var modeLbl=x.mode==='video'?'วิดีโอ':(x.mode==='phone'?'โทร':'พบตัว');
+      var head=esc(x.employee_id||'')+(x.session_date?' · '+esc(x.session_date):'');
+      var sub=esc(x.topic||x.notes||'')||modeLbl;
+      return '<div class="oo-row">'
+        +'<div style="min-width:0"><div>'+head+'</div>'
+        +'<div style="font-size:11px;color:#6B7280">'+sub+'</div></div>'
+        +'<div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
+        +(badge||'')
+        +'<span class="oo-pill '+pill+'">'+(esc(st)||modeLbl)+'</span></div>'
+        +'</div>';
+    }).join(''):'<div class="oo-empty">ยังไม่มีบันทึก 1:1</div>';
+    var ct=document.getElementById('ct-oneonone'); if(ct)ct.textContent=items.length||'';
+  }catch(e){ console.error('oneonone',e);
+    var h=document.getElementById('oo-hist'); if(h)h.innerHTML='<div class="oo-empty">โหลดประวัติไม่สำเร็จ</div>';
+  }
+}
+
+async function ooSubmit(){
+  var emp=document.getElementById('oo-emp').value.trim();
+  if(!emp){ alert('กรอกรหัสพนักงาน'); return; }
+
+  var sentVal=(typeof window.__ooGetSent==='function')?window.__ooGetSent():0;
+  var body={
+    employee_id:   emp,
+    supervisor_id: document.getElementById('oo-sup').value.trim(),
+    session_date:  document.getElementById('oo-date').value,
+    mode:          (typeof window.__ooGetMode==='function')?window.__ooGetMode():'in_person',
+    topic:         document.getElementById('oo-topic').value.trim(),
+    notes:         document.getElementById('oo-notes').value.trim(),
+    action_items:  document.getElementById('oo-action').value.trim(),
+    sentiment:     sentVal,
+    next_date:     document.getElementById('oo-next').value
+  };
+
+  var btn=document.getElementById('oo-btn');
+  btn.disabled=true; btn.textContent='กำลังบันทึก...';
+  try{
+    var res=await sb.functions.invoke('hr_oneonone',{body:body});
+    var data=res&&res.data, error=res&&res.error;
+    if(error||(data&&data.error)){
+      alert('ไม่สำเร็จ: '+((data&&data.error)||(error&&error.message)||'unknown'));
+      return;
+    }
+    // เคลียร์ฟอร์ม
+    ['oo-emp','oo-sup','oo-date','oo-topic','oo-notes','oo-action','oo-next'].forEach(function(id){
+      var el=document.getElementById(id); if(el)el.value='';
+    });
+    // reset mode + sentiment (closure state + UI)
+    if(typeof window.__ooResetSel==='function') window.__ooResetSel();
+    ooLoad();
+  }catch(e){
+    alert('ไม่สำเร็จ: '+(e&&e.message||e));
+  }finally{
+    btn.disabled=false; btn.textContent='บันทึก 1:1';
+  }
+}
+
+
+/* ===== ported: probreview ===== */
+/* probreview.js — native port ของหน้า "ประเมินทดลองงาน" (เดิม probation_review_liff.html)
+ * ใช้ global ที่มีอยู่แล้วใน index.html: sb (supabase client), esc (html-escape)
+ * ห้าม redeclare sb/esc · var/fn ทุกตัว prefix `pr` · scoped CSS `#pr` + element id `pr-`
+ * mount จุดเดียว: เรียก mountProbreview() แทน mountWrite('probreview')
+ *
+ * Field map (contract กับ edge function hr_probation_review):
+ *   create body = { employee_id, milestone_days, result, score, comments, review_date }
+ *     - employee_id   : string  (input "รหัสพนักงาน" -> pr-emp แทน ?uid=)
+ *     - milestone_days : 30 | 60 | 90 | 120
+ *     - result        : pass | extend | fail
+ *     - score         : number (คะแนนรวม 0-100, อาจเว้นได้)
+ *     - comments      : string (ความเห็นเพิ่มเติม)
+ *     - review_date   : YYYY-MM-DD
+ *   list = sb.functions.invoke('hr_probation_review') -> { items:[...] }
+ */
+
+var PR_FN = 'hr_probation_review';
+var prResult = '';      // ผลที่เลือก: pass | extend | fail
+var prBusy = false;
+
+function mountProbreview() {
+  var wrap = document.getElementById('wrap-probreview');
+  if (!wrap) return;
+
+  wrap.innerHTML = ''
+    + '<style>'
+    + '#pr{--prnavy:#0D2F4F;--prteal:#3DC5B7;--prtealdk:#0F766E;--prline:#E5E7EB;--prmuted:#6B7280;max-width:480px;margin:0 auto}'
+    + '#pr .pr-head{position:relative;background:linear-gradient(135deg,var(--prnavy),var(--prtealdk));color:#fff;padding:16px;border-radius:12px;overflow:hidden}'
+    + '#pr .pr-blob{position:absolute;width:120px;height:120px;border-radius:50%;background:#ffffff14;top:-44px;right:-36px}'
+    + '#pr .pr-eb{font-size:12px;color:var(--prteal);font-weight:600;position:relative}'
+    + '#pr .pr-h1{font-size:18px;font-weight:600;margin:6px 0 0;position:relative}'
+    + '#pr .pr-card{background:#fff;border-radius:12px;border:.5px solid rgba(0,0,0,.1);margin:14px 0;padding:16px}'
+    + '#pr .pr-sec{font-size:13px;color:var(--prnavy);font-weight:600;margin:0 0 10px;display:flex;align-items:center;gap:8px}'
+    + '#pr .pr-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#E0F7F4;color:var(--prtealdk);font-size:11px;font-weight:700}'
+    + '#pr label{display:block;font-size:12px;color:var(--prmuted);margin:10px 0 4px}'
+    + '#pr select,#pr input,#pr textarea{width:100%;padding:10px;border:1px solid #CBD5E1;border-radius:8px;font-size:14px;background:#fff;font-family:inherit;box-sizing:border-box}'
+    + '#pr textarea{min-height:64px;resize:vertical}'
+    + '#pr .pr-notice{background:#FEF3C7;color:#92400E;border-radius:10px;padding:9px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px}'
+    + '#pr .pr-deci{display:flex;gap:8px}'
+    + '#pr .pr-deci button{flex:1;text-align:center;border:1.5px solid var(--prline);border-radius:10px;padding:11px 4px;font-size:13px;font-weight:600;color:var(--prmuted);background:#fff;font-family:inherit;cursor:pointer}'
+    + '#pr .pr-deci button.on{border-color:var(--prtealdk);background:#E0F7F4;color:var(--prtealdk)}'
+    + '#pr .pr-cta button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--prteal);color:#04342C;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin:4px 0 14px}'
+    + '#pr .pr-cta button:disabled{opacity:.6;cursor:default}'
+    + '#pr .pr-msg{font-size:12.5px;color:var(--prmuted);text-align:center;min-height:18px;margin-bottom:8px}'
+    + '#pr .pr-msg.err{color:#A32D2D}#pr .pr-msg.ok{color:var(--prtealdk)}'
+    + '#pr .pr-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:.5px solid var(--prline)}'
+    + '#pr .pr-row:last-child{border-bottom:0}'
+    + '#pr .pr-pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:#FAEEDA;color:#854F0B}'
+    + '#pr .pr-pill.ap{background:#E6F7F5;color:#0F766E}#pr .pr-pill.rj{background:#FCEBEB;color:#791F1F}'
+    + '#pr .pr-res{font-weight:600;color:var(--prnavy)}'
+    + '#pr .pr-empty{color:var(--prmuted);font-size:13px;text-align:center;padding:14px}'
+    + '</style>'
+    + '<div id="pr">'
+    + '  <div class="pr-head"><div class="pr-blob"></div><div class="pr-eb">PROBATION · ประเมินทดลองงาน</div><div class="pr-h1">บันทึกผลรีวิว / ดูประวัติ</div></div>'
+    + '  <div class="pr-notice">ผลรีวิวเป็นข้อมูลลับ · ระบบบันทึกผู้กรอกและเวลา · พนักงานจะได้รับแจ้งผลผ่าน flow ปกติ ไม่เห็นคะแนนรายข้อ</div>'
+    + '  <div class="pr-card">'
+    + '    <div class="pr-sec"><span class="pr-num">1</span>พนักงาน &amp; รอบประเมิน</div>'
+    + '    <label>รหัสพนักงาน</label><input id="pr-emp" placeholder="YY-XNU-013">'
+    + '    <label>รอบประเมิน (วัน)</label><select id="pr-milestone"><option value="30">ครบ 30 วัน</option><option value="60">ครบ 60 วัน</option><option value="90" selected>ครบ 90 วัน</option><option value="120">ครบ 120 วัน</option></select>'
+    + '    <label>วันประเมิน</label><input id="pr-date" type="date">'
+    + '  </div>'
+    + '  <div class="pr-card">'
+    + '    <div class="pr-sec"><span class="pr-num">2</span>คะแนน &amp; ความเห็น</div>'
+    + '    <label>คะแนนรวม (0-100)</label><input id="pr-score" type="number" min="0" max="100" placeholder="เช่น 82">'
+    + '    <label>ความเห็นเพิ่มเติม</label><textarea id="pr-comments" placeholder="จุดแข็ง · จุดที่ควรพัฒนา · ข้อสังเกต"></textarea>'
+    + '  </div>'
+    + '  <div class="pr-card">'
+    + '    <div class="pr-sec"><span class="pr-num">3</span>ผลการประเมินรอบนี้</div>'
+    + '    <div class="pr-deci" id="pr-deci">'
+    + '      <button data-result="pass">ผ่านเกณฑ์</button>'
+    + '      <button data-result="extend">ติดตามต่อ</button>'
+    + '      <button data-result="fail">ไม่ผ่าน</button>'
+    + '    </div>'
+    + '  </div>'
+    + '  <div class="pr-msg" id="pr-msg"></div>'
+    + '  <div class="pr-cta"><button id="pr-btn">บันทึกผลรีวิว</button></div>'
+    + '  <div class="pr-card"><div class="pr-sec"><span class="pr-num"><i class="ti ti-history" style="font-size:12px"></i></span>ประวัติการประเมิน</div><div id="pr-hist"><div class="pr-empty">กำลังโหลด...</div></div></div>'
+    + '</div>';
+
+  // reset state ทุกครั้งที่ mount
+  prResult = '';
+  prBusy = false;
+
+  // ปุ่มผลการประเมิน — toggle เลือกได้ครั้งเดียว (เหมือน setDecision เดิม)
+  var deci = document.getElementById('pr-deci');
+  var btns = deci.getElementsByTagName('button');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].onclick = prSetResult;
+  }
+
+  document.getElementById('pr-btn').onclick = prSubmit;
+  prLoad();
+}
+
+function prSetResult(e) {
+  var btn = e.currentTarget;
+  prResult = btn.getAttribute('data-result');
+  var btns = document.getElementById('pr-deci').getElementsByTagName('button');
+  for (var i = 0; i < btns.length; i++) btns[i].className = '';
+  btn.className = 'on';
+}
+
+function prMsg(text, kind) {
+  var el = document.getElementById('pr-msg');
+  if (!el) return;
+  el.textContent = text || '';
+  el.className = 'pr-msg' + (kind ? ' ' + kind : '');
+}
+
+// map ผล -> ฉลากไทย/สีในตารางประวัติ
+function prResultLabel(r) {
+  return { pass: 'ผ่าน', extend: 'ติดตามต่อ', fail: 'ไม่ผ่าน' }[r] || (r || '');
+}
+
+async function prLoad() {
+  try {
+    var res = await sb.functions.invoke(PR_FN);
+    var data = res && res.data;
+    var items = (data && data.items) || [];
+    var hist = document.getElementById('pr-hist');
+    if (!hist) return;
+    if (!items.length) {
+      hist.innerHTML = '<div class="pr-empty">ยังไม่มีรายการประเมิน</div>';
+    } else {
+      hist.innerHTML = items.map(function (x) {
+        var s = String(x.status || '').toLowerCase();
+        var pill = s === 'approved' ? 'ap' : (s === 'rejected' ? 'rj' : '');
+        var scoreTxt = (x.score != null && x.score !== '') ? (Math.round(Number(x.score) * 10) / 10) : '–';
+        return '<div class="pr-row">'
+          + '<div><div>' + esc(x.employee_id || '') + ' · ครบ ' + esc(x.milestone_days || '') + ' วัน</div>'
+          + '<div style="font-size:11px;color:#6B7280">' + esc(prResultLabel(x.result)) + (x.comments ? ' · ' + esc(x.comments) : '') + '</div></div>'
+          + '<div style="text-align:right"><div class="pr-res">' + esc(scoreTxt) + '</div>'
+          + (x.status ? '<span class="pr-pill ' + pill + '">' + esc(x.status) + '</span>' : '') + '</div>'
+          + '</div>';
+      }).join('');
+    }
+    var ct = document.getElementById('ct-probreview');
+    if (ct) ct.textContent = items.length || '';
+  } catch (e) {
+    console.error('pr', e);
+  }
+}
+
+async function prSubmit() {
+  if (prBusy) return;
+  var emp = (document.getElementById('pr-emp').value || '').trim();
+  var milestone = document.getElementById('pr-milestone').value;
+  var scoreRaw = (document.getElementById('pr-score').value || '').trim();
+  var comments = document.getElementById('pr-comments').value || '';
+  var reviewDate = document.getElementById('pr-date').value || '';
+
+  if (!emp) { prMsg('กรุณากรอกรหัสพนักงาน', 'err'); return; }
+  if (!prResult) { prMsg('กรุณาเลือกผลการประเมิน (ผ่าน / ติดตามต่อ / ไม่ผ่าน)', 'err'); return; }
+
+  var body = {
+    employee_id: emp,
+    milestone_days: milestone,
+    result: prResult,
+    comments: comments,
+    review_date: reviewDate,
+  };
+  if (scoreRaw !== '') body.score = Number(scoreRaw);
+
+  prBusy = true;
+  var btn = document.getElementById('pr-btn');
+  btn.disabled = true; btn.textContent = 'กำลังส่ง…';
+  prMsg('กำลังบันทึก…');
+
+  try {
+    var res = await sb.functions.invoke(PR_FN, { body: body });
+    var data = res && res.data, error = res && res.error;
+    prBusy = false;
+    btn.disabled = false; btn.textContent = 'บันทึกผลรีวิว';
+    if (error || (data && data.error)) {
+      prMsg('ไม่สำเร็จ: ' + ((data && data.error) || (error && error.message) || ''), 'err');
+      return;
+    }
+    // สำเร็จ — เคลียร์ฟอร์ม + reset ผล + reload + set ct
+    document.getElementById('pr-emp').value = '';
+    document.getElementById('pr-score').value = '';
+    document.getElementById('pr-comments').value = '';
+    document.getElementById('pr-date').value = '';
+    prResult = '';
+    var btns = document.getElementById('pr-deci').getElementsByTagName('button');
+    for (var i = 0; i < btns.length; i++) btns[i].className = '';
+    prMsg('บันทึกผลรีวิวเรียบร้อย ✓', 'ok');
+    prLoad();
+  } catch (e) {
+    prBusy = false;
+    btn.disabled = false; btn.textContent = 'บันทึกผลรีวิว';
+    prMsg('ไม่สำเร็จ: ' + (e && e.message), 'err');
+  }
+}
+
+
+/* ===== ported: survey ===== */
+/* survey.js · native port of pulse_response.html (+ survey_360.html) · v1
+ * ใช้ global `sb` (supabase client) + `esc` ที่ index.html ประกาศไว้แล้ว — ห้าม redeclare
+ * Edge function: hr_survey_response
+ *   create: sb.functions.invoke('hr_survey_response',{body:{survey_type,employee_id,rating,comment,anonymous}})
+ *   list  : sb.functions.invoke('hr_survey_response') -> {items:[...]}
+ * survey_type: pulse | exit_hr | one_on_one | learning_log | idp_review | quarterly_review | buddy_feedback | review_360
+ * mount target: #wrap-survey · counter: #ct-survey
+ */
+
+// ---- ชนิดแบบสอบถาม (ลอกจากระบบเดิม) ----
+var SV_TYPES = [
+  { v: 'pulse',            l: 'Pulse Survey · เช็คความรู้สึก' },
+  { v: 'exit_hr',          l: 'สัมภาษณ์ลาออก (HR)' },
+  { v: 'one_on_one',       l: '1-on-1 · คุยตัวต่อตัว' },
+  { v: 'learning_log',     l: 'Learning Log · บันทึกการเรียนรู้' },
+  { v: 'idp_review',       l: 'IDP Review · แผนพัฒนา' },
+  { v: 'quarterly_review', l: 'Quarterly Review · รายไตรมาส' },
+  { v: 'buddy_feedback',   l: 'Buddy Feedback · เพื่อนคู่หู' },
+  { v: 'review_360',       l: '360° Review · feedback รอบทิศ' }
+];
+
+var SV_SCALE = 5; // 1..5
+
+// state
+var _svState = { type: 'pulse', rating: null, comment: '', anonymous: true, emp: '' };
+
+function mountSurvey() {
+  if (!document.getElementById('wrap-survey')) return;
+  document.getElementById('wrap-survey').innerHTML = `
+ <style>
+ #sv{--svnavy:#0D2F4F;--svteal:#3DC5B7;--svtealdk:#0F766E;--svteallt:#E1F5EE;--svline:#E5E7EB;--svmuted:#6B7280;--sverr:#EF4444;max-width:480px;margin:0 auto}
+ #sv .sv-head{position:relative;background:linear-gradient(135deg,var(--svnavy),var(--svtealdk));color:#fff;padding:16px;border-radius:12px;overflow:hidden}
+ #sv .sv-blob{position:absolute;width:120px;height:120px;border-radius:50%;background:#ffffff14;top:-44px;right:-36px}
+ #sv .sv-eb{font-size:12px;color:var(--svteal);font-weight:600;position:relative}
+ #sv .sv-h1{font-size:18px;font-weight:600;margin:6px 0 0;position:relative}
+ #sv .sv-card{background:#fff;border-radius:12px;border:.5px solid rgba(0,0,0,.1);margin:14px 0;padding:16px}
+ #sv .sv-sec{font-size:13px;color:var(--svnavy);font-weight:600;margin:0 0 10px}
+ #sv label{display:block;font-size:12px;color:var(--svmuted);margin:10px 0 4px}
+ #sv select,#sv input,#sv textarea{width:100%;padding:10px;border:1px solid #CBD5E1;border-radius:8px;font-size:14px;background:#fff;font-family:inherit;box-sizing:border-box}
+ #sv textarea{min-height:80px;resize:vertical}
+ #sv .sv-anon{background:var(--svteallt);border-left:3px solid var(--svteal);border-radius:7px;padding:11px 13px;margin:0 0 12px;font-size:13px;color:#0F6E56;line-height:1.5}
+ #sv .sv-anon b{color:var(--svnavy)}
+ #sv .sv-q{font-size:15px;font-weight:500;line-height:1.5;margin:0 0 11px}
+ #sv .sv-q .sv-req{color:var(--sverr)}
+ #sv .sv-scale{display:flex;gap:5px}
+ #sv .sv-pill{flex:1;padding:13px 0;border-radius:7px;text-align:center;font-size:14px;font-weight:500;background:#FAFBFC;color:var(--svmuted);cursor:pointer;border:1px solid var(--svline)}
+ #sv .sv-pill:hover{background:var(--svteallt)}
+ #sv .sv-pill.active{background:var(--svteal);color:#fff;box-shadow:0 0 0 3px rgba(61,197,183,.25);border-color:var(--svteal)}
+ #sv .sv-help{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:#9CA3AF}
+ #sv .sv-chk{display:flex;align-items:center;gap:8px;margin:6px 0 0;cursor:pointer;font-size:13px;color:var(--svnavy)}
+ #sv .sv-chk input{width:auto;margin:0}
+ #sv .sv-cta button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--svteal);color:#04342C;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin:4px 0 6px}
+ #sv .sv-cta button:disabled{background:#9CA3AF;color:#fff;cursor:not-allowed}
+ #sv .sv-cta-h{font-size:12px;color:#9CA3AF;text-align:center;margin-bottom:14px}
+ #sv .sv-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:.5px solid var(--svline)}
+ #sv .sv-row:last-child{border-bottom:0}
+ #sv .sv-pill-st{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:#FAEEDA;color:#854F0B}
+ #sv .sv-pill-st.ap{background:#E6F7F5;color:#0F766E}#sv .sv-pill-st.rj{background:#FCEBEB;color:#791F1F}
+ #sv .sv-empty{color:var(--svmuted);font-size:13px;text-align:center;padding:14px}
+ </style>
+ <div id="sv">
+  <div class="sv-head"><div class="sv-blob"></div><div class="sv-eb">SURVEY · แบบสอบถาม</div><div class="sv-h1">ส่งคำตอบ / ดูประวัติ</div></div>
+  <div class="sv-card"><div class="sv-sec">ตอบแบบสอบถาม</div>
+   <div class="sv-anon" id="sv-banner">
+     <b>คำตอบของคุณจะถูกเก็บแบบไม่ระบุชื่อ</b><br>
+     HR เห็นเฉพาะภาพรวมตามสาขา/ตำแหน่ง · ไม่สามารถระบุตัวตนรายบุคคล · ปลอดภัยที่จะตอบตรงไปตรงมา
+   </div>
+   <label>ชนิดแบบสอบถาม</label>
+   <select id="sv-type">${SV_TYPES.map(t => `<option value="${t.v}">${esc(t.l)}</option>`).join('')}</select>
+
+   <div style="margin-top:14px">
+     <div class="sv-q">ให้คะแนนความรู้สึก / ความเห็นโดยรวม <span class="sv-req">*</span></div>
+     <div class="sv-scale" id="sv-scale"></div>
+     <div class="sv-help"><span>1 = น้อยที่สุด</span><span>${SV_SCALE} = มากที่สุด</span></div>
+   </div>
+
+   <label style="margin-top:14px">ความคิดเห็นเพิ่มเติม</label>
+   <textarea id="sv-comment" placeholder="พิมพ์ความคิดเห็น (ไม่บังคับ)"></textarea>
+
+   <label class="sv-chk" style="margin-top:12px"><input type="checkbox" id="sv-anon" checked> ส่งแบบไม่ระบุชื่อ (anonymous)</label>
+
+   <div id="sv-emp-wrap" style="display:none">
+     <label>รหัสพนักงาน</label>
+     <input id="sv-emp" placeholder="YY-XNU-013">
+   </div>
+  </div>
+  <div class="sv-cta"><button id="sv-btn" disabled>ส่งคำตอบ</button>
+   <div class="sv-cta-h" id="sv-btn-h">ให้คะแนนก่อนส่ง</div>
+  </div>
+  <div class="sv-card"><div class="sv-sec">ประวัติการตอบ</div><div id="sv-hist"><div class="sv-empty">กำลังโหลด...</div></div></div>
+ </div>`;
+
+  svRenderScale();
+  document.getElementById('sv-type').onchange = function () { _svState.type = this.value; };
+  document.getElementById('sv-comment').oninput = function () { _svState.comment = this.value; };
+  document.getElementById('sv-anon').onchange = function () { _svState.anonymous = this.checked; svSyncAnon(); };
+  document.getElementById('sv-btn').onclick = svSubmit;
+  svSyncAnon();
+  svUpdateCta();
+  svLoad();
+}
+
+function svRenderScale() {
+  var box = document.getElementById('sv-scale');
+  if (!box) return;
+  var html = '';
+  for (var n = 1; n <= SV_SCALE; n++) {
+    html += `<div class="sv-pill${_svState.rating === n ? ' active' : ''}" data-n="${n}">${n}</div>`;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll('.sv-pill').forEach(function (p) {
+    p.onclick = function () { svSetRating(parseInt(this.getAttribute('data-n'), 10)); };
+  });
+}
+
+function svSetRating(n) {
+  _svState.rating = n;
+  svRenderScale();
+  svUpdateCta();
+}
+
+function svSyncAnon() {
+  // anonymous ติ๊ก = ซ่อน + ไม่ส่ง employee_id
+  var w = document.getElementById('sv-emp-wrap');
+  var banner = document.getElementById('sv-banner');
+  if (w) w.style.display = _svState.anonymous ? 'none' : 'block';
+  if (banner) banner.style.display = _svState.anonymous ? 'block' : 'none';
+}
+
+function svUpdateCta() {
+  var btn = document.getElementById('sv-btn');
+  var h = document.getElementById('sv-btn-h');
+  if (!btn || !h) return;
+  if (_svState.rating != null) {
+    btn.disabled = false;
+    h.textContent = 'พร้อมส่ง · ส่งแล้วแก้ไม่ได้';
+  } else {
+    btn.disabled = true;
+    h.textContent = 'ให้คะแนนก่อนส่ง';
+  }
+}
+
+async function svLoad() {
+  try {
+    const { data } = await sb.functions.invoke('hr_survey_response');
+    const items = (data && data.items) || [];
+    const hist = document.getElementById('sv-hist');
+    if (!hist) return;
+    const labelOf = function (v) { var t = SV_TYPES.find(function (x) { return x.v === v; }); return t ? t.l : (v || ''); };
+    hist.innerHTML = items.length
+      ? items.map(function (x) {
+          var st = x.status || '';
+          var cls = st === 'approved' ? 'ap' : (st === 'rejected' ? 'rj' : '');
+          return '<div class="sv-row"><div><div>' + esc(labelOf(x.survey_type)) +
+            '</div><div style="font-size:11px;color:#6B7280">' + esc(x.comment || '') + '</div></div>' +
+            '<div style="text-align:right"><div style="font-weight:600;color:#0D2F4F">' +
+            (x.rating != null ? esc(String(x.rating)) : '-') + '</div>' +
+            '<span class="sv-pill-st ' + cls + '">' + esc(st) + '</span></div></div>';
+        }).join('')
+      : '<div class="sv-empty">ยังไม่มีการตอบแบบสอบถาม</div>';
+    const ct = document.getElementById('ct-survey');
+    if (ct) ct.textContent = items.length || '';
+  } catch (e) { console.error('sv', e); }
+}
+
+async function svSubmit() {
+  if (_svState.rating == null) { alert('กรุณาให้คะแนนก่อนส่ง'); return; }
+  var anon = !!_svState.anonymous;
+  var emp = anon ? '' : (document.getElementById('sv-emp') ? document.getElementById('sv-emp').value.trim() : '');
+  if (!anon && !emp) { alert('กรอกรหัสพนักงาน หรือเลือกส่งแบบไม่ระบุชื่อ'); return; }
+
+  var btn = document.getElementById('sv-btn');
+  var h = document.getElementById('sv-btn-h');
+  btn.disabled = true; btn.textContent = 'กำลังส่ง...'; if (h) h.textContent = 'กำลังส่ง...';
+
+  var body = {
+    survey_type: _svState.type,
+    rating: _svState.rating,
+    comment: _svState.comment,
+    anonymous: anon
+  };
+  if (!anon) body.employee_id = emp; // anonymous = ไม่ต้องส่ง employee_id
+
+  const { data, error } = await sb.functions.invoke('hr_survey_response', { body: body });
+
+  btn.textContent = 'ส่งคำตอบ';
+  if (error || (data && data.error)) {
+    btn.disabled = false;
+    var msg = (data && data.error) || (error && error.message) || 'unknown';
+    if (h) h.textContent = 'ส่งล้มเหลว · ' + msg;
+    alert('ไม่สำเร็จ: ' + msg);
+    return;
+  }
+
+  // เคลียร์ฟอร์ม + reload + set ct-survey
+  _svState.rating = null;
+  _svState.comment = '';
+  var c = document.getElementById('sv-comment'); if (c) c.value = '';
+  svRenderScale();
+  svUpdateCta();
+  svLoad();
+}
+
+
+/* ===== ported: announce ===== */
+/* ====================================================================
+   announce.js — Native port of "ประกาศ" (announcement_manager.html)
+   Pattern: mirrors mountExpense() in index.html (scoped style + HTML
+   injected into a container, wire button, then load list).
+
+   Conventions (per port spec):
+   - Scoped CSS prefix: #an   ·   element id prefix: an2-
+   - Function / var prefix: an2   (avoid clashing with existing
+     loadAnnounce/postAnnounce/annTitle in index.html)
+   - Globals reused (DO NOT redeclare): sb (supabase client), esc (escaper)
+   - Container: #wrap-announce_p  (parent adds the div later)
+     -> mountAnnounceP() is a no-op if the container is absent.
+
+   Edge function: hr_announce
+   - create: sb.functions.invoke('hr_announce', { body: {
+       title, body, audience, category, effective_date, requires_ack(bool)
+     }})
+   - list:   sb.functions.invoke('hr_announce')  ->  { announcements:[...] }
+   ==================================================================== */
+
+/* category — 8 values, labels mirror announcement_view.html categoryLabel() */
+var AN2_CATEGORIES = [
+  { v: 'general',      l: 'ทั่วไป' },
+  { v: 'policy',       l: 'นโยบาย' },
+  { v: 'welfare',      l: 'สวัสดิการ' },
+  { v: 'activity',     l: 'กิจกรรม' },
+  { v: 'urgent',       l: 'ด่วน' },
+  { v: 'monthly',      l: 'บอร์ดประจำเดือน' },
+  { v: 'permanent',    l: 'บอร์ดถาวร' },
+  { v: 'announcement', l: 'แจ้งเตือน' }
+];
+
+function an2CatLabel(cat) {
+  var c = String(cat || 'general').toLowerCase();
+  for (var i = 0; i < AN2_CATEGORIES.length; i++) {
+    if (AN2_CATEGORIES[i].v === c) return AN2_CATEGORIES[i].l;
+  }
+  return cat || 'ทั่วไป';
+}
+
+/* mountAnnounceP — render the native announcement panel into #wrap-announce_p.
+   No-op when the container is absent (index.html may not have it yet). */
+function mountAnnounceP() {
+  var wrap = document.getElementById('wrap-announce_p');
+  if (!wrap) return;
+
+  var catOpts = AN2_CATEGORIES
+    .map(function (c) { return '<option value="' + c.v + '">' + esc(c.l) + '</option>'; })
+    .join('');
+
+  wrap.innerHTML = ''
+    + '<style>'
+    + '#an{--annavy:#0D2F4F;--anteal:#3DC5B7;--antealdk:#0F766E;--anline:#E5E7EB;--anmuted:#6B7280;max-width:480px;margin:0 auto}'
+    + '#an .anhead{position:relative;background:linear-gradient(135deg,var(--annavy),var(--antealdk));color:#fff;padding:16px;border-radius:12px;overflow:hidden}'
+    + '#an .anblob{position:absolute;width:120px;height:120px;border-radius:50%;background:#ffffff14;top:-44px;right:-36px}'
+    + '#an .aneb{font-size:12px;color:var(--anteal);font-weight:600;position:relative}'
+    + '#an .anh1{font-size:18px;font-weight:600;margin:6px 0 0;position:relative}'
+    + '#an .ancard{background:#fff;border-radius:12px;border:.5px solid rgba(0,0,0,.1);margin:14px 0;padding:16px}'
+    + '#an .ansec{font-size:13px;color:var(--annavy);font-weight:600;margin:0 0 10px}'
+    + '#an label{display:block;font-size:12px;color:var(--anmuted);margin:10px 0 4px}'
+    + '#an select,#an input,#an textarea{width:100%;padding:10px;border:1px solid #CBD5E1;border-radius:8px;font-size:14px;background:#fff;font-family:inherit}'
+    + '#an textarea{min-height:90px;resize:vertical}'
+    + '#an .anack{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--annavy)}'
+    + '#an .anack input{width:auto;margin:0}'
+    + '#an .annote{background:#FEF3C7;border-radius:8px;padding:10px;font-size:12px;color:#854F0B;margin-top:10px}'
+    + '#an .ancta button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--anteal);color:#04342C;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin:4px 0 6px}'
+    + '#an .ancta button:disabled{opacity:.6;cursor:not-allowed}'
+    + '#an .anmsg{font-size:12px;color:var(--antealdk);min-height:16px;text-align:center;margin-bottom:8px}'
+    + '#an .anmsg.err{color:#B91C1C}'
+    + '#an .anitem{border-bottom:.5px solid var(--anline);padding:12px 0}'
+    + '#an .anitem:last-child{border-bottom:0}'
+    + '#an .anit-cat{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:#E0F2FE;color:#075985}'
+    + '#an .anit-cat.urgent{background:#FCEBEB;color:#791F1F}'
+    + '#an .anit-ttl{font-weight:600;color:var(--annavy);font-size:14px;margin:6px 0 0}'
+    + '#an .anit-body{color:#475569;margin:4px 0;white-space:pre-wrap;font-size:13px}'
+    + '#an .anit-meta{font-size:11px;color:#94A3B8;margin-top:4px}'
+    + '#an .anit-ack{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;background:#FEF3C7;color:#92400E;margin-left:6px}'
+    + '#an .anempty{color:var(--anmuted);font-size:13px;text-align:center;padding:14px}'
+    + '</style>'
+    + '<div id="an">'
+    +   '<div class="anhead"><div class="anblob"></div><div class="aneb">ANNOUNCE · ประกาศบริษัท</div><div class="anh1">เขียนประกาศ / ดูรายการ</div></div>'
+    +   '<div class="ancard"><div class="ansec">เขียนประกาศใหม่</div>'
+    +     '<label>หัวข้อ</label><input id="an2-title" placeholder="เช่น ปรับเวลาทำการช่วงเทศกาล">'
+    +     '<label>รายละเอียด</label><textarea id="an2-body" placeholder="เนื้อหาประกาศ..."></textarea>'
+    +     '<label>กลุ่มเป้าหมาย (audience)</label><input id="an2-audience" placeholder="เช่น ทุกสาขา / แผนกบัญชี (เว้นว่าง = ทั้งหมด)">'
+    +     '<label>หมวด</label><select id="an2-category">' + catOpts + '</select>'
+    +     '<label>วันที่มีผลบังคับใช้ (effective date)</label><input id="an2-effective" type="date">'
+    +     '<label class="anack"><input id="an2-ack" type="checkbox"> ต้องกดรับทราบ (requires acknowledgement)</label>'
+    +     '<div class="annote">ประกาศจะถูกส่งให้พนักงานตาม audience ที่เลือก · ถ้าติ๊ก "ต้องกดรับทราบ" พนักงานต้องเปิดอ่านและยืนยัน</div>'
+    +   '</div>'
+    +   '<div class="ancta"><div class="anmsg" id="an2-msg"></div><button id="an2-btn">โพสต์ประกาศ</button></div>'
+    +   '<div class="ancard"><div class="ansec">ประกาศล่าสุด</div><div id="an2-list"><div class="anempty">กำลังโหลด...</div></div></div>'
+    + '</div>';
+
+  document.getElementById('an2-btn').onclick = an2Submit;
+  an2Load();
+}
+
+/* render one announcement row (mirrors annCard + announcement_view fields) */
+function an2Item(a) {
+  var cat = String(a.category || 'general').toLowerCase();
+  var when = String(a.posted_at || a.published_at || a.created_at || '').slice(0, 16).replace('T', ' ');
+  return '<div class="anitem">'
+    + '<span class="anit-cat' + (cat === 'urgent' ? ' urgent' : '') + '">' + esc(an2CatLabel(cat)) + '</span>'
+    + (a.requires_ack ? '<span class="anit-ack">ต้องรับทราบ</span>' : '')
+    + '<div class="anit-ttl">' + esc(a.title || '') + '</div>'
+    + (a.body ? '<div class="anit-body">' + esc(a.body) + '</div>' : '')
+    + '<div class="anit-meta">'
+    +   (a.audience ? esc(a.audience) : 'ทั้งหมด')
+    +   (when ? ' · ' + esc(when) : '')
+    +   (a.posted_by ? ' · ' + esc(a.posted_by) : '')
+    +   (a.effective_date ? ' · มีผล ' + esc(String(a.effective_date).slice(0, 10)) : '')
+    + '</div>'
+    + '</div>';
+}
+
+/* list — sb.functions.invoke('hr_announce') -> { announcements:[...] } */
+async function an2Load() {
+  var list = document.getElementById('an2-list');
+  try {
+    var res = await sb.functions.invoke('hr_announce');
+    var data = res && res.data;
+    var items = (data && data.announcements) || [];
+    if (list) {
+      list.innerHTML = items.length
+        ? items.map(an2Item).join('')
+        : '<div class="anempty">ยังไม่มีประกาศ</div>';
+    }
+    var ct = document.getElementById('ct-announce');
+    if (ct) ct.textContent = items.length || '';
+  } catch (e) {
+    console.error('an2Load', e);
+    if (list) list.innerHTML = '<div class="anempty">โหลดประกาศไม่สำเร็จ</div>';
+  }
+}
+
+/* create — body: {title, body, audience, category, effective_date, requires_ack(bool)} */
+async function an2Submit() {
+  var msg = document.getElementById('an2-msg');
+  var btn = document.getElementById('an2-btn');
+  if (msg) { msg.classList.remove('err'); msg.textContent = ''; }
+
+  var title = (document.getElementById('an2-title').value || '').trim();
+  if (!title) {
+    if (msg) { msg.classList.add('err'); msg.textContent = 'กรุณาใส่หัวข้อ'; }
+    return;
+  }
+
+  var body = {
+    title: title,
+    body: document.getElementById('an2-body').value || '',
+    audience: (document.getElementById('an2-audience').value || '').trim(),
+    category: document.getElementById('an2-category').value,
+    effective_date: document.getElementById('an2-effective').value || '',
+    requires_ack: !!document.getElementById('an2-ack').checked
+  };
+
+  if (btn) { btn.disabled = true; btn.textContent = 'กำลังโพสต์...'; }
+  if (msg) msg.textContent = 'กำลังโพสต์…';
+
+  var res = await sb.functions.invoke('hr_announce', { body: body });
+  var data = res && res.data, error = res && res.error;
+
+  if (btn) { btn.disabled = false; btn.textContent = 'โพสต์ประกาศ'; }
+
+  if (error || (data && data.error)) {
+    if (msg) {
+      msg.classList.add('err');
+      msg.textContent = 'ผิดพลาด: ' + ((data && data.error) || (error && error.message) || 'unknown');
+    }
+    return;
+  }
+
+  /* success: clear form + reload + count is set inside an2Load via ct-announce */
+  document.getElementById('an2-title').value = '';
+  document.getElementById('an2-body').value = '';
+  document.getElementById('an2-audience').value = '';
+  document.getElementById('an2-effective').value = '';
+  document.getElementById('an2-ack').checked = false;
+  if (msg) { msg.classList.remove('err'); msg.textContent = 'โพสต์แล้ว ✓'; }
+  an2Load();
+}
+
 async function loadAll(flash){
  const q=(t,c,o={})=>sb.from(t).select(c).order(o.by||'updated_at',{ascending:false}).limit(o.lim||50);
  const [ev,br,em,pr,pm,ap,src,evAll]=await Promise.all([
@@ -1351,7 +3053,6 @@ function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
  sb.auth.getUser().then(({data})=>{const e=(data&&data.user&&data.user.email)||'admin'; $('sbName').textContent=e; $('sbAv').textContent=e.substring(0,2).toUpperCase();});
  document.querySelectorAll('.sb-item').forEach(i=>i.onclick=()=>showView(i.dataset.view));
- $('annPost').onclick=postAnnounce;
  $('expPost').onclick=postExpense; loadAccExp();
  $('prPost').onclick=postPR; loadPR();
  $('pePost').onclick=postPettyEntry; $('pcPost').onclick=postPettyCycle; loadPetty();
@@ -1361,8 +3062,7 @@ function start(){
  $('dfAdd').onclick=dfAddTimesheet; $('dfCalc').onclick=dfCalc; $('dfCommit').onclick=dfCommit; loadDF();
  renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
  renderBankTabs(); $('bkPeriod').value=_curMonth(); $('bkGen').onclick=bkGenerate; $('bkCsv').onclick=bkDownloadCsv; loadBankHistory();
- ['leavereq','otreq','pinfo','incident','oneonone','probreview','survey'].forEach(mountWrite);
- mountExpense();
+ mountLeavereq();mountOtreq();mountPinfo();mountIncident();mountOneonone();mountProbreview();mountSurvey();mountExpense();mountAnnounceP();
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
