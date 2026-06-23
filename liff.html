@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>คีย์รายจ่าย · Yiaoya บัญชี</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#e2e8f0;--muted:#64748b;}
+  *{box-sizing:border-box;font-family:'Noto Sans Thai',-apple-system,system-ui,sans-serif;}
+  body{margin:0;background:#f1f5f9;color:var(--navy);padding:16px;}
+  .head{background:var(--navy);color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:14px;}
+  .head .eyebrow{color:var(--teal);font-size:12px;letter-spacing:2px;font-weight:600;}
+  .head h1{font-size:20px;margin:4px 0 2px;font-weight:600;}
+  .head .who{font-size:13px;color:#9fb6c9;}
+  .card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px;}
+  input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:9px;font-size:15px;}
+  button{width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;margin-top:16px;}
+  button:disabled{opacity:.5;}
+  .msg{text-align:center;font-size:14px;margin-top:12px;min-height:20px;}
+  .warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:14px;font-size:14px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div id="app" style="display:none">
+  <div class="head">
+    <div class="eyebrow">YIAOYA · บัญชี</div>
+    <h1>คีย์รายจ่าย</h1>
+    <div class="who" id="who">—</div>
+  </div>
+  <div class="card">
+    <label>ร้านค้า / ผู้รับเงิน</label>
+    <input id="vendor" placeholder="เช่น ร้านเครื่องเขียน">
+    <label>จำนวนเงิน (บาท)</label>
+    <input id="amount" type="number" inputmode="decimal" step="0.01" placeholder="0.00">
+    <label>หมวด</label>
+    <select id="category">
+      <option>ค่าเดินทาง</option><option>ค่าอาหาร</option><option>อุปกรณ์สำนักงาน</option><option>ค่าสาธารณูปโภค</option><option>ค่าการตลาด</option><option>อื่นๆ</option>
+    </select>
+    <label>วันที่</label>
+    <input id="date" type="date">
+    <label>หมายเหตุ</label>
+    <input id="note" placeholder="(ไม่บังคับ)">
+    <button id="submit">บันทึกรายจ่าย</button>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+<div id="notready" style="display:none"><div class="warn" id="warnmsg"></div></div>
+
+<script>
+const LIFF_ID = 'REPLACE_WITH_LIFF_ID';  // <<< ใส่ LIFF ID หลัง register ใน LINE Developers
+const ENDPOINT = 'https://iyldrlzhftylewstfmsg.supabase.co/functions/v1/acc_liff_submit';
+const APIKEY = 'sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK';
+
+function showWarn(t){ document.getElementById('notready').style.display='block'; document.getElementById('warnmsg').textContent=t; }
+
+async function main(){
+  if(LIFF_ID === 'REPLACE_WITH_LIFF_ID'){ showWarn('ยังไม่ได้ตั้งค่า LIFF ID — register LIFF app ใน LINE Developers ก่อน แล้วใส่ LIFF ID ในไฟล์นี้'); return; }
+  try{
+    await liff.init({ liffId: LIFF_ID });
+    if(!liff.isLoggedIn()){ liff.login(); return; }
+    const p = await liff.getProfile();
+    document.getElementById('who').textContent = 'สวัสดี ' + (p.displayName || '');
+    document.getElementById('date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('submit').onclick = submit;
+  }catch(e){ showWarn('เปิด LIFF ไม่สำเร็จ: ' + (e.message||e)); }
+}
+
+async function submit(){
+  const amount = Number(document.getElementById('amount').value||0);
+  const msg = document.getElementById('msg');
+  if(!(amount>0)){ msg.style.color='#b91c1c'; msg.textContent='ใส่จำนวนเงินก่อน'; return; }
+  const btn = document.getElementById('submit'); btn.disabled=true; msg.style.color='#64748b'; msg.textContent='กำลังบันทึก…';
+  try{
+    const idToken = liff.getIDToken();
+    const res = await fetch(ENDPOINT, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'apikey':APIKEY },
+      body: JSON.stringify({
+        id_token: idToken,
+        amount,
+        vendor: document.getElementById('vendor').value,
+        category: document.getElementById('category').value,
+        expense_date: document.getElementById('date').value,
+        note: document.getElementById('note').value,
+      })
+    });
+    const d = await res.json();
+    btn.disabled=false;
+    if(d.ok){ msg.style.color='#0f766e'; msg.textContent='บันทึกแล้ว ✓ (' + d.id + ')';
+      document.getElementById('vendor').value=''; document.getElementById('amount').value=''; document.getElementById('note').value=''; }
+    else { msg.style.color='#b91c1c'; msg.textContent='ผิดพลาด: ' + (d.error||'unknown'); }
+  }catch(e){ btn.disabled=false; msg.style.color='#b91c1c'; msg.textContent='ส่งไม่สำเร็จ: ' + (e.message||e); }
+}
+main();
+</script>
+</body>
+</html>
