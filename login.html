@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>เข้าสู่ระบบจัดซื้อ · Yiaoya</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+:root{--navy:#0D2F4F;--teal:#3DC5B7}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',system-ui,sans-serif}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0D2F4F,#13405f);color:#fff;padding:24px}
+.card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:18px;padding:30px 26px;max-width:380px;width:100%;text-align:center}
+h1{font-size:18px;margin:0 0 4px}.sub{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:20px}
+#msg{font-size:13px;line-height:1.6;color:rgba(255,255,255,.9);min-height:40px}
+.spin{width:30px;height:30px;border:3px solid rgba(255,255,255,.25);border-top-color:var(--teal);border-radius:50%;animation:s 1s linear infinite;margin:14px auto}
+@keyframes s{to{transform:rotate(360deg)}}
+.warn{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:12px;font-size:12px;text-align:left;margin-top:14px;line-height:1.6}
+a.btn{display:inline-block;margin-top:16px;background:var(--teal);color:#04342C;text-decoration:none;font-weight:700;padding:10px 22px;border-radius:9px;font-size:13px}
+code{background:rgba(255,255,255,.12);padding:1px 5px;border-radius:4px;font-size:11px}
+</style></head>
+<body><div class="card">
+  <h1>เยียวยา · ระบบจัดซื้อ</h1>
+  <div class="sub">เข้าสู่ระบบด้วย LINE</div>
+  <div class="spin" id="spin"></div>
+  <div id="msg">กำลังเชื่อมต่อ LINE…</div>
+</div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// ====== ตั้งค่า (เซินวางค่าจาก LINE Developers Console) ======
+const LIFF_ID = "";   // <<< วาง LIFF ID ที่นี่ (เช่น 1234567890-abcdEFGH)
+// ============================================================
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL,ANON);
+const msg=(t)=>document.getElementById('msg').innerHTML=t;
+const stopSpin=()=>{const s=document.getElementById('spin');if(s)s.style.display='none';};
+
+async function run(){
+  if(!LIFF_ID){ stopSpin(); msg('ยังไม่ได้ตั้งค่า LIFF'); document.querySelector('.card').insertAdjacentHTML('beforeend',
+    `<div class="warn"><b>ขั้นตอนเปิดใช้งาน (เซิน):</b><br>1. LINE Developers → สร้าง LIFF app บน OA จัดซื้อ<br>2. Endpoint URL = หน้านี้ · Size = Full · Scope = <code>profile</code><br>3. เอา <b>LIFF ID</b> วางในไฟล์ <code>login.html</code> บรรทัด <code>LIFF_ID</code><br>4. เอา <b>Channel ID</b> ตั้ง secret <code>LINE_CHANNEL_ID_PUR</code> บน Supabase<br>5. เปิด anonymous sign-in ใน Supabase Auth</div>`); return; }
+  try{
+    await liff.init({ liffId: LIFF_ID });
+    if(!liff.isLoggedIn()){ liff.login(); return; }
+    const token = liff.getAccessToken();
+    let { data:sess } = await sb.auth.getSession();
+    if(!sess.session){ const r=await sb.auth.signInAnonymously(); if(r.error){ stopSpin(); msg('ระบบยังไม่เปิด anonymous sign-in<br><small>Supabase → Auth → อนุญาต anonymous</small>'); return; } }
+    const { data, error } = await sb.functions.invoke('line_login',{ body:{ action:'verify', access_token: token } });
+    if(error||data?.error){ stopSpin(); msg('ยืนยันตัวตนไม่สำเร็จ: '+(data?.error||error.message)); return; }
+    localStorage.setItem('yy_line_id', JSON.stringify({ uid:data.uid, display_name:data.display_name, employee_name:data.employee_name||data.display_name, employee_id:data.employee_id||'', role:data.role||'staff', verified:data.verified }));
+    stopSpin();
+    if(!data.linked){ msg(`สวัสดีคุณ ${data.display_name} 👋<br><small>บัญชี LINE นี้ยังไม่ผูกกับพนักงาน — แจ้งแอดมินผูกให้ก่อน</small>`); }
+    else { msg(`ยินดีต้อนรับ ${data.employee_name||data.display_name} ✓`); }
+    document.querySelector('.card').insertAdjacentHTML('beforeend','<a class="btn" href="index.html">เข้าหน้าระบบ →</a>');
+  }catch(e){ stopSpin(); msg('ผิดพลาด: '+e); }
+}
+run();
+</script></body></html>
