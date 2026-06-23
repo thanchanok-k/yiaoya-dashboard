@@ -87,6 +87,8 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
 .pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:10px;font-weight:600;text-transform:capitalize}
 .pill.dispatched{background:var(--success-bg);color:var(--success)}.pill.logged{background:#F1F5F9;color:var(--text-muted)}
 .pill.posted{background:var(--success-bg);color:var(--success)}.pill.booked{background:var(--info-bg);color:var(--info)}
+.pill.approved,.pill.active{background:var(--success-bg);color:var(--success)}
+.pill.pending{background:#FFFBEB;color:#B45309}.pill.rejected,.pill.terminated{background:#FEF2F2;color:#B91C1C}
 .flash{animation:fl 1.8s}@keyframes fl{0%{background:#FFF7CC}100%{background:transparent}}
 .sys-wrap{padding:14px 16px;display:flex;gap:10px;flex-wrap:wrap}
 .sys{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--text)}
@@ -133,6 +135,10 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="prices"><i class="ti ti-tag"></i>ราคา<span class="ct" id="ct-prices"></span></div>
       <div class="sb-item" data-view="payments"><i class="ti ti-cash"></i>การชำระเงิน<span class="ct" id="ct-payments"></span></div>
       <div class="sb-item" data-view="appointments"><i class="ti ti-calendar-event"></i>นัดหมาย<span class="ct" id="ct-appointments"></span></div>
+      <div class="sb-label">HR</div>
+      <div class="sb-item" data-view="leaves"><i class="ti ti-calendar-off"></i>การลา<span class="ct" id="ct-leaves"></span></div>
+      <div class="sb-item" data-view="ot"><i class="ti ti-clock"></i>OT</div>
+      <div class="sb-item" data-view="kpi"><i class="ti ti-chart-bar"></i>KPI</div>
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
@@ -180,6 +186,18 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sec"><span class="sec-bar"></span>นัดหมาย (Appointments)</div>
       <div class="card"><div id="appointments"></div></div>
     </section>
+    <section class="view" data-view="leaves">
+      <div class="sec"><span class="sec-bar"></span>การลา (Leave)<span class="sec-c" id="leaveSub"></span></div>
+      <div class="card"><div id="leaves"></div></div>
+    </section>
+    <section class="view" data-view="ot">
+      <div class="sec"><span class="sec-bar"></span>OT (ทำงานล่วงเวลา)</div>
+      <div class="card"><div id="ot"></div></div>
+    </section>
+    <section class="view" data-view="kpi">
+      <div class="sec"><span class="sec-bar"></span>KPI</div>
+      <div class="card"><div id="kpi"></div></div>
+    </section>
     <section class="view" data-view="events">
       <div class="sec"><span class="sec-bar"></span>เหตุการณ์ทั้งหมด<span class="sec-c"><span class="dot"></span>realtime</span></div>
       <div class="card"><div id="eventsAll"></div></div>
@@ -198,7 +216,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -232,6 +250,14 @@ function tbl(rows,cols,opt={}){
    return '<td>'+v+'</td>';}).join('')+'</tr>';});
  return h+'</tbody></table>';}
 
+// ดึง payload ล่าสุดต่อ entity จาก events (สำหรับ field ครบ ๆ ที่เก็บใน payload)
+async function latestByEntity(eventType, keyField, lim){
+ const {data}=await sb.from('events').select('entity_id,payload').eq('event_type',eventType).order('seq',{ascending:false}).limit(lim||1000);
+ const seen={}, out=[];
+ (data||[]).forEach(r=>{ const p=r.payload||{}; const k=p[keyField]||r.entity_id; if(k&&!seen[k]){seen[k]=1; out.push(p);} });
+ return out;
+}
+
 async function loadAll(flash){
  const q=(t,c,o={})=>sb.from(t).select(c).order(o.by||'updated_at',{ascending:false}).limit(o.lim||50);
  const [ev,br,em,pr,pm,ap,src,evAll]=await Promise.all([
@@ -245,6 +271,10 @@ async function loadAll(flash){
   sb.from('events').select('seq,event_type,source,entity_id,status').order('seq',{ascending:false}).limit(100),
  ]);
  renderIntegration((src.data||[]).map(r=>r.source));
+ const [empsRich, leaves] = await Promise.all([
+   latestByEntity('employee.updated','employee_id',1500),
+   latestByEntity('leave.updated','request_id',500),
+ ]);
  const d={events:ev.data||[],branches:br.data||[],employees:em.data||[],prices:pr.data||[],payments:pm.data||[],appointments:ap.data||[]};
  const stats=[
   {n:d.events.length,lb:'Events',ic:'ti-activity',bg:'#EFF6FF',fg:'#1D4ED8'},
@@ -261,7 +291,11 @@ async function loadAll(flash){
  const empByBr={}; d.employees.forEach(e=>{const b=e.branch_id||'-'; empByBr[b]=(empByBr[b]||0)+1;});
  const brRows=d.branches.map(b=>Object.assign({},b,{emp:(empByBr[b.branch_id]||0)+' คน'}));
  $('branches').innerHTML=tbl(brRows,[{h:'รหัส',k:'branch_id',t:'mono'},{h:'code',k:'code'},{h:'ชื่อ',k:'name'},{h:'พนักงาน',k:'emp'}]);
- $('employees').innerHTML=tbl(d.employees,[{h:'รหัส',k:'employee_id',t:'mono'},{h:'ชื่อ',k:'full_name'},{h:'สาขา',k:'branch_id'},{h:'ตำแหน่ง',k:'position'}]);
+ $('employees').innerHTML=tbl(empsRich.length?empsRich:d.employees,[{h:'รหัส',k:'employee_id',t:'mono'},{h:'ชื่อ',k:'full_name'},{h:'ชื่อเล่น',k:'nickname'},{h:'แผนก',k:'department_th'},{h:'ตำแหน่ง',k:'position'},{h:'สาขา',k:'branch_id'},{h:'อีเมล',k:'email'},{h:'เบอร์',k:'phone'},{h:'เริ่มงาน',k:'start_date'},{h:'สถานะ',k:'status',t:'status'}]);
+ $('leaves').innerHTML=tbl(leaves,[{h:'รหัสคำขอ',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'ประเภท',k:'leave_type'},{h:'เริ่ม',k:'start_date'},{h:'ถึง',k:'end_date'},{h:'วัน',k:'days'},{h:'สถานะ',k:'status',t:'status'},{h:'เหตุผล',k:'reason'}],{empty:'⏳ ยังไม่มีข้อมูลลา'});
+ $('ot').innerHTML=tbl([],[{h:'รหัส',k:'id'}],{empty:'⏳ แท็บ OT ยังว่าง (ยังไม่มีคำขอ OT ในชีท)'});
+ $('kpi').innerHTML=tbl([],[{h:'รหัส',k:'id'}],{empty:'⏳ แท็บ KPI ยังว่าง (ยังไม่มีคะแนนในชีท)'});
+ $('ct-leaves').textContent=leaves.length||'';
  $('prices').innerHTML=tbl(d.prices,[{h:'รหัส',k:'price_code',t:'mono'},{h:'รายการ',k:'name'},{h:'ราคา',k:'price'},{h:'สาขา',k:'branch_id'}],{empty:'⏳ รอเชื่อมต่อระบบ Pricing'});
  $('payments').innerHTML=tbl(d.payments,[{h:'รหัส',k:'payment_id',t:'mono'},{h:'จำนวน',k:'amount'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}],{empty:'⏳ รอเชื่อมต่อระบบ Accountant'});
  $('appointments').innerHTML=tbl(d.appointments,[{h:'รหัส',k:'appointment_id',t:'mono'},{h:'บริการ',k:'service'},{h:'สาขา',k:'branch_id'},{h:'สถานะ',k:'status',t:'status'}],{empty:'⏳ รอเชื่อมต่อระบบ Front Office'});
