@@ -238,6 +238,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="acctax"><i class="ti ti-file-percent"></i>ภาษี (ภงด./ปกส)<span class="ct" id="ct-acctax"></span></div>
       <div class="sb-item" data-view="accbank"><i class="ti ti-building-bank"></i>ไฟล์โอนธนาคาร<span class="ct" id="ct-accbank"></span></div>
       <div class="sb-item" data-view="accpayset"><i class="ti ti-id-badge-2"></i>ตั้งเงินเดือน/บัญชี<span class="ct" id="ct-accpayset"></span></div>
+      <div class="sb-item" data-view="accroster"><i class="ti ti-stethoscope"></i>หมอ/PT (roster)<span class="ct" id="ct-accroster"></span></div>
       <div class="sb-label">จัดซื้อ (Purchase)</div>
       <div class="sb-item" data-view="purdash"><i class="ti ti-shopping-cart"></i>สรุปจัดซื้อ<span class="ct" id="ct-purdash"></span></div>
       <div class="sb-item" data-view="purpr"><i class="ti ti-file-text"></i>ใบขอซื้อ·อนุมัติ<span class="ct" id="ct-purpr"></span></div>
@@ -592,6 +593,12 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div id="psStat"></div>
       <div id="psList"></div>
     </section>
+    <section class="view" data-view="accroster">
+      <div class="sec"><span class="sec-bar"></span>หมอ/PT/พยาบาล (roster)<span class="sec-c">ย้ายจากชีต ค่า DF · บัญชี</span></div>
+      <div class="note"><i class="ti ti-lock ni"></i><div><b>ข้อมูลละเอียดอ่อน</b> · เรท + เลขบัญชี เห็นเฉพาะผู้บริหาร/บัญชี · ข้อมูลย้ายจากชีตเก่า (df.doctor_profile)</div></div>
+      <div id="rosterStat"></div>
+      <div id="rosterList"></div>
+    </section>
     <section class="view" data-view="purdash"><div class="sec"><span class="sec-bar"></span>สรุปจัดซื้อ<span class="sec-c">Native Supabase · จัดซื้อ</span></div><div id="wrap-purdash"></div></section>
     <section class="view" data-view="purpr"><div class="sec"><span class="sec-bar"></span>ใบขอซื้อ · อนุมัติ 3 ขั้น<span class="sec-c">Native Supabase · pur_pr</span></div><div id="wrap-purpr"></div></section>
     <section class="view" data-view="purpo"><div class="sec"><span class="sec-bar"></span>ใบสั่งซื้อ<span class="sec-c">Native Supabase · pur_po</span></div><div id="wrap-purpo"></div></section>
@@ -624,7 +631,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',adops:'โฆษณา · Ad Ops'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',adops:'โฆษณา · Ad Ops'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -641,7 +648,7 @@ const ROLE_LANDING={director:'overview',accountant:'accdigest',hr:'digest',staff
 const ALL_VIEWS=Object.keys(VIEW_TITLE);
 const VIEWS_BY_ROLE={
  director: ALL_VIEWS.slice(),
- accountant:['overview','events','accdigest','accexp','accpr','accpetty','accsales','accpayroll','accdf','acctax','accbank','accpayset'],
+ accountant:['overview','events','accdigest','accexp','accpr','accpetty','accsales','accpayroll','accdf','acctax','accbank','accpayset','accroster'],
  hr:['overview','employees','branches','leaves','ot','kpi',
      'digest','balance','kpisum','contract','anniv','leaveana','otsum',
      'announce','leavereq','otreq','pinfo','incident','oneonone','probreview','expense','survey'],
@@ -1266,6 +1273,18 @@ async function psSave(){
   $('psMsg').textContent='บันทึกแล้ว ✓'; loadPayset();
  }catch(e){console.error('payset save',e);$('psMsg').textContent='ผิดพลาด';}
  finally{btn.disabled=false;}
+}
+async function loadRoster(){
+ try{
+  const docs=await latestByEntity('df.doctor_profile','doctor_id',500);
+  const withAcct=docs.filter(d=>d.bank_account).length;
+  $('rosterStat').innerHTML=statHero([
+   {eyebrow:'DOCTORS',big:docs.length,unit:'คน',sub:'หมอ/PT/พยาบาล',tone:'navy'},
+   {eyebrow:'BANK',big:withAcct,unit:'คน',sub:'มีเลขบัญชี',tone:'info'},
+  ]);
+  $('rosterList').innerHTML='<div class="card">'+tbl(docs,[{h:'รหัส',k:'doctor_id',t:'mono'},{h:'ชื่อเล่น',k:'nickname'},{h:'ชื่อ',k:'name'},{h:'แผนก',k:'dept'},{h:'เรท/วัน',k:'rate_per_day'},{h:'เลขบัญชี',k:'bank_account'},{h:'ธนาคาร',k:'bank'}],{empty:'ยังไม่มี roster หมอ'})+'</div>';
+  $('ct-accroster').textContent=docs.length||'';
+ }catch(e){console.error('roster',e);}
 }
 async function loadPayset(){
  try{
@@ -10443,7 +10462,7 @@ function start(){
  $('dsPost').onclick=postSales; loadSales();
  loadAccDigest();
  $('plCalc').onclick=plCalc; $('plCommit').onclick=plCommit; loadPayroll();
- $('psSave').onclick=psSave; loadPayset();
+ $('psSave').onclick=psSave; loadPayset(); loadRoster();
  $('dfAdd').onclick=dfAddTimesheet; $('dfCalc').onclick=dfCalc; $('dfCommit').onclick=dfCommit; loadDF();
  renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
  renderBankTabs(); $('bkPeriod').value=_curMonth(); $('bkGen').onclick=bkGenerate; $('bkCsv').onclick=bkDownloadCsv; loadBankHistory();
