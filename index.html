@@ -230,6 +230,11 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="accpr"><i class="ti ti-file-invoice"></i>คำขอจ่าย·อนุมัติ<span class="ct" id="ct-accpr"></span></div>
       <div class="sb-item" data-view="accpetty"><i class="ti ti-wallet"></i>เงินสดย่อย<span class="ct" id="ct-accpetty"></span></div>
       <div class="sb-item" data-view="accsales"><i class="ti ti-chart-line"></i>ยอดขาย·variance<span class="ct" id="ct-accsales"></span></div>
+      <div class="sb-item" data-view="accdigest"><i class="ti ti-sun-high"></i>สรุปวันนี้·บัญชี<span class="ct" id="ct-accdigest"></span></div>
+      <div class="sb-item" data-view="accpayroll"><i class="ti ti-coin"></i>เงินเดือน<span class="ct" id="ct-accpayroll"></span></div>
+      <div class="sb-item" data-view="accdf"><i class="ti ti-stethoscope"></i>ค่า DF หมอ<span class="ct" id="ct-accdf"></span></div>
+      <div class="sb-item" data-view="acctax"><i class="ti ti-file-percent"></i>ภาษี (ภงด./ปกส)<span class="ct" id="ct-acctax"></span></div>
+      <div class="sb-item" data-view="accbank"><i class="ti ti-building-bank"></i>ไฟล์โอนธนาคาร<span class="ct" id="ct-accbank"></span></div>
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
@@ -473,7 +478,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -914,6 +919,55 @@ async function postSales(){
  ['dsJera','dsReceipt','dsSheet','dsBrief'].forEach(i=>$(i).value=''); loadSales();
 }
 
+// ===== หน้าเบิกค่าใช้จ่าย — ลอก expense_claim.html เดิมเป๊ะ (scoped #xp) =====
+function mountExpense(){ if(!$('wrap-expense'))return;
+ $('wrap-expense').innerHTML=`
+ <style>
+ #xp{--xnavy:#0D2F4F;--xteal:#3DC5B7;--xtealdk:#0F766E;--xline:#E5E7EB;--xmuted:#6B7280;max-width:480px;margin:0 auto}
+ #xp .xhead{position:relative;background:linear-gradient(135deg,var(--xnavy),var(--xtealdk));color:#fff;padding:16px;border-radius:12px;overflow:hidden}
+ #xp .xblob{position:absolute;width:120px;height:120px;border-radius:50%;background:#ffffff14;top:-44px;right:-36px}
+ #xp .xeb{font-size:12px;color:var(--xteal);font-weight:600;position:relative}
+ #xp .xh1{font-size:18px;font-weight:600;margin:6px 0 0;position:relative}
+ #xp .xcard{background:#fff;border-radius:12px;border:.5px solid rgba(0,0,0,.1);margin:14px 0;padding:16px}
+ #xp .xsec{font-size:13px;color:var(--xnavy);font-weight:600;margin:0 0 10px}
+ #xp label{display:block;font-size:12px;color:var(--xmuted);margin:10px 0 4px}
+ #xp select,#xp input,#xp textarea{width:100%;padding:10px;border:1px solid #CBD5E1;border-radius:8px;font-size:14px;background:#fff;font-family:inherit}
+ #xp textarea{min-height:60px;resize:vertical}
+ #xp .xnote{background:#FEF3C7;border-radius:8px;padding:10px;font-size:12px;color:#854F0B;margin-top:10px}
+ #xp .xrow{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:.5px solid var(--xline)}
+ #xp .xrow:last-child{border-bottom:0}
+ #xp .xpill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:#FAEEDA;color:#854F0B}
+ #xp .xpill.ap{background:#E6F7F5;color:#0F766E}#xp .xpill.rj{background:#FCEBEB;color:#791F1F}
+ #xp .xcta button{width:100%;padding:13px;border:0;border-radius:10px;background:var(--xteal);color:#04342C;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin:4px 0 14px}
+ #xp .xamt{font-weight:600;color:var(--xnavy)}
+ #xp .xempty{color:var(--xmuted);font-size:13px;text-align:center;padding:14px}
+ </style>
+ <div id="xp">
+  <div class="xhead"><div class="xblob"></div><div class="xeb">EXPENSE · เบิกค่าใช้จ่าย</div><div class="xh1">ยื่นเบิก / ดูประวัติ</div></div>
+  <div class="xcard"><div class="xsec">ยื่นเบิกใหม่</div>
+   <label>รหัสพนักงาน</label><input id="xp-emp" placeholder="YY-XNU-013">
+   <label>หมวดค่าใช้จ่าย</label><select id="xp-cat"><option value="travel">ค่าเดินทาง (auto ≤ 1,000)</option><option value="supplies">อุปกรณ์สำนักงาน (auto ≤ 500)</option><option value="training">ค่าอบรม/สัมมนา (auto ≤ 2,000)</option><option value="medical">ค่ารักษา/ฉุกเฉิน (auto ≤ 1,000)</option><option value="client">ค่ารับรองลูกค้า (ต้องผ่าน HR)</option><option value="other">อื่น ๆ (ต้องผ่าน HR)</option></select>
+   <label>จำนวนเงิน (บาท)</label><input id="xp-amount" type="number" min="1" placeholder="0">
+   <label>รายละเอียด</label><textarea id="xp-desc" placeholder="เช่น ค่าแท็กซี่ไปอบรม CPR ที่ รพ.บำรุงราษฎร์"></textarea>
+   <div class="xnote">ใบเสร็จตัวจริงต้องนำส่งแผนกบัญชีเพื่อตรวจ + เซ็นเอกสาร · จ่ายคืนพร้อมรอบเงินเดือนถัดไป</div>
+  </div>
+  <div class="xcta"><button id="xp-btn">ยื่นเบิก</button></div>
+  <div class="xcard"><div class="xsec">ประวัติการเบิก</div><div id="xp-hist"><div class="xempty">กำลังโหลด...</div></div></div>
+ </div>`;
+ $('xp-btn').onclick=xpSubmit; xpLoad();
+}
+async function xpLoad(){ try{ const {data}=await sb.functions.invoke('hr_expense_claim'); const items=(data&&data.items)||[];
+ $('xp-hist').innerHTML=items.length?items.map(x=>'<div class="xrow"><div><div>'+esc(x.category_label||x.category||'')+'</div><div style="font-size:11px;color:#6B7280">'+esc(x.description||'')+'</div></div><div style="text-align:right"><div class="xamt">฿ '+Math.round(x.amount||0).toLocaleString()+'</div><span class="xpill '+(x.status==='approved'?'ap':x.status==='rejected'?'rj':'')+'">'+esc(x.status||'')+'</span></div></div>').join(''):'<div class="xempty">ยังไม่มีรายการเบิก</div>';
+ const ct=$('ct-expense'); if(ct)ct.textContent=items.length||'';
+ }catch(e){ console.error('xp',e); } }
+async function xpSubmit(){ const emp=$('xp-emp').value.trim(); const amt=parseFloat($('xp-amount').value||'0');
+ if(!emp){alert('กรอกรหัสพนักงาน');return;} if(!(amt>0)){alert('กรอกจำนวนเงินให้ถูกต้อง');return;}
+ const btn=$('xp-btn'); btn.disabled=true; btn.textContent='กำลังส่ง...';
+ const {data,error}=await sb.functions.invoke('hr_expense_claim',{body:{employee_id:emp,category:$('xp-cat').value,amount:amt,description:$('xp-desc').value}});
+ btn.disabled=false; btn.textContent='ยื่นเบิก';
+ if(error||(data&&data.error)){alert('ไม่สำเร็จ: '+((data&&data.error)||error.message));return;}
+ $('xp-amount').value='';$('xp-desc').value=''; xpLoad();
+}
 async function loadAll(flash){
  const q=(t,c,o={})=>sb.from(t).select(c).order(o.by||'updated_at',{ascending:false}).limit(o.lim||50);
  const [ev,br,em,pr,pm,ap,src,evAll]=await Promise.all([
@@ -974,7 +1028,8 @@ function start(){
  $('prPost').onclick=postPR; loadPR();
  $('pePost').onclick=postPettyEntry; $('pcPost').onclick=postPettyCycle; loadPetty();
  $('dsPost').onclick=postSales; loadSales();
- ['leavereq','otreq','pinfo','incident','oneonone','probreview','expense','survey'].forEach(mountWrite);
+ ['leavereq','otreq','pinfo','incident','oneonone','probreview','survey'].forEach(mountWrite);
+ mountExpense();
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
