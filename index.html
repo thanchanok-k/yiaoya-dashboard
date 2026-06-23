@@ -2354,49 +2354,82 @@ async function scMatch(code){
 function mountDept(){
  if(!$('deptWrap'))return;
  const B=n=>'฿'+Number(n||0).toLocaleString('th-TH',{maximumFractionDigits:0});
+ const Bk=n=>n>=1000?(Math.round(n/100)/10)+'k':String(Math.round(n));
  const TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
  const mLab=m=>{const p=(m||'').split('-');return (TH[(+p[1]||1)-1]||m)+' '+(+p[0]+543);};
- const dcol=d=>({'กระดูกและข้อ':'#0D2F4F','กายภาพ':'#185FA5','พิลาทิส':'#3DC5B7','นวด':'#C2410C','ผสม':'#7C3AED'})[d]||'#64748B';
+ const mSh=m=>{const p=(m||'').split('-');return (TH[(+p[1]||1)-1]||m)+'ป'+String((+p[0]+543)).slice(-2);};
+ const dcol=d=>({'กระดูกและข้อ':'#0D2F4F','กายภาพ':'#185FA5','พิลาทิส':'#3DC5B7','นวด':'#C2410C','ผสม':'#7C3AED'})[d]||'#94A3B8';
  const BR2DEPT={'KneeCare':'กระดูกและข้อ','Yiaoya':'กายภาพ','นางฟ้า':'กายภาพ'};
+ const lineChart=(mons,series)=>{const W=840,H=250,pad=42,n=mons.length;const mx=Math.max(1,...series.flatMap(s=>s.vals));
+   const X=i=>pad+(n<=1?(W-pad*2)/2:i*(W-pad-12)/(n-1)); const Y=v=>H-26-(v/mx)*(H-52);
+   let g='';for(let k=0;k<=4;k++){const yy=H-26-(k/4)*(H-52);g+='<line x1="'+pad+'" y1="'+yy+'" x2="'+(W-12)+'" y2="'+yy+'" stroke="#EEF2F6"/><text x="'+(pad-6)+'" y="'+(yy+3)+'" font-size="9" fill="#94A3B8" text-anchor="end">'+Math.round(mx*k/4/1000)+'k</text>';}
+   mons.forEach((m,i)=>{if(n>10&&i%2)return;g+='<text x="'+X(i)+'" y="'+(H-9)+'" font-size="8.5" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
+   series.forEach(s=>{const pts=s.vals.map((v,i)=>X(i)+','+Y(v)).join(' ');g+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="2.4"/>';s.vals.forEach((v,i)=>{g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="2.4" fill="'+s.color+'"><title>'+s.name+' '+mSh(mons[i])+': '+B(v)+'</title></circle>';});});
+   return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';};
+ const donut=parts=>{const tot=parts.reduce((a,p)=>a+p.value,0)||1,R=66,C=2*Math.PI*R;let off=0;
+   const seg=parts.map(p=>{const dash=p.value/tot*C,el='<circle cx="100" cy="100" r="'+R+'" fill="none" stroke="'+p.color+'" stroke-width="26" stroke-dasharray="'+dash+' '+(C-dash)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 100 100)"><title>'+p.label+' '+B(p.value)+' ('+Math.round(p.value/tot*100)+'%)</title></circle>';off+=dash;return el;}).join('');
+   return '<svg viewBox="0 0 200 200" style="width:170px;height:170px;flex:none">'+seg+'<text x="100" y="94" font-size="11" fill="#64748B" text-anchor="middle">รวม</text><text x="100" y="114" font-size="15" fill="#0D2F4F" text-anchor="middle" font-weight="800">'+B(tot)+'</text></svg>';};
+ const spark=vals=>{const W=80,H=22,mx=Math.max(1,...vals);const pts=vals.map((v,i)=>(vals.length<=1?W/2:i*W/(vals.length-1))+','+(H-2-(v/mx)*(H-4))).join(' ');return '<svg viewBox="0 0 '+W+' '+H+'" style="width:80px;height:22px"><polyline points="'+pts+'" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';};
  $('deptWrap').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลดข้อมูลแผนก…</span></div>';
  Promise.all([sb.functions.invoke('dept_sales'),sb.functions.invoke('ad_creative')]).then(([ds,cr])=>{
   const all=(ds.data&&ds.data.rows)||[]; const months=(ds.data&&ds.data.months)||[];
   const creatives=((cr&&cr.data)||{}).rows||[];
   if(!all.length){$('deptWrap').innerHTML='<div class="empty-card"><i class="ti ti-building-hospital"></i><span>ยังไม่มีข้อมูลแผนก</span></div>';return;}
   const adByDept={}; creatives.forEach(r=>{const d=BR2DEPT[r.adset_name];if(!d)return;const o=adByDept[d]||(adByDept[d]={spend:0,msg:0});o.spend+=r.spend||0;o.msg+=r.messages||0;});
+  const asc=months.slice().reverse();
   let sel=months[0]; let openDept=null;
-  const allDepts=[...new Set(all.map(r=>r.dept))];
+  const allDepts=[...new Set(all.map(r=>r.dept))].sort((a,b)=>{const t=x=>all.filter(r=>r.dept===x).reduce((s,r)=>s+ +r.amount,0);return t(b)-t(a);});
   const byMonthDept=m=>{const o={};all.filter(r=>r.month===m).forEach(r=>{const x=o[r.dept]||(o[r.dept]={total:0,course:0,service:0,n:0,newp:0});x.total+=+r.amount;x[r.kind==='course'?'course':'service']+=+r.amount;x.n++;if(r.new_patient)x.newp++;});return o;};
+  const totOf=m=>all.filter(r=>r.month===m).reduce((a,r)=>a+ +r.amount,0);
   const render=()=>{
-   let h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap"><span style="font-weight:700;color:var(--navy,#0D2F4F)">เลือกเดือน</span><select id="deptMo" style="padding:9px 14px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit;font-weight:600;color:var(--navy,#0D2F4F)">'+months.map(m=>'<option value="'+m+'"'+(m===sel?' selected':'')+'>'+mLab(m)+'</option>').join('')+'</select><span style="font-size:12px;color:var(--text-muted,#64748B)">มูลค่าคอร์สที่ขาย + ค่าบริการ · สาขาศาลายา</span></div>';
-   h+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">แนวโน้มรายได้ตามแผนก ('+months.length+' เดือน)</div>';
-   months.slice().reverse().forEach(m=>{const o=byMonthDept(m);const tot=Object.values(o).reduce((a,x)=>a+x.total,0)||1;
-     h+='<div style="margin-bottom:10px;cursor:pointer" class="deptMonthRow" data-m="'+m+'"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:'+(m===sel?'var(--teal,#0F766E)':'var(--navy,#0D2F4F)')+'">'+mLab(m)+(m===sel?' ●':'')+'</span><span style="font-weight:700">'+B(tot)+'</span></div><div style="display:flex;height:18px;border-radius:5px;overflow:hidden">'+allDepts.map(d=>{const v=(o[d]||{}).total||0;const w=v/tot*100;return w>0?'<div title="'+d+' '+B(v)+'" style="width:'+w+'%;background:'+dcol(d)+'"></div>':'';}).join('')+'</div></div>';});
-   h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">'+allDepts.map(d=>'<span style="font-size:11px;color:var(--text-muted,#64748B)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+dcol(d)+';margin-right:4px"></span>'+esc(d)+'</span>').join('')+'</div></div>';
-   const o=byMonthDept(sel); const tot=Object.values(o).reduce((a,x)=>a+x.total,0); const totNew=Object.values(o).reduce((a,x)=>a+x.newp,0);
-   h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:4px 0 10px">แผนก · '+mLab(sel)+' (รวม '+B(tot)+' · คนไข้ใหม่ '+totNew+')</div>';
-   h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin-bottom:14px">';
+   const o=byMonthDept(sel); const tot=Object.values(o).reduce((a,x)=>a+x.total,0);
+   const idx=asc.indexOf(sel); const prevM=idx>0?asc[idx-1]:null; const prevTot=prevM?totOf(prevM):0;
+   const mom=prevTot?Math.round((tot-prevTot)/prevTot*100):null;
+   const totNew=Object.values(o).reduce((a,x)=>a+x.newp,0);
+   const totItems=Object.values(o).reduce((a,x)=>a+x.n,0);
+   const top=Object.entries(o).sort((a,b)=>b[1].total-a[1].total)[0];
+   // month selector
+   let h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap"><span style="font-weight:700;color:var(--navy,#0D2F4F)">เลือกเดือน</span><select id="deptMo" style="padding:9px 14px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit;font-weight:600;color:var(--navy,#0D2F4F)">'+months.map(m=>'<option value="'+m+'"'+(m===sel?' selected':'')+'>'+mLab(m)+'</option>').join('')+'</select><span style="font-size:12px;color:var(--text-muted,#64748B)">'+months.length+' เดือน · มูลค่าคอร์ส+บริการ · ศาลายา</span></div>';
+   // KPI row
+   const kpi=(l,v,sub,c)=>'<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:13px 15px;border-top:3px solid '+(c||'#3DC5B7')+'"><div style="font-size:10.5px;color:var(--text-muted,#64748B);font-weight:600">'+l+'</div><div style="font-size:21px;font-weight:800;color:var(--navy,#0D2F4F);margin-top:2px">'+v+'</div><div style="font-size:10.5px;color:var(--text-muted,#64748B);margin-top:1px">'+(sub||'')+'</div></div>';
+   const momTxt=mom==null?'—':(mom>=0?'<span style="color:#0F766E">▲ '+mom+'%</span>':'<span style="color:#DC2626">▼ '+Math.abs(mom)+'%</span>');
+   h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">'
+     +kpi('รายได้รวม',B(tot),mLab(sel),'#185FA5')
+     +kpi('เทียบเดือนก่อน',momTxt,prevM?'จาก '+B(prevTot):'—','#0F766E')
+     +kpi('แผนกท็อป',top?esc(top[0]):'—',top?B(top[1].total):'','#0D2F4F')
+     +kpi('คนไข้ใหม่',totNew+' คน',totItems+' รายการ','#C2410C')+'</div>';
+   // line chart (all months, per dept)
+   const series=allDepts.map(d=>({name:d,color:dcol(d),vals:asc.map(m=>(byMonthDept(m)[d]||{}).total||0)}));
+   h+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">แนวโน้มรายได้รายแผนก (เส้น · '+months.length+' เดือน)</div>'+lineChart(asc,series)
+     +'<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px">'+allDepts.map(d=>'<span style="font-size:11px;color:var(--text-muted,#64748B)"><span style="display:inline-block;width:12px;height:3px;border-radius:2px;background:'+dcol(d)+';margin-right:4px;vertical-align:middle"></span>'+esc(d)+'</span>').join('')+'</div></div>';
+   // donut + stacked trend side by side
+   h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px">';
+   h+='<div class="card" style="padding:16px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:8px">สัดส่วนแผนก · '+mLab(sel)+'</div><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'+donut(Object.entries(o).map(([d,x])=>({label:d,value:x.total,color:dcol(d)})))
+     +'<div style="flex:1;min-width:130px">'+Object.entries(o).sort((a,b)=>b[1].total-a[1].total).map(([d,x])=>'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+dcol(d)+';margin-right:5px"></span>'+esc(d)+'</span><b>'+(tot?Math.round(x.total/tot*100):0)+'%</b></div>').join('')+'</div></div></div>';
+   h+='<div class="card" style="padding:16px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">สัดส่วนรายเดือน (กดเลือก)</div>';
+   asc.slice(-8).reverse().forEach(m=>{const oo=byMonthDept(m);const t=Object.values(oo).reduce((a,x)=>a+x.total,0)||1;
+     h+='<div style="margin-bottom:8px;cursor:pointer" class="deptMonthRow" data-m="'+m+'"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="font-weight:600;color:'+(m===sel?'var(--teal,#0F766E)':'var(--navy,#0D2F4F)')+'">'+mSh(m)+(m===sel?' ●':'')+'</span><span style="font-weight:700">'+Bk(t)+'</span></div><div style="display:flex;height:15px;border-radius:4px;overflow:hidden">'+allDepts.map(d=>{const v=(oo[d]||{}).total||0;const w=v/t*100;return w>0?'<div style="width:'+w+'%;background:'+dcol(d)+'"></div>':'';}).join('')+'</div></div>';});
+   h+='</div></div>';
+   // dept cards with sparkline + MoM
+   h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:4px 0 10px">แผนก · '+mLab(sel)+'</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:12px;margin-bottom:14px">';
    Object.entries(o).sort((a,b)=>b[1].total-a[1].total).forEach(([d,x])=>{
+     const pv=prevM?((byMonthDept(prevM)[d]||{}).total||0):0; const dm=pv?Math.round((x.total-pv)/pv*100):null;
+     const sv=asc.map(m=>(byMonthDept(m)[d]||{}).total||0);
      h+='<div class="deptCard" data-d="'+esc(d)+'" style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-left:4px solid '+dcol(d)+';border-radius:12px;padding:14px;cursor:pointer">'
-       +'<div style="font-size:13px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(d)+'</div>'
-       +'<div style="font-size:22px;font-weight:800;color:'+dcol(d)+';margin:4px 0">'+B(x.total)+'</div>'
-       +'<div style="font-size:11px;color:var(--text-muted,#64748B)">'+(tot?Math.round(x.total/tot*100):0)+'% ของรายได้ · '+x.n+' รายการ</div>'
-       +'<div style="display:flex;gap:10px;margin-top:6px;font-size:11px"><span style="color:var(--text-muted,#64748B)">คอร์ส '+B(x.course)+'</span><span style="color:var(--text-muted,#64748B)">บริการ '+B(x.service)+'</span></div>'
-       +'<div style="font-size:11px;color:#0F766E;margin-top:3px"><i class="ti ti-user-plus"></i> คนไข้ใหม่ '+x.newp+'</div>'
+       +'<div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font-size:13px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(d)+'</div><span style="color:'+dcol(d)+'">'+spark(sv)+'</span></div>'
+       +'<div style="font-size:22px;font-weight:800;color:'+dcol(d)+';margin:2px 0">'+B(x.total)+'</div>'
+       +'<div style="font-size:11px;color:var(--text-muted,#64748B)">'+(tot?Math.round(x.total/tot*100):0)+'% · '+x.n+' รายการ · '+(dm==null?'':(dm>=0?'<span style="color:#0F766E">▲'+dm+'%</span>':'<span style="color:#DC2626">▼'+Math.abs(dm)+'%</span>'))+'</div>'
+       +'<div style="display:flex;gap:10px;margin-top:6px;font-size:11px"><span style="color:var(--text-muted,#64748B)">คอร์ส '+Bk(x.course)+'</span><span style="color:var(--text-muted,#64748B)">บริการ '+Bk(x.service)+'</span><span style="color:#0F766E">ใหม่ '+x.newp+'</span></div>'
        +'<div style="font-size:11px;color:var(--teal,#0F766E);margin-top:6px;font-weight:600">'+(openDept===d?'▲ ซ่อนรายละเอียด':'▼ ดูรายละเอียด')+'</div></div>';
    });
    h+='</div>';
-   // ad match panel
    if(Object.keys(adByDept).length){
-     h+='<div class="card" style="padding:0;overflow:hidden;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);padding:14px 16px 4px">จับคู่แอด ↔ แผนก (ROAS รายแผนก)</div><div style="font-size:11px;color:var(--text-muted,#64748B);padding:0 16px 8px">KneeCare→กระดูก · Yiaoya/นางฟ้า→กายภาพ · ⚠️ ค่าแอด = Meta ~14 วันล่าสุด เทียบรายได้ทั้งเดือน (คร่าว ๆ · ROAS จริงรอ auto-pull รายเดือน)</div>'
-       +'<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#F8FAFC;text-align:left"><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B)">แผนก</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">ค่าแอด~14วัน</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">ทักแชท</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">รายได้เดือน</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">รายได้/ค่าแอด</th></tr></thead><tbody>'
-       +Object.entries(adByDept).map(([d,a])=>{const rev=(o[d]||{}).total||0;const ratio=a.spend?(rev/a.spend):0;return '<tr><td style="padding:8px 12px;font-size:12px;font-weight:600;color:'+dcol(d)+'">'+esc(d)+'</td><td style="padding:8px 12px;text-align:right;font-size:12px">'+B(a.spend)+'</td><td style="padding:8px 12px;text-align:right;font-size:12px">'+a.msg+'</td><td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700">'+B(rev)+'</td><td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:800;color:#0F766E">'+(ratio?ratio.toFixed(1)+'x':'—')+'</td></tr>';}).join('')
-       +'</tbody></table></div>';
+     h+='<div class="card" style="padding:0;overflow:hidden;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);padding:14px 16px 4px">จับคู่แอด ↔ แผนก (ROAS รายแผนก)</div><div style="font-size:11px;color:var(--text-muted,#64748B);padding:0 16px 8px">KneeCare→กระดูก · Yiaoya/นางฟ้า→กายภาพ · ⚠️ ค่าแอด ~14 วันล่าสุด เทียบรายได้ทั้งเดือน (คร่าว ๆ)</div><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#F8FAFC;text-align:left"><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B)">แผนก</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">ค่าแอด~14วัน</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">ทักแชท</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">รายได้เดือน</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">รายได้/ค่าแอด</th></tr></thead><tbody>'
+       +Object.entries(adByDept).map(([d,a])=>{const rev=(o[d]||{}).total||0;const ra=a.spend?(rev/a.spend):0;return '<tr><td style="padding:8px 12px;font-size:12px;font-weight:600;color:'+dcol(d)+'">'+esc(d)+'</td><td style="padding:8px 12px;text-align:right;font-size:12px">'+B(a.spend)+'</td><td style="padding:8px 12px;text-align:right;font-size:12px">'+a.msg+'</td><td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700">'+B(rev)+'</td><td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:800;color:#0F766E">'+(ra?ra.toFixed(1)+'x':'—')+'</td></tr>';}).join('')+'</tbody></table></div>';
    }
    if(openDept){const items=all.filter(r=>r.month===sel&&r.dept===openDept).sort((a,b)=>b.amount-a.amount);
      h+='<div class="card" style="padding:0;overflow:hidden;margin-bottom:14px"><div style="font-weight:700;color:'+dcol(openDept)+';padding:14px 16px 8px">รายละเอียด '+esc(openDept)+' · '+mLab(sel)+' ('+items.length+' รายการ)</div><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#F8FAFC;text-align:left"><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B)">ประเภท</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B)">รายการ</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B)">คนไข้</th><th style="padding:8px 12px;font-size:11px;color:var(--text-muted,#64748B);text-align:right">ยอด</th></tr></thead><tbody>'
-       +items.map(r=>'<tr><td style="padding:7px 12px"><span style="background:'+(r.kind==='course'?'#EFF6FF':'#F0FDFA')+';color:'+(r.kind==='course'?'#1D4ED8':'#0F766E')+';padding:2px 7px;border-radius:10px;font-size:10px">'+(r.kind==='course'?'คอร์ส':'บริการ')+'</span></td><td style="padding:7px 12px;font-size:12px;color:var(--navy,#0D2F4F)">'+esc(r.name||r.code||'')+'</td><td style="padding:7px 12px;font-size:11px">'+(r.new_patient?'<span style="color:#0F766E;font-weight:600">ใหม่</span>':'<span style="color:var(--text-muted,#64748B)">เก่า</span>')+'</td><td style="padding:7px 12px;text-align:right;font-size:12px;font-weight:600">'+B(r.amount)+'</td></tr>').join('')
-       +'</tbody></table></div>';
+       +items.map(r=>'<tr><td style="padding:7px 12px"><span style="background:'+(r.kind==='course'?'#EFF6FF':'#F0FDFA')+';color:'+(r.kind==='course'?'#1D4ED8':'#0F766E')+';padding:2px 7px;border-radius:10px;font-size:10px">'+(r.kind==='course'?'คอร์ส':'บริการ')+'</span></td><td style="padding:7px 12px;font-size:12px;color:var(--navy,#0D2F4F)">'+esc(r.name||r.code||'')+'</td><td style="padding:7px 12px;font-size:11px">'+(r.new_patient?'<span style="color:#0F766E;font-weight:600">ใหม่</span>':'<span style="color:var(--text-muted,#64748B)">เก่า</span>')+'</td><td style="padding:7px 12px;text-align:right;font-size:12px;font-weight:600">'+B(r.amount)+'</td></tr>').join('')+'</tbody></table></div>';
    }
    $('deptWrap').innerHTML=h;
    $('deptMo').onchange=e=>{sel=e.target.value;openDept=null;render();};
