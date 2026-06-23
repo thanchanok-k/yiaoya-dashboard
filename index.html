@@ -313,7 +313,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
           <select id="annAudience" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
             <option>ทั้งบริษัท</option><option>เฉพาะ HR</option><option>หัวหน้างาน</option><option>เฉพาะหน้าบ้าน</option>
           </select>
-          <button onclick="postAnnounce()" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">โพสต์ประกาศ</button>
+          <button id="annPost" onclick="postAnnounce()" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">โพสต์ประกาศ</button>
           <span id="annMsg" style="font-size:12px;color:var(--text-muted)"></span>
         </div>
       </div>
@@ -552,9 +552,9 @@ async function loadAnnounce(){
 }
 async function postAnnounce(){
  const t=$('annTitle').value.trim(); if(!t){$('annMsg').textContent='กรุณาใส่หัวข้อ';return;}
- const btn=event&&event.target; if(btn)btn.disabled=true; $('annMsg').textContent='กำลังโพสต์…';
+ const btn=$('annPost'); btn.disabled=true; $('annMsg').textContent='กำลังโพสต์…';
  const {data,error}=await sb.functions.invoke('hr_announce',{body:{title:t,body:$('annBody').value,audience:$('annAudience').value}});
- if(btn)btn.disabled=false;
+ btn.disabled=false;
  if(error||(data&&data.error)){$('annMsg').textContent='ผิดพลาด: '+((data&&data.error)||error.message);return;}
  $('annTitle').value='';$('annBody').value='';$('annMsg').textContent='โพสต์แล้ว ✓';
  loadAnnounce();
