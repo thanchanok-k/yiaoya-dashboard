@@ -89,7 +89,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
 .pill.dispatched{background:var(--success-bg);color:var(--success)}.pill.logged{background:#F1F5F9;color:var(--text-muted)}
 .pill.posted{background:var(--success-bg);color:var(--success)}.pill.booked{background:var(--info-bg);color:var(--info)}
 .pill.approved,.pill.active{background:var(--success-bg);color:var(--success)}
-.pill.pending{background:#FFFBEB;color:#B45309}.pill.rejected,.pill.terminated{background:#FEF2F2;color:#B91C1C}
+.pill.pending{background:#FFFBEB;color:#B45309}.wf-appr{padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;margin-right:4px;font-family:inherit}.wf-appr.ok{background:#ECFDF5;color:#047857}.wf-appr.no{background:#FEF2F2;color:#B91C1C}.pill.rejected,.pill.terminated{background:#FEF2F2;color:#B91C1C}
 .flash{animation:fl 1.8s}@keyframes fl{0%{background:#FFF7CC}100%{background:transparent}}
 
 /* ===== DESIGN SYSTEM (yiaoya-flex-ui) ===== */
@@ -220,6 +220,10 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="otreq"><i class="ti ti-clock-plus"></i>คำขอ OT<span class="ct" id="ct-otreq"></span></div>
       <div class="sb-item" data-view="pinfo"><i class="ti ti-user-edit"></i>ขอแก้ข้อมูล<span class="ct" id="ct-pinfo"></span></div>
       <div class="sb-item" data-view="incident"><i class="ti ti-alert-triangle"></i>รายงานเหตุการณ์<span class="ct" id="ct-incident"></span></div>
+      <div class="sb-item" data-view="oneonone"><i class="ti ti-messages"></i>บันทึก 1-on-1<span class="ct" id="ct-oneonone"></span></div>
+      <div class="sb-item" data-view="probreview"><i class="ti ti-clipboard-check"></i>ประเมินทดลองงาน<span class="ct" id="ct-probreview"></span></div>
+      <div class="sb-item" data-view="expense"><i class="ti ti-receipt"></i>เบิกค่าใช้จ่าย<span class="ct" id="ct-expense"></span></div>
+      <div class="sb-item" data-view="survey"><i class="ti ti-clipboard-text"></i>แบบสอบถาม<span class="ct" id="ct-survey"></span></div>
       <div class="sb-label">บัญชี (Accountant)</div>
       <div class="sb-item" data-view="accexp"><i class="ti ti-receipt"></i>คีย์รายจ่าย<span class="ct" id="ct-accexp"></span></div>
       <div class="sb-item" data-view="accpr"><i class="ti ti-file-invoice"></i>คำขอจ่าย·อนุมัติ<span class="ct" id="ct-accpr"></span></div>
@@ -349,6 +353,11 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sec"><span class="sec-bar"></span>รายงานเหตุการณ์ · เขียนได้<span class="sec-c">Native Supabase</span></div>
       <div id="wrap-incident"></div>
     </section>
+    <section class="view" data-view="oneonone"><div class="sec"><span class="sec-bar"></span>บันทึก 1-on-1 · เขียนได้<span class="sec-c">Native</span></div><div id="wrap-oneonone"></div></section>
+    <section class="view" data-view="probreview"><div class="sec"><span class="sec-bar"></span>ประเมินทดลองงาน · เขียนได้<span class="sec-c">Native</span></div><div id="wrap-probreview"></div></section>
+    <section class="view" data-view="expense"><div class="sec"><span class="sec-bar"></span>เบิกค่าใช้จ่าย · เขียนได้<span class="sec-c">Native</span></div><div id="wrap-expense"></div></section>
+    <section class="view" data-view="survey"><div class="sec"><span class="sec-bar"></span>แบบสอบถาม · เขียนได้<span class="sec-c">Native</span></div><div id="wrap-survey"><!--wrap--></div>
+    </section>
     <section class="view" data-view="accexp">
       <div class="sec"><span class="sec-bar"></span>คีย์รายจ่าย · เขียนได้<span class="sec-c">Native Supabase · บัญชี</span></div>
       <div class="card" style="padding:16px;margin-bottom:14px">
@@ -463,7 +472,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -670,23 +679,35 @@ const WFORMS={
    {k:'start_date',lb:'วันเริ่ม',t:'date',req:1},{k:'end_date',lb:'วันสิ้นสุด',t:'date'},
    {k:'half_day',lb:'ลาครึ่งวัน (นับ 0.5 วัน)',cb:1},{k:'days',lb:'จำนวนวัน (เว้นว่าง=คำนวณเอง)',t:'number'},
    {k:'reason',lb:'เหตุผล',ta:1},{k:'replacement_employee_id',lb:'ผู้รับมอบงานแทน',ph:'YY-...'},{k:'attachment_url',lb:'ลิงก์ใบรับรอง/ไฟล์แนบ'}],
-  cols:[{h:'รหัส',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'ประเภท',k:'leave_type'},{h:'เริ่ม',k:'start_date'},{h:'ถึง',k:'end_date'},{h:'วัน',k:'days'},{h:'สถานะ',k:'status',t:'status'}]},
+  cols:[{h:'รหัส',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'ประเภท',k:'leave_type'},{h:'เริ่ม',k:'start_date'},{h:'ถึง',k:'end_date'},{h:'วัน',k:'days'},{h:'สถานะ',k:'status',t:'status'},{h:'จัดการ',render:r=>apprCell(r,'request_id','leavereq')}]},
  otreq:{fn:'hr_ot_request',title:'คำขอ OT',
   fields:[{k:'employee_id',lb:'รหัสพนักงาน',ph:'YY-XNU-013',req:1},{k:'ot_date',lb:'วันที่ทำ OT',t:'date',req:1},
    {k:'expected_start',lb:'เวลาเริ่ม',t:'time'},{k:'expected_end',lb:'เวลาสิ้นสุด',t:'time'},
    {k:'expected_minutes',lb:'จำนวนนาที (หรือกรอกเวลาด้านบน)',t:'number'},{k:'reason',lb:'เหตุผล',ta:1,req:1}],
-  cols:[{h:'รหัส',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'วันที่',k:'ot_date'},{h:'ชม.',k:'expected_hours'},{h:'สถานะ',k:'status',t:'status'}]},
+  cols:[{h:'รหัส',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'วันที่',k:'ot_date'},{h:'ชม.',k:'expected_hours'},{h:'สถานะ',k:'status',t:'status'},{h:'จัดการ',render:r=>apprCell(r,'request_id','otreq')}]},
  pinfo:{fn:'hr_personal_info_request',title:'ขอแก้ข้อมูลส่วนตัว',
   fields:[{k:'employee_id',lb:'รหัสพนักงาน',ph:'YY-XNU-013',req:1},
    {k:'field',lb:'ข้อมูลที่ขอแก้',req:1,sel:[{v:'address',l:'ที่อยู่ปัจจุบัน'},{v:'phone',l:'เบอร์โทรศัพท์'},{v:'marital_status',l:'สถานภาพสมรส'},{v:'dependent',l:'ผู้อยู่ในอุปการะ'},{v:'emergency_contact',l:'ผู้ติดต่อฉุกเฉิน'},{v:'bank_account',l:'บัญชีธนาคาร'},{v:'other',l:'อื่นๆ'}]},
    {k:'new_value',lb:'ค่าใหม่',req:1},{k:'note',lb:'หมายเหตุ',ta:1},{k:'attachment_url',lb:'ลิงก์เอกสารแนบ (บางประเภทบังคับ)'}],
-  cols:[{h:'รหัส',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'ฟิลด์',k:'field'},{h:'ค่าใหม่',k:'new_value'},{h:'สถานะ',k:'status',t:'status'}]},
+  cols:[{h:'รหัส',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'ฟิลด์',k:'field'},{h:'ค่าใหม่',k:'new_value'},{h:'สถานะ',k:'status',t:'status'},{h:'จัดการ',render:r=>apprCell(r,'request_id','pinfo')}]},
  incident:{fn:'hr_incident',title:'รายงานเหตุการณ์',
   fields:[{k:'category',lb:'ประเภทเหตุการณ์',req:1,sel:[{v:'injury',l:'บาดเจ็บ'},{v:'near_miss',l:'เกือบเกิดเหตุ'},{v:'equipment_damage',l:'อุปกรณ์เสียหาย'},{v:'security',l:'ความปลอดภัย'},{v:'patient_safety',l:'ความปลอดภัยผู้ป่วย'},{v:'other',l:'อื่นๆ'}]},
    {k:'severity',lb:'ระดับความรุนแรง',sel:[{v:'minor',l:'เล็กน้อย'},{v:'moderate',l:'ปานกลาง'},{v:'severe',l:'รุนแรง'},{v:'critical',l:'วิกฤต'}]},
    {k:'branch_id',lb:'สาขา',sel:[{v:'BR00',l:'BR00'},{v:'BR01',l:'BR01'}]},{k:'incident_date',lb:'วันที่เกิดเหตุ',t:'date'},{k:'incident_time',lb:'เวลา',t:'time'},
    {k:'incident_location',lb:'สถานที่'},{k:'detail',lb:'รายละเอียด',ta:1,req:1},{k:'immediate_action',lb:'การแก้ไขเบื้องต้น',ta:1},{k:'medical_attention',lb:'ต้องเข้ารับการรักษาพยาบาล',cb:1}],
-  cols:[{h:'รหัส',k:'incident_id',t:'mono'},{h:'สาขา',k:'branch_id'},{h:'หมวด',k:'category'},{h:'ระดับ',k:'severity'},{h:'วันที่',k:'incident_date'},{h:'สถานะ',k:'status',t:'status'}]}
+  cols:[{h:'รหัส',k:'incident_id',t:'mono'},{h:'สาขา',k:'branch_id'},{h:'หมวด',k:'category'},{h:'ระดับ',k:'severity'},{h:'วันที่',k:'incident_date'},{h:'สถานะ',k:'status',t:'status'}]},
+ oneonone:{fn:'hr_oneonone',title:'บันทึก 1-on-1',
+  fields:[{k:'employee_id',lb:'รหัสพนักงาน',ph:'YY-XNU-013',req:1},{k:'supervisor_id',lb:'หัวหน้า',ph:'YY-...'},{k:'session_date',lb:'วันที่คุย',t:'date'},{k:'mode',lb:'รูปแบบ',sel:[{v:'in_person',l:'พบตัว'},{v:'video',l:'วิดีโอ'},{v:'phone',l:'โทร'}]},{k:'topic',lb:'หัวข้อ',ta:1},{k:'notes',lb:'บันทึกการคุย',ta:1},{k:'action_items',lb:'สิ่งที่ต้องทำต่อ'},{k:'sentiment',lb:'ความรู้สึก (1-5)',t:'number'},{k:'next_date',lb:'นัดครั้งถัดไป',t:'date'}],
+  cols:[{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'วันที่',k:'session_date'},{h:'รูปแบบ',k:'mode'},{h:'สถานะ',k:'status',t:'status'}]},
+ probreview:{fn:'hr_probation_review',title:'ประเมินทดลองงาน',
+  fields:[{k:'employee_id',lb:'รหัสพนักงาน',ph:'YY-XNU-013',req:1},{k:'milestone_days',lb:'รอบประเมิน (วัน)',req:1,sel:[{v:'30',l:'30 วัน'},{v:'60',l:'60 วัน'},{v:'90',l:'90 วัน'},{v:'120',l:'120 วัน'}]},{k:'result',lb:'ผลการประเมิน',req:1,sel:[{v:'pass',l:'ผ่าน'},{v:'extend',l:'ติดตามต่อ'},{v:'fail',l:'ไม่ผ่าน'}]},{k:'score',lb:'คะแนนรวม',t:'number'},{k:'comments',lb:'ความเห็น',ta:1},{k:'review_date',lb:'วันประเมิน',t:'date'}],
+  cols:[{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'รอบ(วัน)',k:'milestone_days'},{h:'ผล',k:'result'},{h:'คะแนน',k:'score'},{h:'สถานะ',k:'status',t:'status'}]},
+ expense:{fn:'hr_expense_claim',title:'เบิกค่าใช้จ่าย',
+  fields:[{k:'employee_id',lb:'รหัสพนักงาน',ph:'YY-XNU-013',req:1},{k:'category',lb:'หมวดค่าใช้จ่าย',req:1,sel:[{v:'travel',l:'ค่าเดินทาง'},{v:'supplies',l:'อุปกรณ์สำนักงาน'},{v:'training',l:'ค่าอบรม'},{v:'medical',l:'ค่ารักษา'},{v:'client',l:'รับรองลูกค้า'},{v:'other',l:'อื่นๆ'}]},{k:'amount',lb:'จำนวนเงิน (บาท)',t:'number',req:1},{k:'description',lb:'รายละเอียด',ta:1},{k:'receipt_url',lb:'ลิงก์ใบเสร็จ'},{k:'branch_id',lb:'สาขา',sel:[{v:'BR00',l:'BR00'},{v:'BR01',l:'BR01'}]}],
+  cols:[{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'หมวด',k:'category'},{h:'จำนวนเงิน',k:'amount'},{h:'สถานะ',k:'status',t:'status'}]},
+ survey:{fn:'hr_survey_response',title:'แบบสอบถาม',
+  fields:[{k:'survey_type',lb:'ชนิดแบบสอบถาม',req:1,sel:[{v:'pulse',l:'Pulse'},{v:'exit_hr',l:'สัมภาษณ์ลาออก(HR)'},{v:'one_on_one',l:'1-on-1'},{v:'learning_log',l:'Learning Log'},{v:'idp_review',l:'IDP Review'},{v:'quarterly_review',l:'รายไตรมาส'},{v:'buddy_feedback',l:'Buddy'},{v:'review_360',l:'360'}]},{k:'rating',lb:'คะแนน',t:'number'},{k:'comment',lb:'ความเห็น',ta:1},{k:'anonymous',lb:'ไม่ระบุชื่อ',cb:1},{k:'employee_id',lb:'รหัสพนักงาน (ถ้าไม่ anonymous)',ph:'YY-...'}],
+  cols:[{h:'ประเภท',k:'survey_type'},{h:'คะแนน',k:'rating'},{h:'ความเห็น',k:'comment'},{h:'สถานะ',k:'status',t:'status'}]}
 };
 const WIST='padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;width:100%';
 function wfInput(key,f){ const id='wf_'+key+'_'+f.k;
@@ -712,6 +733,17 @@ async function loadWriteList(key){ const c=WFORMS[key];
   $('wflist_'+key).innerHTML=tbl(items,c.cols,{empty:'ยังไม่มีรายการ'});
   const ct=$('ct-'+key); if(ct)ct.textContent=items.length||'';
  }catch(e){ console.error('wf '+key,e); }
+}
+function apprCell(r,idKey,key){
+ const s=String(r.status||'').toLowerCase();
+ if(s&&s!=='pending')return '<span class="pill '+s+'">'+esc(r.status||'')+'</span>';
+ const id=esc(r[idKey]||'');
+ return '<button class="wf-appr ok" data-k="'+key+'" data-id="'+id+'" data-d="approved">อนุมัติ</button> <button class="wf-appr no" data-k="'+key+'" data-id="'+id+'" data-d="rejected">ปฏิเสธ</button>';
+}
+async function doApprove(key,id,decision){ if(!id)return;
+ const {data,error}=await sb.functions.invoke('hr_approve',{body:{request_id:id,decision}});
+ if(error||(data&&data.error)){ alert('ผิดพลาด: '+((data&&data.error)||error.message)); return; }
+ loadWriteList(key);
 }
 async function submitWrite(key){ const c=WFORMS[key]; const body={};
  c.fields.forEach(f=>{ const el=$('wf_'+key+'_'+f.k); body[f.k]= f.cb? el.checked : el.value; });
@@ -941,7 +973,8 @@ function start(){
  $('prPost').onclick=postPR; loadPR();
  $('pePost').onclick=postPettyEntry; $('pcPost').onclick=postPettyCycle; loadPetty();
  $('dsPost').onclick=postSales; loadSales();
- ['leavereq','otreq','pinfo','incident'].forEach(mountWrite);
+ ['leavereq','otreq','pinfo','incident','oneonone','probreview','expense','survey'].forEach(mountWrite);
+ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
  loadAll(false);
