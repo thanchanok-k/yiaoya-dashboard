@@ -241,7 +241,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
     </nav>
     <div class="sb-foot">
       <div class="sb-user"><div class="sb-av" id="sbAv">AD</div>
-        <div style="min-width:0"><div class="sb-uname" id="sbName">admin</div><div class="sb-urole">ผู้ดูแลระบบ</div></div></div>
+        <div style="min-width:0"><div class="sb-uname" id="sbName">admin</div><div class="sb-urole" id="sbRole">บทบาท: ผู้บริหาร</div></div></div>
       <div class="sb-out" id="logout"><i class="ti ti-logout"></i> ออกจากระบบ</div>
     </div>
   </aside>
@@ -252,6 +252,15 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="logo"><i class="ti ti-topology-star-3"></i></div>
       <div><div class="g-eb">YIAOYA · HR PORTAL</div><h1 id="viewTitle">ภาพรวม</h1>
         <div class="sub"><span class="dot"></span><span id="upd">กำลังเชื่อมต่อ realtime…</span></div></div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:7px;flex:none">
+        <label for="viewAs" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.8)">ดูแบบ:</label>
+        <select id="viewAs" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer;outline:none">
+          <option value="director" style="color:#0F172A">ผู้บริหาร (Director)</option>
+          <option value="accountant" style="color:#0F172A">บัญชี (Accountant)</option>
+          <option value="hr" style="color:#0F172A">ทรัพยากรบุคคล (HR)</option>
+          <option value="staff" style="color:#0F172A">พนักงาน (Staff)</option>
+        </select>
+      </div>
     </div></div>
 
     <section class="view active" data-view="overview">
@@ -561,6 +570,54 @@ function showView(v){
  $('viewTitle').textContent=VIEW_TITLE[v]||'ภาพรวม';
  $('sidebar').classList.remove('open');
  window.scrollTo(0,0);
+}
+
+/* ===== ROLE-BASED VIEWS (Wave 4) ===== */
+const ROLES=['director','accountant','hr','staff'];
+const ROLE_TH={director:'ผู้บริหาร',accountant:'บัญชี',hr:'ทรัพยากรบุคคล',staff:'พนักงาน'};
+const ROLE_LANDING={director:'overview',accountant:'accdigest',hr:'digest',staff:'overview'};
+const ALL_VIEWS=Object.keys(VIEW_TITLE);
+const VIEWS_BY_ROLE={
+ director: ALL_VIEWS.slice(),
+ accountant:['overview','events','accdigest','accexp','accpr','accpetty','accsales','accpayroll','accdf','acctax','accbank'],
+ hr:['overview','employees','branches','leaves','ot','kpi',
+     'digest','balance','kpisum','contract','anniv','leaveana','otsum',
+     'announce','leavereq','otreq','pinfo','incident','oneonone','probreview','expense','survey'],
+ staff:['overview','announce'],
+};
+/* email → role (real per-user roles need each employee to have a Supabase Auth account — future).
+   Today: ROLE_MAP + the view-as switcher demonstrate the behavior. */
+const ROLE_MAP={'admin@yiaoya-hub.com':'director'};
+let currentRole='director';
+
+function applyRole(role){
+ if(!VIEWS_BY_ROLE[role]) role='director';
+ currentRole=role;
+ const allowed=VIEWS_BY_ROLE[role];
+ // show/hide each nav item
+ document.querySelectorAll('.sb-item').forEach(i=>{
+  i.style.display = allowed.includes(i.dataset.view) ? '' : 'none';
+ });
+ // hide a group header (.sb-label) if every item under it (until next label) is hidden
+ const nav=$('sbnav'); if(nav){
+  const kids=Array.from(nav.children);
+  kids.forEach((node,idx)=>{
+   if(!node.classList||!node.classList.contains('sb-label')) return;
+   let anyVisible=false;
+   for(let j=idx+1;j<kids.length;j++){
+    const n=kids[j];
+    if(n.classList&&n.classList.contains('sb-label')) break;
+    if(n.classList&&n.classList.contains('sb-item')&&n.style.display!=='none'){anyVisible=true;break;}
+   }
+   node.style.display = anyVisible ? '' : 'none';
+  });
+ }
+ // role chip in footer
+ const chip=$('sbRole'); if(chip) chip.textContent='บทบาท: '+(ROLE_TH[role]||role);
+ // if current active view not allowed → go to role landing
+ const active=document.querySelector('.view.active');
+ const cur=active?active.dataset.view:null;
+ if(!cur||!allowed.includes(cur)) showView(ROLE_LANDING[role]||'overview');
 }
 
 const SYSTEMS=[
@@ -3051,8 +3108,15 @@ async function loadAll(flash){
 
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
- sb.auth.getUser().then(({data})=>{const e=(data&&data.user&&data.user.email)||'admin'; $('sbName').textContent=e; $('sbAv').textContent=e.substring(0,2).toUpperCase();});
+ sb.auth.getUser().then(({data})=>{
+   const e=(data&&data.user&&data.user.email)||'admin';
+   $('sbName').textContent=e; $('sbAv').textContent=e.substring(0,2).toUpperCase();
+   const role=ROLE_MAP[e.toLowerCase()]||'director';   // unknown → director (full), nothing breaks
+   const sel=$('viewAs'); if(sel) sel.value=role;
+   applyRole(role);
+ });
  document.querySelectorAll('.sb-item').forEach(i=>i.onclick=()=>showView(i.dataset.view));
+ const viewAs=$('viewAs'); if(viewAs) viewAs.onchange=()=>applyRole(viewAs.value);
  $('expPost').onclick=postExpense; loadAccExp();
  $('prPost').onclick=postPR; loadPR();
  $('pePost').onclick=postPettyEntry; $('pcPost').onclick=postPettyCycle; loadPetty();
@@ -3068,6 +3132,7 @@ function start(){
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
  loadAll(false);
  sb.channel('events-live').on('postgres_changes',{event:'INSERT',schema:'public',table:'events'},()=>loadAll(true)).subscribe();
+ applyRole(currentRole);
 }
 $('btn').onclick=async()=>{ $('err').textContent='';
  const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pass').value});
