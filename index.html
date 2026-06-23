@@ -216,6 +216,10 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="otsum"><i class="ti ti-clock-hour-4"></i>สรุป OT</div>
       <div class="sb-label">จัดการ · เขียนได้ (Native)</div>
       <div class="sb-item" data-view="announce"><i class="ti ti-speakerphone"></i>ประกาศ<span class="ct" id="ct-announce"></span></div>
+      <div class="sb-item" data-view="leavereq"><i class="ti ti-calendar-plus"></i>คำขอลา<span class="ct" id="ct-leavereq"></span></div>
+      <div class="sb-item" data-view="otreq"><i class="ti ti-clock-plus"></i>คำขอ OT<span class="ct" id="ct-otreq"></span></div>
+      <div class="sb-item" data-view="pinfo"><i class="ti ti-user-edit"></i>ขอแก้ข้อมูล<span class="ct" id="ct-pinfo"></span></div>
+      <div class="sb-item" data-view="incident"><i class="ti ti-alert-triangle"></i>รายงานเหตุการณ์<span class="ct" id="ct-incident"></span></div>
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
@@ -319,6 +323,22 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       </div>
       <div id="announceList"></div>
     </section>
+    <section class="view" data-view="leavereq">
+      <div class="sec"><span class="sec-bar"></span>คำขอลา · เขียนได้<span class="sec-c">Native Supabase</span></div>
+      <div id="wrap-leavereq"></div>
+    </section>
+    <section class="view" data-view="otreq">
+      <div class="sec"><span class="sec-bar"></span>คำขอ OT · เขียนได้<span class="sec-c">Native Supabase</span></div>
+      <div id="wrap-otreq"></div>
+    </section>
+    <section class="view" data-view="pinfo">
+      <div class="sec"><span class="sec-bar"></span>ขอแก้ข้อมูลส่วนตัว · เขียนได้<span class="sec-c">Native Supabase</span></div>
+      <div id="wrap-pinfo"></div>
+    </section>
+    <section class="view" data-view="incident">
+      <div class="sec"><span class="sec-bar"></span>รายงานเหตุการณ์ · เขียนได้<span class="sec-c">Native Supabase</span></div>
+      <div id="wrap-incident"></div>
+    </section>
     <section class="view" data-view="events">
       <div class="sec"><span class="sec-bar"></span>เหตุการณ์ทั้งหมด<span class="sec-c"><span class="dot"></span>realtime</span></div>
       <div class="card"><div id="eventsAll"></div></div>
@@ -337,7 +357,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -535,6 +555,55 @@ async function renderHrFunctions(){
  }catch(e){ console.error('hr fn',e); $('digest').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดฟังก์ชันไม่ได้: '+esc(e.message)+'</span></div>'; }
 }
 
+// ===== Generic write-form system (rebuild หน้าเขียน native · ใช้ซ้ำได้) =====
+const WFORMS={
+ leavereq:{fn:'hr_leave_request',title:'คำขอลา',
+  fields:[{k:'employee_id',lb:'รหัสพนักงาน',ph:'YY-XNU-013'},{k:'leave_type',lb:'ประเภท',sel:['annual','sick','personal','business']},{k:'start_date',lb:'วันเริ่ม',t:'date'},{k:'end_date',lb:'วันสิ้นสุด',t:'date'},{k:'days',lb:'จำนวนวัน',t:'number'},{k:'reason',lb:'เหตุผล',ta:true}],
+  cols:[{h:'รหัส',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'ประเภท',k:'leave_type'},{h:'เริ่ม',k:'start_date'},{h:'ถึง',k:'end_date'},{h:'วัน',k:'days'},{h:'สถานะ',k:'status',t:'status'}]},
+ otreq:{fn:'hr_ot_request',title:'คำขอ OT',
+  fields:[{k:'employee_id',lb:'รหัสพนักงาน',ph:'YY-XNU-013'},{k:'ot_date',lb:'วันที่ OT',t:'date'},{k:'hours',lb:'จำนวนชั่วโมง',t:'number'},{k:'reason',lb:'เหตุผล',ta:true}],
+  cols:[{h:'รหัส',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'วันที่',k:'ot_date'},{h:'ชม.',k:'hours'},{h:'สถานะ',k:'status',t:'status'}]},
+ pinfo:{fn:'hr_personal_info_request',title:'ขอแก้ข้อมูลส่วนตัว',
+  fields:[{k:'employee_id',lb:'รหัสพนักงาน',ph:'YY-XNU-013'},{k:'field',lb:'ข้อมูลที่ขอแก้',sel:['phone','address','email','bank_account','emergency_contact']},{k:'new_value',lb:'ค่าใหม่'},{k:'note',lb:'หมายเหตุ',ta:true}],
+  cols:[{h:'รหัส',k:'request_id',t:'mono'},{h:'พนักงาน',k:'employee_id',t:'mono'},{h:'ฟิลด์',k:'field'},{h:'ค่าใหม่',k:'new_value'},{h:'สถานะ',k:'status',t:'status'}]},
+ incident:{fn:'hr_incident',title:'รายงานเหตุการณ์',
+  fields:[{k:'branch_id',lb:'สาขา',sel:['BR00','BR01']},{k:'category',lb:'หมวด',ph:'อุปกรณ์ / ความปลอดภัย / ...'},{k:'severity',lb:'ระดับ',sel:['low','medium','high']},{k:'detail',lb:'รายละเอียด',ta:true}],
+  cols:[{h:'รหัส',k:'incident_id',t:'mono'},{h:'สาขา',k:'branch_id'},{h:'หมวด',k:'category'},{h:'ระดับ',k:'severity'},{h:'สถานะ',k:'status',t:'status'}]}
+};
+const WIST='padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;width:100%';
+function wfInput(key,f){ const id='wf_'+key+'_'+f.k;
+ if(f.sel)return '<select id="'+id+'" style="'+WIST+'">'+f.sel.map(o=>'<option>'+o+'</option>').join('')+'</select>';
+ if(f.ta)return '<textarea id="'+id+'" rows="2" style="'+WIST+';resize:vertical"></textarea>';
+ return '<input id="'+id+'" type="'+(f.t||'text')+'" '+(f.ph?'placeholder="'+f.ph+'"':'')+' style="'+WIST+'">';
+}
+function mountWrite(key){ const c=WFORMS[key]; if(!$('wrap-'+key))return;
+ $('wrap-'+key).innerHTML='<div class="card" style="padding:16px;margin-bottom:14px">'
+  +'<div style="font-weight:600;margin-bottom:10px;color:var(--navy)">'+c.title+' — สร้างใหม่</div>'
+  +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">'
+  +c.fields.map(f=>'<div'+(f.ta?' style="grid-column:1/-1"':'')+'><div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">'+f.lb+'</div>'+wfInput(key,f)+'</div>').join('')
+  +'</div><div style="display:flex;gap:8px;align-items:center;margin-top:12px"><button id="wfbtn_'+key+'" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึก</button><span id="wfmsg_'+key+'" style="font-size:12px;color:var(--text-muted)"></span></div></div>'
+  +'<div id="wflist_'+key+'"></div>';
+ $('wfbtn_'+key).onclick=()=>submitWrite(key);
+ loadWriteList(key);
+}
+async function loadWriteList(key){ const c=WFORMS[key];
+ try{ const {data}=await sb.functions.invoke(c.fn); const items=(data&&data.items)||[];
+  $('wflist_'+key).innerHTML=tbl(items,c.cols,{empty:'ยังไม่มีรายการ'});
+  const ct=$('ct-'+key); if(ct)ct.textContent=items.length||'';
+ }catch(e){ console.error('wf '+key,e); }
+}
+async function submitWrite(key){ const c=WFORMS[key]; const body={};
+ c.fields.forEach(f=>{ body[f.k]=$('wf_'+key+'_'+f.k).value; });
+ const need=c.fields[0].k; if(!body[need]){ $('wfmsg_'+key).textContent='กรุณากรอก '+c.fields[0].lb; return; }
+ const btn=$('wfbtn_'+key); btn.disabled=true; $('wfmsg_'+key).textContent='กำลังบันทึก…';
+ const {data,error}=await sb.functions.invoke(c.fn,{body});
+ btn.disabled=false;
+ if(error||(data&&data.error)){ $('wfmsg_'+key).textContent='ผิดพลาด: '+((data&&data.error)||error.message); return; }
+ $('wfmsg_'+key).textContent='บันทึกแล้ว ✓';
+ c.fields.forEach(f=>{ if(!f.sel){ const el=$('wf_'+key+'_'+f.k); if(el)el.value=''; } });
+ loadWriteList(key);
+}
+
 // ประกาศ (native เขียน/อ่าน ผ่าน edge function hr_announce)
 function annCard(a){
  return '<div class="card" style="padding:14px;margin-bottom:10px;border-left:3px solid var(--teal)">'
@@ -616,6 +685,7 @@ function start(){
  sb.auth.getUser().then(({data})=>{const e=(data&&data.user&&data.user.email)||'admin'; $('sbName').textContent=e; $('sbAv').textContent=e.substring(0,2).toUpperCase();});
  document.querySelectorAll('.sb-item').forEach(i=>i.onclick=()=>showView(i.dataset.view));
  $('annPost').onclick=postAnnounce;
+ ['leavereq','otreq','pinfo','incident'].forEach(mountWrite);
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
  loadAll(false);
