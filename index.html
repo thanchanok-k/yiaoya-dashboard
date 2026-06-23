@@ -313,7 +313,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
           <select id="annAudience" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
             <option>ทั้งบริษัท</option><option>เฉพาะ HR</option><option>หัวหน้างาน</option><option>เฉพาะหน้าบ้าน</option>
           </select>
-          <button id="annPost" onclick="postAnnounce()" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">โพสต์ประกาศ</button>
+          <button id="annPost" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">โพสต์ประกาศ</button>
           <span id="annMsg" style="font-size:12px;color:var(--text-muted)"></span>
         </div>
       </div>
@@ -615,6 +615,7 @@ function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
  sb.auth.getUser().then(({data})=>{const e=(data&&data.user&&data.user.email)||'admin'; $('sbName').textContent=e; $('sbAv').textContent=e.substring(0,2).toUpperCase();});
  document.querySelectorAll('.sb-item').forEach(i=>i.onclick=()=>showView(i.dataset.view));
+ $('annPost').onclick=postAnnounce;
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
  loadAll(false);
