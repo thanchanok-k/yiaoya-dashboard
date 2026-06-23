@@ -500,6 +500,17 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
         </div>
         <div id="plBreak" style="margin-top:12px"></div>
       </div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:10px;color:var(--navy)">คิดเงินเดือนทั้งบริษัท</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input id="plAllPeriod" type="month" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <button id="plAllCalc" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">คิดเงินเดือนทั้งบริษัท</button>
+          <button id="plAllExport" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ออกไฟล์โอนเงินเดือน</button>
+          <span id="plAllMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+        <div id="plAllStat" style="margin-top:12px"></div>
+        <div id="plAllList"></div>
+      </div>
       <div id="plStat"></div>
       <div id="plList"></div>
     </section>
@@ -1273,6 +1284,43 @@ async function loadPayroll(){
   $('plList').querySelectorAll('[data-payslip]').forEach(b=>b.onclick=()=>plDownloadSlip(b.dataset.payslip,b));
   $('ct-accpayroll').textContent=((t.count||rows.length)-(t.paid_count||0))||'';
  }catch(e){ console.error('payroll',e); }
+}
+// ── คิดเงินเดือนทั้งบริษัท (calc_all) + ออกไฟล์โอน (acc_bankfile) ──
+async function plCalcAll(){
+ const period=$('plAllPeriod').value.trim();
+ if(!period){$('plAllMsg').textContent='เลือกงวดก่อน';return;}
+ const btn=$('plAllCalc');btn.disabled=true;$('plAllMsg').textContent='กำลังคิดเงินเดือนทั้งบริษัท…';
+ const {data,error}=await sb.functions.invoke('acc_payroll',{body:{action:'calc_all',period}});
+ btn.disabled=false;
+ if(error||(data&&data.error)){$('plAllMsg').textContent='ผิดพลาด: '+((data&&data.error)||error.message);return;}
+ const rows=(data&&data.rows)||[], tt=(data&&data.totals)||{};
+ $('plAllStat').innerHTML=statHero([
+  {eyebrow:'พนักงาน',big:(data&&data.count)||rows.length,unit:'คน',sub:'งวด '+period,tone:'navy'},
+  {eyebrow:'รวมรายได้',big:_baht(tt.gross),unit:'',sub:'gross รวม',tone:'amber'},
+  {eyebrow:'รวมสุทธิที่ต้องจ่าย',big:_baht(tt.net),unit:'',sub:'net รวมทั้งบริษัท',tone:'info'},
+ ]);
+ $('plAllList').innerHTML='<div class="card">'+tbl(rows,[
+  {h:'พนักงาน',k:'full_name'},
+  {h:'ฐาน',render:r=>_baht(r.base_salary)},
+  {h:'รายได้รวม',render:r=>_baht(r.gross)},
+  {h:'สสช',render:r=>_baht(r.sso)},
+  {h:'ภาษี',render:r=>_baht(r.wht)},
+  {h:'สุทธิ',render:r=>_baht(r.net)},
+ ],{empty:'ยังไม่มีพนักงานที่ตั้งฐานเงินเดือน'})
+  +(rows.length?'<div style="padding:11px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);display:flex;gap:18px;flex-wrap:wrap"><span>รวมรายได้: <b>'+_baht(tt.gross)+'</b></span><span>รวม สสช: <b>'+_baht(tt.sso)+'</b></span><span>รวมภาษี: <b>'+_baht(tt.wht)+'</b></span><span>รวมสุทธิที่ต้องจ่าย: <b style="color:var(--teal-ink)">'+_baht(tt.net)+'</b></span></div>':'')
+  +'</div>';
+ $('plAllMsg').textContent='คิดแล้ว '+((data&&data.count)||rows.length)+' คน ✓';
+}
+async function plExportTransfer(){
+ const period=$('plAllPeriod').value.trim();
+ if(!period){$('plAllMsg').textContent='เลือกงวดก่อน';return;}
+ const btn=$('plAllExport');btn.disabled=true;$('plAllMsg').textContent='กำลังออกไฟล์โอน…';
+ const {data,error}=await sb.functions.invoke('acc_bankfile',{body:{action:'generate',batch_type:'payroll',period}});
+ btn.disabled=false;
+ if(error||(data&&data.error)){$('plAllMsg').textContent='ผิดพลาด: '+((data&&data.error)||error.message);return;}
+ if(!data||!data.csv){$('plAllMsg').textContent='ไม่มีข้อมูลให้ออกไฟล์';return;}
+ downloadCsv(data.filename||('payroll-'+period+'.csv'),data.csv);
+ $('plAllMsg').textContent='ดาวน์โหลดไฟล์โอนแล้ว ✓';
 }
 
 // ===== ตั้งเงินเดือน/บัญชีพนักงาน (acc_employee_payroll · SENSITIVE) =====
@@ -2369,6 +2417,8 @@ function start(){
  $('dsPost').onclick=postSales; loadSales();
  loadAccDigest();
  $('plCalc').onclick=plCalc; $('plCommit').onclick=plCommit; loadPayroll();
+ if($('plAllPeriod')&&!$('plAllPeriod').value)$('plAllPeriod').value=_curMonth();
+ $('plAllCalc').onclick=plCalcAll; $('plAllExport').onclick=plExportTransfer;
  $('psSave').onclick=psSave; loadPayset(); loadRoster();
  $('dfAdd').onclick=dfAddTimesheet; $('dfCalc').onclick=dfCalc; $('dfCommit').onclick=dfCommit; loadDF();
  renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
