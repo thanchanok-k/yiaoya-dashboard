@@ -13,10 +13,6 @@
    ANN_BACKEND — map google.script.run → Supabase edge fn hr_announce
    คืน shape เดียวกับที่ JS เดิมคาดหวัง (อ่านจาก renderListView/renderDetail/openEditorWithData)
    ============================================================ */
-var ANN_LOOKUPS_CACHE = null;
-
-function an2NowIso() { return new Date().toISOString(); }
-
 // map payload (จาก events.payload) → row shape ที่ JS เดิมใช้
 function an2MapRow(p) {
   p = p || {};
@@ -860,4 +856,807 @@ function AN2_DETAIL_MODAL() {
   +     '<div class="modal-footer" style="justify-content:space-between"><div style="display:flex;gap:6px"><button class="btn" id="d-remind-btn" onclick="remindUnacked()" style="display:none">เตือนคนที่ยังไม่ ack</button><button class="btn" id="d-resend-btn" onclick="resendAnnouncement()" title="ส่งซ้ำ flex LINE">ส่งซ้ำ</button></div><div style="display:flex;gap:6px"><button class="btn" onclick="closeDetail()">ปิด</button><button class="btn" onclick="editFromDetail()" id="d-edit-btn">แก้ไข</button></div></div>'
   +   '</div>'
   + '</div>';
+}
+
+/* ============================================================
+   AN2_RUN_PAGE_JS — รัน JS ของหน้าเดิม (closure) · google = shim → ANN_BACKEND
+   helper จาก _shared_scripts (ICONS/showHelp/showToast/escapeHtml/escapeAttr) inline เข้ามา
+   fn ที่ inline onclick ต้องใช้ → ผูกกับ window ตอนท้าย
+   ============================================================ */
+function AN2_RUN_PAGE_JS() {
+
+  // ---- google.script.run shim → ANN_BACKEND (async, คืน shape เดิม) ----
+  function _an2MakeChain() {
+    var h = { _s: null, _f: null };
+    var p = new Proxy(function(){}, {
+      get: function (_t, prop) {
+        if (prop === 'withSuccessHandler') return function (cb) { h._s = cb; return p; };
+        if (prop === 'withFailureHandler') return function (cb) { h._f = cb; return p; };
+        return function () {
+          var args = Array.prototype.slice.call(arguments);
+          if (ANN_BACKEND[prop]) {
+            Promise.resolve().then(function () { return ANN_BACKEND[prop].apply(ANN_BACKEND, args); })
+              .then(function (r) { if (h._s) h._s(r); })
+              .catch(function (e) { if (h._f) h._f(e); else console.error('[ANN_BACKEND ' + String(prop) + ']', e); });
+          } else { console.warn('[ANN_BACKEND] no method:', prop); if (h._s) h._s(null); }
+          return p;
+        };
+      }
+    });
+    return p;
+  }
+  var google = { script: { run: null } };
+  Object.defineProperty(google.script, 'run', { get: function () { return _an2MakeChain(); } });
+
+  // ---- helpers จาก _shared_scripts (inline) ----
+  const ICONS = {
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+    save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+    help: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>',
+    close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  };
+
+  function escapeHtml(s) { const d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; }
+  function escapeAttr(s) { return String(s == null ? '' : s).replace(/'/g, '&#39;').replace(/"/g, '&quot;'); }
+  function showToast(msg, type) {
+    let t = document.getElementById('an2-toast');
+    if (!t) { t = document.createElement('div'); t.id = 'an2-toast'; t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:10px 16px;border-radius:6px;color:#fff;box-shadow:0 10px 25px rgba(0,0,0,.15);font-size:13px;font-weight:500;transition:all .3s'; document.body.appendChild(t); }
+    t.style.background = type === 'error' ? '#B91C1C' : type === 'success' ? '#047857' : '#0F172A';
+    t.textContent = msg; t.style.opacity = '1'; t.style.transform = 'translateY(0)';
+    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(100px)'; }, 2800);
+  }
+  window.an2Toast = showToast;
+  function showHelp(content) {
+    let bg = document.getElementById('an-help-modal-bg');
+    if (!bg) { bg = document.createElement('div'); bg.id = 'an-help-modal-bg'; bg.className = 'modal-bg'; bg.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9500;align-items:center;justify-content:center;padding:20px;display:none'; bg.onclick = e => { if (e.target === bg) bg.classList.remove('active'); bg.style.display = (bg.classList.contains('active')) ? 'flex' : 'none'; }; document.body.appendChild(bg); }
+    const sections = (content.sections || []).map(s => {
+      const cls = s.type === 'warn' ? 'help-section-warn' : '';
+      const items = (s.items || []).map(it => '<li>' + (typeof it === 'string' ? it : (it.html || '')) + '</li>').join('');
+      return '<div class="help-section ' + cls + '" style="background:#F8FAFC;border-radius:8px;padding:12px 14px;margin-bottom:10px;border-left:3px solid #CBD5E1"><div class="help-section-title" style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;margin-bottom:8px">' + escapeHtml(s.title) + '</div><ul style="margin-left:18px;font-size:13px;line-height:1.7">' + items + '</ul></div>';
+    }).join('');
+    bg.innerHTML = '<div class="modal" style="max-width:600px;background:#fff;border-radius:12px;display:flex;flex-direction:column;max-height:90vh"><div class="modal-header" style="padding:20px 24px 16px;border-bottom:1px solid #E2E8F0"><div style="display:flex;align-items:center;justify-content:space-between"><div><h2 style="font-size:16px;font-weight:600;color:#0F172A">' + escapeHtml(content.title || 'Help') + '</h2>' + (content.subtitle ? '<p style="font-size:12px;color:#64748B;margin-top:4px">' + escapeHtml(content.subtitle) + '</p>' : '') + '</div><button onclick="document.getElementById(\'an-help-modal-bg\').style.display=\'none\'" style="border:none;background:transparent;cursor:pointer;color:#64748B">' + ICONS.close + '</button></div></div><div class="modal-body" style="padding:20px 24px;overflow-y:auto">' + (content.intro ? '<div style="padding:12px 14px;background:#EFF6FF;color:#1D4ED8;border-radius:6px;font-size:13px;line-height:1.6;margin-bottom:14px">' + escapeHtml(content.intro) + '</div>' : '') + sections + '</div><div class="modal-footer" style="padding:14px 24px;border-top:1px solid #E2E8F0;background:#F8FAFC;display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="document.getElementById(\'an-help-modal-bg\').style.display=\'none\'">เข้าใจแล้ว</button></div></div>';
+    bg.classList.add('active'); bg.style.display = 'flex';
+  }
+
+  /* ===== STATE (ลอกจากหน้าเดิม) ===== */
+  let currentTab = 'all';
+  let currentView = 'dashboard';
+  let allData = null;
+  let lookups = null;
+  let filteredCache = [];
+  let currentDetail = null;
+  let IS_OWNER = false;
+  let MY_ROLE = '';
+  let editing = { branches: new Set(), positions: new Set(), departments: new Set(), tags: new Set(), employees: new Set(), exclude_employees: new Set() };
+  const FILTERS = { category: [], position: [], branch: [], department: [], range: 'all' };
+
+  const HELP = {
+    title: 'Announcements v2',
+    subtitle: 'ประกาศบริษัท · เก็บบน Supabase (events)',
+    intro: 'เขียน → targeting → multicast LINE · ดูสถิติ 4 มุมมอง (Dashboard/Calendar/List/Analytics)',
+    sections: [
+      { title: '4 มุมมอง', items: ['<strong>Dashboard</strong> — สถิติรวม · trend · top/low · coverage', '<strong>Calendar</strong> — ปฏิทินรายเดือน · click วัน', '<strong>List</strong> — รายการ · sort ได้', '<strong>Analytics</strong> — engagement ตามตำแหน่ง/สาขา/แผนก/หมวด'] },
+      { title: 'Multi-select filter', items: ['หมวด · ตำแหน่ง · สาขา · แผนก เลือกหลายอันได้', 'Filter apply ทุก view ทันที'] },
+      { type: 'warn', title: 'ระวัง', items: ['บาง feature (อัปโหลด Drive · ส่ง LINE จริง) ยังไม่พร้อมบน dashboard → กดได้แต่จะแจ้งว่ายังไม่พร้อม', 'Archive ≠ Delete'] },
+    ],
+  };
+
+  const CATEGORY_META = {
+    permanent: { label: 'บอร์ดถาวร', cls: 'cat-policy', color: '#0D2F4F' },
+    monthly: { label: 'บอร์ดประจำเดือน', cls: 'cat-activity', color: '#6D28D9' },
+    policy: { label: 'นโยบาย/ระเบียบ', cls: 'cat-policy', color: '#1D4ED8' },
+    welfare: { label: 'สวัสดิการ', cls: 'cat-welfare', color: '#2BA89B' },
+    activity: { label: 'กิจกรรม/CSR', cls: 'cat-activity', color: '#6D28D9' },
+    announcement: { label: 'แจ้งเตือนทั่วไป', cls: 'cat-general', color: '#94A3B8' },
+    urgent: { label: 'ด่วน', cls: 'cat-urgent', color: '#B91C1C' },
+    general: { label: 'ทั่วไป', cls: 'cat-general', color: '#94A3B8' },
+    rule: { label: 'ระเบียบ', cls: 'cat-rule', color: '#B45309' },
+  };
+  function catMeta(id) { return CATEGORY_META[id] || { label: id || 'ทั่วไป', cls: 'cat-general', color: '#94A3B8' }; }
+
+  /* ===== STATIC ICONS / LABELS ===== */
+  document.getElementById('help-btn').innerHTML = ICONS.help;
+  document.getElementById('new-btn').innerHTML = ICONS.plus + ' เขียนใหม่';
+  document.getElementById('preview-btn').innerHTML = ICONS.users + ' Preview targets';
+  document.getElementById('es-options').innerHTML = ICONS.settings + ' Options';
+  document.getElementById('es-targeting').innerHTML = ICONS.users + ' Targeting (multi-criteria)';
+  document.getElementById('es-images').innerHTML = ICONS.doc + ' Images & Send mode';
+
+  /* ===== VIEW SWITCHER ===== */
+  function setView(v) {
+    currentView = v;
+    document.querySelectorAll('#an .vs-tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+    document.querySelectorAll('#an .view-section').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
+    if (v === 'dashboard') renderDashboard();
+    else if (v === 'calendar') renderCalendar();
+    else if (v === 'list') renderListView();
+    else if (v === 'analytics') renderAnalytics();
+  }
+  function setTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('#an .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    onFiltersChanged();
+  }
+
+  /* ===== MULTI-SELECT DROPDOWN ===== */
+  function renderMs(field, items, labelKey) {
+    const wrap = document.getElementById('ms-' + field);
+    if (!wrap) return;
+    const selected = FILTERS[field];
+    const chips = selected.length
+      ? selected.slice(0, 2).map(id => {
+          const it = items.find(x => x.id === id);
+          const label = it ? (it[labelKey] || it.id) : id;
+          return '<span class="ms-chip-mini">' + escapeHtml(label) + '<span class="x" onclick="event.stopPropagation();msToggle(\'' + field + '\',\'' + escapeAttr(id) + '\')">×</span></span>';
+        }).join('') + (selected.length > 2 ? '<span class="ms-chip-mini" style="background:var(--border);color:var(--text-muted)">+' + (selected.length - 2) + '</span>' : '')
+      : '<span style="color:var(--text-faint)">เลือก…</span>';
+    const optionsHtml = items.map(it => {
+      const checked = selected.includes(it.id) ? 'checked' : '';
+      const meta = it.count != null ? '<span class="opt-meta">' + it.count + '</span>' : '';
+      return '<label class="ms-option" onclick="event.stopPropagation()"><input type="checkbox" ' + checked + ' onchange="msToggle(\'' + field + '\',\'' + escapeAttr(it.id) + '\')">' + escapeHtml(it[labelKey] || it.id) + meta + '</label>';
+    }).join('');
+    wrap.innerHTML = '<div class="ms-trigger ' + (selected.length ? '' : 'is-empty') + '" onclick="msToggleOpen(\'' + field + '\')">' + chips + '</div><div class="ms-panel"><div class="ms-actions"><span class="ms-action" onclick="msAll(\'' + field + '\')">เลือกทั้งหมด</span><span class="ms-action" onclick="msNone(\'' + field + '\')">ล้าง</span></div>' + optionsHtml + '</div>';
+  }
+  function msToggleOpen(field) { document.querySelectorAll('#an .ms-dropdown').forEach(d => { if (d.id === 'ms-' + field) d.classList.toggle('open'); else d.classList.remove('open'); }); }
+  function msToggle(field, id) { const arr = FILTERS[field]; const idx = arr.indexOf(id); if (idx < 0) arr.push(id); else arr.splice(idx, 1); renderAllMs(); onFiltersChanged(); }
+  function _getMsItems(field) {
+    if (field === 'category') return getCategoryItems();
+    if (field === 'position') return (lookups && lookups.positions) || [];
+    if (field === 'branch') return (lookups && lookups.branches) || [];
+    if (field === 'department') return (lookups && lookups.departments) || [];
+    return [];
+  }
+  function msAll(field) { FILTERS[field] = _getMsItems(field).map(x => x.id); renderAllMs(); onFiltersChanged(); }
+  function msNone(field) { FILTERS[field] = []; renderAllMs(); onFiltersChanged(); }
+  function renderAllMs() {
+    renderMs('category', getCategoryItems(), 'name');
+    renderMs('position', (lookups && lookups.positions) || [], 'name');
+    renderMs('branch', (lookups && lookups.branches) || [], 'name');
+    renderMs('department', (lookups && lookups.departments) || [], 'name');
+  }
+  function getCategoryItems() {
+    const seen = new Set();
+    ((allData && allData.announcements) || []).forEach(a => seen.add(a.category));
+    const list = Array.from(seen).filter(Boolean).map(id => ({ id: id, name: (CATEGORY_META[id] && CATEGORY_META[id].label) || id }));
+    Object.keys(CATEGORY_META).forEach(id => { if (!list.find(x => x.id === id)) list.push({ id: id, name: CATEGORY_META[id].label }); });
+    return list;
+  }
+  document.addEventListener('click', (e) => { if (!e.target.closest('#an .ms-dropdown')) { document.querySelectorAll('#an .ms-dropdown').forEach(d => d.classList.remove('open')); } });
+  function clearAllFilters() {
+    FILTERS.category = []; FILTERS.position = []; FILTERS.branch = []; FILTERS.department = []; FILTERS.range = 'all';
+    const s = document.getElementById('f-search'); if (s) s.value = '';
+    const r = document.getElementById('f-range'); if (r) r.value = 'all';
+    renderAllMs(); onFiltersChanged();
+  }
+
+  /* ===== CLIENT-SIDE FILTERING ===== */
+  function applyClientFilters() {
+    let list = ((allData && allData.announcements) || []).slice();
+    const q = ((document.getElementById('f-search') || {}).value || '').toLowerCase();
+    if (q) list = list.filter(a => (a.title || '').toLowerCase().includes(q) || (a.body_md || '').toLowerCase().includes(q) || (a.ann_id || '').toLowerCase().includes(q));
+    if (FILTERS.category.length) list = list.filter(a => FILTERS.category.includes(a.category));
+    if (FILTERS.position.length) list = list.filter(a => { const tp = a.target_positions || []; if (!tp.length) return true; return tp.some(p => FILTERS.position.includes(p)); });
+    if (FILTERS.branch.length) list = list.filter(a => { const tb = a.target_branches || []; if (!tb.length) return true; return tb.some(b => FILTERS.branch.includes(b)); });
+    if (FILTERS.department.length) list = list.filter(a => { const td = a.target_departments || []; if (!td.length) return true; return td.some(d => FILTERS.department.includes(d)); });
+    const range = (document.getElementById('f-range') || {}).value || 'all';
+    if (range !== 'all') {
+      const now = new Date(); let cutoff = new Date(now);
+      if (range === 'month') cutoff = new Date(now.getFullYear(), now.getMonth(), 1);
+      else if (range === 'last30') cutoff.setDate(now.getDate() - 30);
+      else if (range === 'last90') cutoff.setDate(now.getDate() - 90);
+      else if (range === 'year') cutoff = new Date(now.getFullYear(), 0, 1);
+      list = list.filter(a => { const t = a.published_at || a.created_at || a.scheduled_at; if (!t) return false; return new Date(t) >= cutoff; });
+    }
+    return list;
+  }
+  function onFiltersChanged() {
+    filteredCache = applyClientFilters();
+    const c = filteredCache;
+    setText('cnt-all', c.length);
+    setText('cnt-draft', c.filter(a => a.status === 'draft').length);
+    setText('cnt-scheduled', c.filter(a => a.status === 'scheduled').length);
+    setText('cnt-published', c.filter(a => a.status === 'published').length);
+    setText('cnt-archived', c.filter(a => a.status === 'archived').length);
+    const ct = document.getElementById('ct-announce'); if (ct) ct.textContent = ((allData && allData.announcements) || []).length || '';
+    if (currentView === 'dashboard') renderDashboard();
+    else if (currentView === 'calendar') renderCalendar();
+    else if (currentView === 'list') renderListView();
+    else if (currentView === 'analytics') renderAnalytics();
+  }
+  function _statusFiltered() {
+    let base = IS_OWNER ? filteredCache : filteredCache.filter(a => a.status !== 'archived');
+    if (currentTab === 'all') return base;
+    return base.filter(a => a.status === currentTab);
+  }
+
+  /* ===== DATA LOAD ===== */
+  function loadList() {
+    if (currentView === 'list') { const el = document.getElementById('content'); if (el) el.innerHTML = '<div class="empty"><div class="empty-title">กำลังโหลด...</div></div>'; }
+    google.script.run
+      .withSuccessHandler(d => { allData = d; lookups = d.lookups || null; renderAllMs(); onFiltersChanged(); })
+      .withFailureHandler(e => { const el = document.getElementById('content'); if (el) el.innerHTML = '<div class="empty"><div class="empty-title">โหลดไม่สำเร็จ</div><div class="empty-sub">' + escapeHtml(e && e.message ? e.message : e) + '</div></div>'; })
+      .annAdminList({ tab: 'all' });
+  }
+  function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+  /* ===== DASHBOARD RENDER ===== */
+  function renderDashboard() {
+    const list = _statusFiltered();
+    const pub = list.filter(a => a.status === 'published');
+    setText('d-total', list.length);
+    setText('d-published', list.filter(a => a.status === 'published').length);
+    setText('d-draft', list.filter(a => a.status === 'draft').length);
+    const totalReached = pub.reduce((s, a) => s + (a.target_count || 0), 0);
+    setText('d-published-sub', 'ส่งแล้ว · ' + totalReached + ' คน');
+    const drafts = list.filter(a => a.status === 'draft');
+    if (drafts.length) {
+      const ages = drafts.map(a => { const t = a.created_at; if (!t) return 0; return Math.floor((Date.now() - new Date(t).getTime()) / 86400000); });
+      setText('d-draft-sub', 'รอ publish · เก่าสุด ' + Math.max(...ages) + ' วัน');
+    } else setText('d-draft-sub', 'ไม่มี draft');
+    const avgOpen = pub.length ? Math.round(pub.reduce((s, a) => s + (a.open_rate || 0), 0) / pub.length) : 0;
+    const avgAck = pub.length ? Math.round(pub.reduce((s, a) => s + (a.ack_rate || 0), 0) / pub.length) : 0;
+    setText('d-open', avgOpen); setText('d-ack', avgAck);
+    setText('d-ack-sub', avgAck >= 80 ? 'ดีมาก' : avgAck >= 60 ? 'ใช้ได้' : 'ต้องตาม');
+    // trend sparkline
+    const months = [], labels = []; const now = new Date();
+    const TH_MO = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ y: d.getFullYear(), m: d.getMonth() }); labels.push(TH_MO[d.getMonth()]); }
+    const counts = months.map(({ y, m }) => list.filter(a => { const t = a.published_at || a.created_at; if (!t) return false; const dt = new Date(t); return dt.getFullYear() === y && dt.getMonth() === m; }).length);
+    const maxC = Math.max(1, ...counts); const W = 600, H = 80, PAD = 10;
+    const stepX = (W - PAD * 2) / Math.max(1, counts.length - 1);
+    const pts = counts.map((c, i) => { const x = PAD + i * stepX; const y = H - PAD - (c / maxC) * (H - PAD * 2); return [x, y]; });
+    const lineD = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    const areaD = lineD + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + (H - PAD) + ' L' + pts[0][0].toFixed(1) + ' ' + (H - PAD) + ' Z';
+    const dots = pts.map(p => '<circle fill="#3DC5B7" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3"/>').join('');
+    const numLabels = pts.map((p, i) => '<text x="' + p[0].toFixed(1) + '" y="' + Math.max(p[1] - 6, 12).toFixed(1) + '" text-anchor="middle" font-size="10" fill="#0D2F4F" font-weight="700">' + counts[i] + '</text>').join('');
+    document.getElementById('spark-trend').innerHTML = '<defs><linearGradient id="sparkGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#3DC5B7" stop-opacity="0.45"/><stop offset="100%" stop-color="#3DC5B7" stop-opacity="0"/></linearGradient></defs><path d="' + areaD + '" fill="url(#sparkGrad)"/><path class="line" d="' + lineD + '"/>' + dots + numLabels;
+    document.getElementById('spark-labels').innerHTML = labels.map(l => '<span>' + l + '</span>').join('');
+    // compliance ring
+    const ackRequired = pub.filter(a => a.requires_ack);
+    const totalAckTarget = ackRequired.reduce((s, a) => s + (a.target_count || 0), 0);
+    const totalAcked = ackRequired.reduce((s, a) => s + (a.ack_count || 0), 0);
+    const ringPct = totalAckTarget > 0 ? Math.round(totalAcked / totalAckTarget * 100) : 0;
+    const circ = 2 * Math.PI * 42;
+    document.getElementById('ring-fill').setAttribute('stroke-dasharray', circ.toFixed(1));
+    document.getElementById('ring-fill').setAttribute('stroke-dashoffset', (circ * (1 - ringPct / 100)).toFixed(1));
+    const ringFill = document.getElementById('ring-fill'); ringFill.classList.remove('warn', 'poor');
+    if (ringPct < 60) ringFill.classList.add('poor'); else if (ringPct < 80) ringFill.classList.add('warn');
+    setText('ring-num', ringPct + '%'); setText('ring-lbl', totalAcked + ' / ' + totalAckTarget + ' คน');
+    const unacked = totalAckTarget - totalAcked;
+    document.getElementById('compliance-detail').innerHTML = 'ประกาศที่ต้อง ack · ' + ackRequired.length + ' รายการ<br>' + (unacked > 0 ? '<strong style="color:var(--warning)">' + unacked + ' คน</strong> ยังไม่ acknowledge' : '<strong style="color:var(--success)">ทุกคน ack ครบแล้ว</strong>');
+    // quick stats
+    const quizzes = pub.filter(a => a.requires_quiz);
+    const scheduledNext = list.filter(a => a.status === 'scheduled' && a.scheduled_at).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))[0];
+    const nextSchedText = scheduledNext ? new Date(scheduledNext.scheduled_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+    const senders = {}; pub.forEach(a => { senders[a.created_by || '—'] = (senders[a.created_by || '—'] || 0) + 1; });
+    const topSender = Object.entries(senders).sort((a, b) => b[1] - a[1])[0];
+    document.getElementById('quick-stats').innerHTML = [
+      '<div class="qs-row"><span class="lbl">ประกาศที่มี Quiz</span><span class="val success">' + quizzes.length + '</span></div>',
+      '<div class="qs-row"><span class="lbl">Total reach (published)</span><span class="val">' + totalReached + ' คน</span></div>',
+      '<div class="qs-row"><span class="lbl">ประกาศต้อง Ack</span><span class="val">' + ackRequired.length + '</span></div>',
+      '<div class="qs-row"><span class="lbl">Most active sender</span><span class="val">' + escapeHtml(topSender ? topSender[0] : '—') + '</span></div>',
+      '<div class="qs-row"><span class="lbl">Scheduled ครั้งถัดไป</span><span class="val teal">' + nextSchedText + '</span></div>',
+    ].join('');
+    // top / low performers
+    const top = pub.slice().sort((a, b) => b.ack_rate - a.ack_rate).slice(0, 5);
+    const low = pub.slice().sort((a, b) => a.ack_rate - b.ack_rate).slice(0, 5);
+    const renderPerf = items => items.length ? items.map(a => {
+      const cls = a.ack_rate >= 85 ? 'good' : a.ack_rate < 60 ? 'warn' : '';
+      return '<div class="perf-row ' + cls + '" onclick="openDetail(\'' + escapeAttr(a.ann_id) + '\')"><div><div class="title">' + escapeHtml(a.title) + '</div><div class="meta">' + escapeHtml(a.ann_id) + ' · ' + escapeHtml(a.targets_summary || '—') + '</div></div><div><div class="score">' + a.ack_rate + '%</div><div class="score-sub">ack ' + a.ack_count + '/' + a.target_count + '</div></div></div>';
+    }).join('') : '<div class="perf-empty">ยังไม่มี published</div>';
+    document.getElementById('perf-top').innerHTML = renderPerf(top);
+    document.getElementById('perf-low').innerHTML = renderPerf(low);
+    // category breakdown
+    const catCounts = {}; list.forEach(a => { catCounts[a.category] = (catCounts[a.category] || 0) + 1; });
+    const catData = Object.keys(catCounts).map(id => ({ label: catMeta(id).label, color: catMeta(id).color, count: catCounts[id] })).sort((a, b) => b.count - a.count);
+    const catMax = Math.max(1, ...catData.map(x => x.count));
+    document.getElementById('cat-breakdown').innerHTML = catData.length ? catData.map(c => '<div class="bar-row"><div class="lbl">' + escapeHtml(c.label) + '</div><div class="bar-track"><div class="fill" style="width:' + (c.count / catMax * 100) + '%;background:' + c.color + '">' + (c.count > 0 ? c.count : '') + '</div></div><div class="cnt">' + c.count + '</div></div>').join('') : '<div class="perf-empty">ยังไม่มีประกาศ</div>';
+    // heatmap branch
+    const branchAgg = {}; pub.forEach(a => { (a.target_branches || []).forEach(b => { if (!branchAgg[b]) branchAgg[b] = { reach: 0, opened: 0 }; branchAgg[b].reach += (a.target_count || 0); branchAgg[b].opened += (a.read_count || 0); }); });
+    const branches = (lookups && lookups.branches) || [];
+    const hmBranch = branches.map(b => { const a = branchAgg[b.id]; const rate = a && a.reach > 0 ? Math.round(a.opened / a.reach * 100) : 0; return { lbl: b.name || b.id, val: rate }; }).filter(r => r.val > 0 || (branches.length <= 10));
+    document.getElementById('heatmap-branch').innerHTML = hmBranch.length ? hmBranch.map(r => { const cls = r.val >= 80 ? '' : r.val >= 60 ? 'warn' : 'poor'; return '<div class="hm-row"><div class="lbl">' + escapeHtml(r.lbl) + '</div><div class="hm-bar"><div class="fill ' + cls + '" style="width:' + r.val + '%"></div></div><div class="val">' + r.val + '%</div></div>'; }).join('') : '<div class="perf-empty">ไม่มีข้อมูล coverage</div>';
+    // heatmap position
+    const posAgg = {}; pub.forEach(a => { (a.target_positions || []).forEach(p => { if (!posAgg[p]) posAgg[p] = { reach: 0, acked: 0 }; posAgg[p].reach += (a.target_count || 0); posAgg[p].acked += (a.ack_count || 0); }); });
+    const positions = (lookups && lookups.positions) || [];
+    const hmPos = positions.map(p => { const a = posAgg[p.id]; const rate = a && a.reach > 0 ? Math.round(a.acked / a.reach * 100) : 0; return { lbl: p.name || p.id, val: rate }; }).filter(r => r.val > 0).slice(0, 10);
+    document.getElementById('heatmap-position').innerHTML = hmPos.length ? hmPos.map(r => { const cls = r.val >= 80 ? '' : r.val >= 60 ? 'warn' : 'poor'; return '<div class="hm-row"><div class="lbl">' + escapeHtml(r.lbl) + '</div><div class="hm-bar"><div class="fill ' + cls + '" style="width:' + r.val + '%"></div></div><div class="val">' + r.val + '%</div></div>'; }).join('') : '<div class="perf-empty">ไม่มีข้อมูล coverage</div>';
+  }
+
+  /* ===== CALENDAR ===== */
+  let CAL_DATE = new Date(); CAL_DATE.setDate(1);
+  const TH_MONTHS_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  function calPrev() { CAL_DATE = new Date(CAL_DATE.getFullYear(), CAL_DATE.getMonth() - 1, 1); renderCalendar(); }
+  function calNext() { CAL_DATE = new Date(CAL_DATE.getFullYear(), CAL_DATE.getMonth() + 1, 1); renderCalendar(); }
+  function calToday() { CAL_DATE = new Date(); CAL_DATE.setDate(1); renderCalendar(); const t = new Date(); selectDay(t.getFullYear(), t.getMonth(), t.getDate()); }
+  function renderCalendar() {
+    const list = _statusFiltered();
+    const y = CAL_DATE.getFullYear(), m = CAL_DATE.getMonth();
+    document.getElementById('cal-month-label').textContent = TH_MONTHS_FULL[m] + ' ' + (y + 543);
+    const first = new Date(y, m, 1); let startDay = first.getDay() - 1; if (startDay < 0) startDay = 6;
+    const daysInMonth = new Date(y, m + 1, 0).getDate(); const prevDays = new Date(y, m, 0).getDate(); const today = new Date();
+    const byDay = {};
+    list.forEach(a => { const t = a.published_at || a.scheduled_at || (a.status === 'draft' ? a.created_at : ''); if (!t) return; const d = new Date(t); if (d.getFullYear() !== y || d.getMonth() !== m) return; const key = d.getDate(); if (!byDay[key]) byDay[key] = []; byDay[key].push(a); });
+    const cells = [];
+    for (let i = 0; i < startDay; i++) cells.push({ day: prevDays - startDay + i + 1, otherMonth: true });
+    for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d });
+    let nextDay = 1; while (cells.length % 7 !== 0) cells.push({ day: nextDay++, otherMonth: true });
+    const html = cells.map((c, idx) => {
+      const isWeekend = (idx % 7 >= 5);
+      const isToday = !c.otherMonth && c.day === today.getDate() && y === today.getFullYear() && m === today.getMonth();
+      const evs = c.otherMonth ? [] : (byDay[c.day] || []);
+      const evHtml = evs.slice(0, 3).map(a => '<div class="cal-event ' + catMeta(a.category).cls + (a.status === 'draft' ? ' draft' : '') + '" title="' + escapeAttr(a.title) + '">' + escapeHtml(a.title) + '</div>').join('');
+      const more = evs.length > 3 ? '<div class="cal-more">+' + (evs.length - 3) + ' อื่น ๆ</div>' : '';
+      return '<div class="cal-cell' + (c.otherMonth ? ' other-month' : '') + (isWeekend ? ' weekend' : '') + (isToday ? ' today' : '') + '"' + (!c.otherMonth ? ' onclick="selectDay(' + y + ',' + m + ',' + c.day + ')"' : '') + '><div class="day-num">' + c.day + '</div><div class="day-events">' + evHtml + more + '</div></div>';
+    }).join('');
+    document.getElementById('cal-grid').innerHTML = html;
+  }
+  function selectDay(y, m, d) {
+    const list = _statusFiltered();
+    const evs = list.filter(a => { const t = a.published_at || a.scheduled_at || (a.status === 'draft' ? a.created_at : ''); if (!t) return false; const dt = new Date(t); return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d; });
+    const det = document.getElementById('day-detail');
+    const dateStr = d + ' ' + TH_MONTHS_FULL[m] + ' ' + (y + 543);
+    let html = '<div class="dd-title">ประกาศของวันนี้</div><div class="dd-date">' + dateStr + '</div>';
+    if (!evs.length) html += '<div class="dd-empty">ไม่มีประกาศในวันนี้</div>';
+    else {
+      html += '<div class="dd-list">' + evs.map(a => {
+        const c = catMeta(a.category);
+        const cBg = c.cls === 'cat-policy' ? 'var(--info-bg)' : c.cls === 'cat-welfare' ? '#E6F7F5' : c.cls === 'cat-activity' ? 'var(--c-company-bg)' : c.cls === 'cat-urgent' ? 'var(--danger-bg)' : c.cls === 'cat-rule' ? 'var(--warning-bg)' : 'var(--border)';
+        return '<div class="dd-item" onclick="openDetail(\'' + escapeAttr(a.ann_id) + '\')"><span class="cat" style="background:' + cBg + ';color:' + c.color + '">' + escapeHtml(c.label) + ' · ' + a.status + '</span><div class="ttl">' + escapeHtml(a.title) + '</div><div class="meta"><span>' + escapeHtml(a.ann_id) + '</span>' + (a.status === 'published' ? '<span>ack ' + a.ack_rate + '% <span class="ack-bar"><span class="f" style="width:' + a.ack_rate + '%"></span></span></span>' : '') + (a.target_count > 0 ? '<span>' + a.target_count + ' คน</span>' : '') + (a.requires_ack ? '<span style="color:#BE185D">ต้อง ack</span>' : '') + (a.requires_quiz ? '<span style="color:var(--success)">มี quiz</span>' : '') + '</div></div>';
+      }).join('') + '</div>';
+    }
+    det.innerHTML = html;
+  }
+
+  /* ===== LIST VIEW ===== */
+  function renderListView() {
+    let list = _statusFiltered();
+    document.getElementById('content').classList.remove('loading');
+    document.getElementById('list-count').textContent = '— ' + list.length + ' รายการ';
+    if (!list.length) {
+      document.getElementById('content').innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><div class="empty-title">ไม่มีประกาศตรง filter นี้</div><div class="empty-sub">กดปุ่ม X เพื่อล้างทุกตัวกรอง · หรือ "เขียนใหม่"</div></div>';
+      return;
+    }
+    const sort = (document.getElementById('f-sort') || {}).value || 'newest';
+    list = list.slice();
+    if (sort === 'newest') list.sort((a, b) => (b.published_at || b.created_at || '').localeCompare(a.published_at || a.created_at || ''));
+    else if (sort === 'oldest') list.sort((a, b) => (a.published_at || a.created_at || '').localeCompare(b.published_at || b.created_at || ''));
+    else if (sort === 'ack-high') list.sort((a, b) => b.ack_rate - a.ack_rate);
+    else if (sort === 'ack-low') list.sort((a, b) => a.ack_rate - b.ack_rate);
+    else if (sort === 'target-high') list.sort((a, b) => b.target_count - a.target_count);
+    document.getElementById('content').innerHTML = '<div class="ann-grid">' + list.map(a => {
+      const rateColor = a.ack_rate >= 80 ? '' : a.ack_rate >= 50 ? 'low' : 'poor';
+      const dateStr = a.published_at ? new Date(a.published_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : a.scheduled_at ? 'sched: ' + new Date(a.scheduled_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : a.created_at ? 'draft: ' + new Date(a.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) : '';
+      const c = catMeta(a.category); const flags = [];
+      if (a.requires_ack) flags.push('<span class="meta-pill pill-ack">' + ICONS.check + ' ack</span>');
+      if (a.requires_quiz) flags.push('<span class="meta-pill pill-quiz">quiz</span>');
+      const ackInfo = a.status === 'published' ? ['<div class="stat-line"><strong>' + a.target_count + '</strong> targets</div>', '<div class="stat-line">Open <strong>' + a.open_rate + '%</strong> · Ack <strong>' + a.ack_rate + '%</strong></div>', '<div class="rate-bar"><div class="rate-fill ' + rateColor + '" style="width:' + a.ack_rate + '%"></div></div>'].join('') : (a.status === 'scheduled' ? '<div class="stat-line" style="color:var(--warning)">รอ publish · ' + (a.scheduled_at ? new Date(a.scheduled_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '') + '</div>' : '<div class="stat-line" style="color:var(--text-faint)">ยังไม่ publish</div>');
+      let delBtn = '';
+      if (a.status === 'draft') delBtn = '<button class="card-del-btn" title="ลบ draft นี้" onclick="quickRemoveAnn(event, \'' + escapeAttr(a.ann_id) + '\')">' + ICONS.trash + ' ลบ</button>';
+      else if (a.status === 'scheduled') delBtn = '<button class="card-del-btn" title="ลบประกาศที่ตั้งเวลาไว้" onclick="quickRemoveScheduled(event, \'' + escapeAttr(a.ann_id) + '\')">' + ICONS.trash + ' ลบ</button>';
+      else if (a.status === 'published') delBtn = IS_OWNER ? '<button class="card-del-btn" title="ลบประกาศ (Owner)" onclick="ownerDeleteAnn(event, \'' + escapeAttr(a.ann_id) + '\')">' + ICONS.trash + ' ลบ</button>' : '<button class="card-del-btn" title="ขอลบประกาศนี้" onclick="requestRemoveAnn(event, \'' + escapeAttr(a.ann_id) + '\')">' + ICONS.trash + ' ขอลบ</button>';
+      return '<div class="ann-card ' + a.status + '" onclick="openDetail(\'' + escapeAttr(a.ann_id) + '\')"><div><div class="ann-meta-row"><span class="meta-pill pill-st-' + a.status + '">' + a.status + '</span><span class="meta-pill pill-cat">' + escapeHtml(c.label) + '</span>' + flags.join('') + (dateStr ? '<span class="meta-pill pill-date">' + dateStr + '</span>' : '') + '</div><div class="ann-title">' + escapeHtml(a.title) + '</div><div class="ann-preview">' + escapeHtml(a.body_preview) + '</div><div class="ann-targets">' + ICONS.users + ' ' + escapeHtml(a.targets_summary) + ' · ' + (a.target_count || 0) + ' คน</div></div><div class="ann-stats">' + ackInfo + delBtn + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  /* ===== ANALYTICS ===== */
+  function renderAnalytics() {
+    const list = _statusFiltered(); const pub = list.filter(a => a.status === 'published');
+    const posAgg = {}; pub.forEach(a => { (a.target_positions || []).forEach(p => { if (!posAgg[p]) posAgg[p] = { reach: 0, opened: 0, acked: 0 }; posAgg[p].reach += (a.target_count || 0); posAgg[p].opened += (a.read_count || 0); posAgg[p].acked += (a.ack_count || 0); }); });
+    const positions = (lookups && lookups.positions) || [];
+    const posData = positions.map(p => { const a = posAgg[p.id] || { reach: 0, opened: 0, acked: 0 }; const ackRate = a.reach > 0 ? Math.round(a.acked / a.reach * 100) : 0; return { name: p.name || p.id, reach: a.reach, opened: a.opened, acked: a.acked, ackRate }; }).filter(r => r.reach > 0).sort((a, b) => b.ackRate - a.ackRate);
+    setAnTable('an-position-body', posData);
+    const brAgg = {}; pub.forEach(a => { (a.target_branches || []).forEach(b => { if (!brAgg[b]) brAgg[b] = { reach: 0, opened: 0, acked: 0 }; brAgg[b].reach += (a.target_count || 0); brAgg[b].opened += (a.read_count || 0); brAgg[b].acked += (a.ack_count || 0); }); });
+    const branches = (lookups && lookups.branches) || [];
+    const brData = branches.map(b => { const a = brAgg[b.id] || { reach: 0, opened: 0, acked: 0 }; const ackRate = a.reach > 0 ? Math.round(a.acked / a.reach * 100) : 0; return { name: b.name || b.id, reach: a.reach, opened: a.opened, acked: a.acked, ackRate }; }).filter(r => r.reach > 0).sort((a, b) => b.ackRate - a.ackRate);
+    setAnTable('an-branch-body', brData);
+    const depAgg = {}; pub.forEach(a => { (a.target_departments || []).forEach(d => { if (!depAgg[d]) depAgg[d] = { reach: 0, opened: 0, acked: 0 }; depAgg[d].reach += (a.target_count || 0); depAgg[d].opened += (a.read_count || 0); depAgg[d].acked += (a.ack_count || 0); }); });
+    const departments = (lookups && lookups.departments) || [];
+    const depData = departments.map(d => { const a = depAgg[d.id] || { reach: 0, opened: 0, acked: 0 }; const ackRate = a.reach > 0 ? Math.round(a.acked / a.reach * 100) : 0; return { name: d.name || d.id, reach: a.reach, opened: a.opened, acked: a.acked, ackRate }; }).filter(r => r.reach > 0).sort((a, b) => b.ackRate - a.ackRate);
+    setAnTable('an-department-body', depData);
+    const catAgg = {}; pub.forEach(a => { const id = a.category || 'general'; if (!catAgg[id]) catAgg[id] = { count: 0, openSum: 0, ackSum: 0 }; catAgg[id].count++; catAgg[id].openSum += (a.open_rate || 0); catAgg[id].ackSum += (a.ack_rate || 0); });
+    const catTbody = document.getElementById('an-category-body');
+    const catRows = Object.keys(catAgg).map(id => { const a = catAgg[id]; return { name: catMeta(id).label, count: a.count, openRate: Math.round(a.openSum / a.count), ackRate: Math.round(a.ackSum / a.count) }; }).sort((a, b) => b.ackRate - a.ackRate);
+    catTbody.innerHTML = catRows.length ? catRows.map(r => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + r.count + '</td><td>' + r.openRate + '%</td><td><span class="an-rate"><span class="bar"><span class="f" style="width:' + r.ackRate + '%;background:' + (r.ackRate >= 80 ? 'var(--success)' : r.ackRate >= 60 ? 'var(--warning)' : 'var(--danger)') + '"></span></span><span class="num">' + r.ackRate + '%</span></span></td></tr>').join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text-faint);padding:18px">ไม่มีข้อมูล</td></tr>';
+  }
+  function setAnTable(tbodyId, rows) {
+    const tbody = document.getElementById(tbodyId);
+    tbody.innerHTML = rows.length ? rows.map(r => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + r.reach + '</td><td>' + r.opened + '</td><td><span class="an-rate"><span class="bar"><span class="f" style="width:' + r.ackRate + '%;background:' + (r.ackRate >= 80 ? 'var(--success)' : r.ackRate >= 60 ? 'var(--warning)' : 'var(--danger)') + '"></span></span><span class="num">' + r.ackRate + '%</span></span></td></tr>').join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text-faint);padding:18px">ไม่มีข้อมูล</td></tr>';
+  }
+
+  /* ===== EDITOR / QUIZ / BLOCK EDITOR / UPLOAD / TARGETING ===== */
+  let ANN_CATEGORIES = []; let ANN_PREFIXES = []; let QUIZ_DRAFT = [];
+  function loadAnnPrefixes() {
+    google.script.run.withSuccessHandler(list => { ANN_PREFIXES = list || []; if (lookups) renderChips(); }).withFailureHandler(e => console.warn('loadAnnPrefixes', e)).annAdminGetPrefixes();
+  }
+  function quizAdd() { QUIZ_DRAFT.push({ q: '', choices: ['', '', '', ''], correct: 0 }); renderQuizDraft(); }
+  function quizRemove(idx) { QUIZ_DRAFT.splice(idx, 1); renderQuizDraft(); }
+  function quizUpdate(idx, key, val, choiceIdx) { if (key === 'q') QUIZ_DRAFT[idx].q = val; else if (key === 'choice') QUIZ_DRAFT[idx].choices[choiceIdx] = val; else if (key === 'correct') QUIZ_DRAFT[idx].correct = parseInt(val, 10); }
+  function renderQuizDraft() {
+    const wrap = document.getElementById('quiz-list'); if (!wrap) return;
+    if (!QUIZ_DRAFT.length) { wrap.innerHTML = '<div style="font-size:11px;color:#94A3B8;padding:4px">ยังไม่มีคำถาม · กด "+ เพิ่มคำถาม"</div>'; return; }
+    wrap.innerHTML = QUIZ_DRAFT.map((q, i) => {
+      const choices = q.choices.map((c, j) => '<label style="display:flex;align-items:center;gap:5px;margin-bottom:3px"><input type="radio" name="qc' + i + '" value="' + j + '"' + (q.correct === j ? ' checked' : '') + ' onchange="quizUpdate(' + i + ',\'correct\',this.value)" style="width:auto"><input type="text" value="' + escapeAttr(c) + '" placeholder="ตัวเลือก ' + (j + 1) + '" oninput="quizUpdate(' + i + ',\'choice\',this.value,' + j + ')" style="flex:1;padding:3px 6px;font-size:11px;border:0.5px solid #E2E8F0;border-radius:3px"></label>').join('');
+      return '<div class="quiz-item"><div style="display:flex;gap:4px;align-items:center;margin-bottom:5px"><strong style="font-size:11px;color:#0E7490">ข้อ ' + (i + 1) + '</strong><span style="flex:1"></span><button type="button" onclick="quizRemove(' + i + ')" style="padding:2px 7px;background:#FEE2E2;color:#991B1B;border:0;border-radius:3px;font-size:10px;cursor:pointer">ลบ</button></div><input type="text" value="' + escapeAttr(q.q) + '" placeholder="พิมพ์คำถาม..." oninput="quizUpdate(' + i + ',\'q\',this.value)"><div style="margin-top:4px">' + choices + '</div></div>';
+    }).join('');
+  }
+  function loadAnnCategories() {
+    google.script.run.withSuccessHandler(list => { ANN_CATEGORIES = list || []; const sel = document.getElementById('ed-category'); sel.innerHTML = ANN_CATEGORIES.map(c => '<option value="' + c.value + '" title="' + (c.desc || '') + '">' + c.label + '</option>').join(''); }).withFailureHandler(e => console.warn('loadAnnCategories', e)).annAdminGetCategories();
+  }
+  function loadAnnIdPreview() {
+    google.script.run.withSuccessHandler(r => { if (r && r.next_id) { const el = document.getElementById('ed-ann-id-preview'); el.textContent = r.next_id + ' · ' + (r.prefix_label || r.prefix); } }).withFailureHandler(e => console.warn('previewNextAnnId', e)).annAdminPreviewNextAnnId({ target_departments: Array.from(editing.departments) });
+  }
+  // block editor
+  let edBlocks = []; let edActiveTA = null;
+  function edEscape(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function edSplitRow(line) { return line.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim()); }
+  function edNormRows(rows) { const w = Math.max.apply(null, rows.map(r => r.length)); return rows.map(r => { const c = r.slice(); while (c.length < w) c.push(''); return c; }); }
+  function edParse(md) {
+    const lines = String(md || '').split('\n'); const out = []; let i = 0, buf = [];
+    const flush = () => { if (buf.length) { out.push({ type: 'text', text: buf.join('\n').replace(/^\n+|\n+$/g, '') }); buf = []; } };
+    while (i < lines.length) {
+      if (/^\s*\|.*\|\s*$/.test(lines[i]) && i + 1 < lines.length && /^\s*\|?[\s:|\-]+\|?\s*$/.test(lines[i + 1]) && lines[i + 1].indexOf('-') >= 0) {
+        flush(); const rows = [edSplitRow(lines[i])]; i += 2;
+        while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(edSplitRow(lines[i])); i++; }
+        out.push({ type: 'table', rows: edNormRows(rows) });
+      } else { buf.push(lines[i]); i++; }
+    }
+    flush(); if (!out.length) out.push({ type: 'text', text: '' }); return out;
+  }
+  function edSerialize() {
+    const parts = [];
+    edBlocks.forEach(b => { if (b.type === 'text') { if ((b.text || '').trim() !== '') parts.push(b.text); } else { const rows = b.rows; const md = rows.map(r => '| ' + r.join(' | ') + ' |'); md.splice(1, 0, '|' + rows[0].map(() => '---').join('|') + '|'); parts.push(md.join('\n')); } });
+    return parts.join('\n\n');
+  }
+  function edSync() { document.getElementById('ed-body').value = edSerialize(); }
+  function edLoadFromHidden() { edBlocks = edParse(document.getElementById('ed-body').value); edActiveTA = null; edRender(); edSync(); }
+  function edRender() {
+    const root = document.getElementById('ed-blocks'); if (!root) return; root.innerHTML = '';
+    edBlocks.forEach((b, bi) => {
+      const div = document.createElement('div'); div.className = 'ed-block';
+      if (b.type === 'text') {
+        const ta = document.createElement('textarea'); ta.className = 'ed-txt'; ta.placeholder = 'พิมพ์ข้อความ...'; ta.value = b.text || ''; ta.dataset.bi = bi;
+        ta.addEventListener('focus', () => { edActiveTA = ta; });
+        ta.addEventListener('input', () => { edBlocks[ta.dataset.bi].text = ta.value; edAutosize(ta); edSync(); });
+        ta.addEventListener('keydown', edTextKeydown);
+        ta.addEventListener('paste', edTextPaste);
+        const del = document.createElement('button'); del.type = 'button'; del.className = 'ed-del'; del.title = 'ลบบล็อก'; del.textContent = '×'; del.onclick = () => edDeleteBlock(bi);
+        div.appendChild(ta); div.appendChild(del); setTimeout(() => edAutosize(ta), 0);
+      } else {
+        div.innerHTML = edTableHtml(b, bi);
+        const del = document.createElement('button'); del.type = 'button'; del.className = 'ed-del'; del.title = 'ลบตาราง'; del.textContent = '×'; del.onclick = () => edDeleteBlock(bi);
+        div.appendChild(del);
+      }
+      root.appendChild(div);
+    });
+    root.querySelectorAll('[data-cell]').forEach(cell => { cell.addEventListener('input', () => { const p = cell.dataset.cell.split('-').map(Number); edBlocks[p[0]].rows[p[1]][p[2]] = cell.textContent; edSync(); }); });
+  }
+  function edTableHtml(b, bi) {
+    let h = '<div class="ed-tlabel">▦ ตาราง</div><div class="ed-grid-wrap"><table class="ed-grid"><tbody>';
+    b.rows.forEach((row, r) => { h += '<tr class="' + (r === 0 ? 'head' : '') + '">'; row.forEach((c, ci) => { h += '<td><div class="ed-cell" contenteditable="true" data-cell="' + bi + '-' + r + '-' + ci + '">' + edEscape(c) + '</div></td>'; }); h += '</tr>'; });
+    h += '</tbody></table><button type="button" class="ed-addcol" title="เพิ่มคอลัมน์" onclick="edAddCol(' + bi + ')">+</button><button type="button" class="ed-addrow" title="เพิ่มแถว" onclick="edAddRow(' + bi + ')">+</button></div><div class="ed-tbl-tools"><button type="button" class="danger" onclick="edDelCol(' + bi + ')">– คอลัมน์</button><button type="button" class="danger" onclick="edDelRow(' + bi + ')">– แถว</button></div>';
+    return h;
+  }
+  function edTextPaste(e) {
+    const cb = e.clipboardData || window.clipboardData; if (!cb) return;
+    const txt = cb.getData('text'); if (!txt || txt.indexOf('\t') < 0) return;
+    const lines = txt.replace(/\s+$/, '').split('\n').filter(l => l.length);
+    if (!(lines.length >= 2 || (lines.length === 1 && /\t/.test(lines[0])))) return;
+    e.preventDefault();
+    const rows = lines.map(l => l.split('\t').map(c => c.trim()));
+    const bi = parseInt(e.target.dataset.bi, 10); const at = isNaN(bi) ? edBlocks.length : bi + 1;
+    edBlocks.splice(at, 0, { type: 'table', rows: edNormRows(rows) }); edActiveTA = null; edRender(); edSync();
+    showToast('วางเป็นตารางให้แล้ว · แก้ในช่องได้เลย', 'success');
+  }
+  function edAutosize(ta) { ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight) + 'px'; }
+  function edTextKeydown(e) { if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); rtFormat('bold'); } else if ((e.ctrlKey || e.metaKey) && (e.key === 'i' || e.key === 'I')) { e.preventDefault(); rtFormat('italic'); } }
+  function edEnsureActiveTA() {
+    if (edActiveTA && document.body.contains(edActiveTA)) return edActiveTA;
+    let idx = -1; for (let i = edBlocks.length - 1; i >= 0; i--) { if (edBlocks[i].type === 'text') { idx = i; break; } }
+    if (idx < 0) { edBlocks.push({ type: 'text', text: '' }); edRender(); edSync(); idx = edBlocks.length - 1; }
+    const ta = document.querySelector('#an .ed-txt[data-bi="' + idx + '"]'); if (ta) { ta.focus(); edActiveTA = ta; }
+    return edActiveTA;
+  }
+  function edAddCol(bi) { edBlocks[bi].rows.forEach((r, i) => r.push(i === 0 ? 'คอลัมน์ ' + (r.length + 1) : '')); edRender(); edSync(); }
+  function edDelCol(bi) { const t = edBlocks[bi].rows; if (t[0].length > 1) { t.forEach(r => r.pop()); edRender(); edSync(); } }
+  function edAddRow(bi) { const w = edBlocks[bi].rows[0].length; edBlocks[bi].rows.push(new Array(w).fill('')); edRender(); edSync(); }
+  function edDelRow(bi) { if (edBlocks[bi].rows.length > 2) { edBlocks[bi].rows.pop(); edRender(); edSync(); } }
+  function edAddText() { edBlocks.push({ type: 'text', text: '' }); edRender(); edSync(); }
+  function edAddTable() { edBlocks.push({ type: 'table', rows: [['คอลัมน์ 1', 'คอลัมน์ 2'], ['', ''], ['', '']] }); edRender(); edSync(); }
+  function edDeleteBlock(bi) { edBlocks.splice(bi, 1); if (!edBlocks.length) edBlocks.push({ type: 'text', text: '' }); edActiveTA = null; edRender(); edSync(); }
+  function edTogglePaste() { const w = document.getElementById('ed-paste-wrap'); w.style.display = (w.style.display === 'none' ? 'block' : 'none'); }
+  function edImportPaste() {
+    const raw = document.getElementById('ed-paste-box').value.replace(/\s+$/, ''); if (!raw.trim()) return;
+    const rows = raw.split('\n').map(l => l.split('\t').map(c => c.trim()));
+    edBlocks.push({ type: 'table', rows: edNormRows(rows) }); document.getElementById('ed-paste-box').value = ''; edTogglePaste(); edRender(); edSync();
+  }
+  function edFetchSheetLink() {
+    const url = (document.getElementById('ed-sheet-url').value || '').trim(); const msg = document.getElementById('ed-sheet-msg'); const btn = document.getElementById('ed-sheet-fetch-btn');
+    if (!/docs\.google\.com\/spreadsheets\//.test(url)) { msg.style.color = '#DC2626'; msg.textContent = 'กรุณาวางลิงก์ Google Sheet ที่ถูกต้อง'; return; }
+    btn.disabled = true; msg.style.color = '#64748B'; msg.textContent = 'กำลังดึงข้อมูลจากชีต...';
+    google.script.run.withSuccessHandler(function (r) {
+      btn.disabled = false;
+      if (!r || !r.ok) { msg.style.color = '#DC2626'; msg.textContent = (r && r.error) || 'ดึงไม่สำเร็จ'; return; }
+      document.getElementById('ed-paste-box').value = r.tsv || ''; edImportPaste(); document.getElementById('ed-sheet-url').value = ''; msg.style.color = '#0F766E'; msg.textContent = 'สร้างตารางจากชีตแล้ว ✓';
+    }).withFailureHandler(function (e) { btn.disabled = false; msg.style.color = '#DC2626'; msg.textContent = 'Error: ' + ((e && e.message) || e); }).announcementFetchSheetTSV(url);
+  }
+  function rtFormat(kind) {
+    const ta = edEnsureActiveTA(); if (!ta) return;
+    const start = ta.selectionStart, end = ta.selectionEnd, sel = ta.value.substring(start, end); let wrapped = sel;
+    if (kind === 'bold') wrapped = '**' + (sel || 'ตัวหนา') + '**';
+    else if (kind === 'italic') wrapped = '*' + (sel || 'ตัวเอียง') + '*';
+    else if (kind === 'bullet') wrapped = (sel || 'รายการที่ 1\nรายการที่ 2').split('\n').map(l => '• ' + l).join('\n');
+    else if (kind === 'number') wrapped = (sel || 'ข้อที่ 1\nข้อที่ 2').split('\n').map((l, i) => (i + 1) + '. ' + l).join('\n');
+    ta.value = ta.value.substring(0, start) + wrapped + ta.value.substring(end); ta.focus(); ta.selectionStart = start; ta.selectionEnd = start + wrapped.length;
+    if (ta.dataset.bi != null && edBlocks[ta.dataset.bi]) edBlocks[ta.dataset.bi].text = ta.value; edAutosize(ta); edSync();
+  }
+  function rtInsertImage() {
+    const url = prompt('วาง Image URL (Drive uc?id=... หรือ https://...):'); if (!url) return;
+    const ta = edEnsureActiveTA(); if (!ta) return; const tag = '\n![](' + url + ')\n'; const pos = ta.selectionStart;
+    ta.value = ta.value.substring(0, pos) + tag + ta.value.substring(pos); ta.focus(); ta.selectionStart = ta.selectionEnd = pos + tag.length;
+    if (ta.dataset.bi != null && edBlocks[ta.dataset.bi]) edBlocks[ta.dataset.bi].text = ta.value; edAutosize(ta); edSync();
+  }
+  let _inlineImgInsertPos = 0; let _inlineImgTA = null;
+  function rtUploadImageAtCursor() { const ta = edEnsureActiveTA(); if (!ta) return; _inlineImgTA = ta; _inlineImgInsertPos = (ta.selectionStart != null) ? ta.selectionStart : ta.value.length; const input = document.getElementById('upload-inline'); input.value = ''; input.click(); }
+  function onInlineImagePicked(input) {
+    const file = input.files && input.files[0]; if (!file) return;
+    const ta = (_inlineImgTA && document.body.contains(_inlineImgTA)) ? _inlineImgTA : edEnsureActiveTA(); if (!ta) return;
+    const commit = () => { if (ta.dataset.bi != null && edBlocks[ta.dataset.bi]) edBlocks[ta.dataset.bi].text = ta.value; edAutosize(ta); edSync(); };
+    const token = '![กำลังอัปโหลด: ' + file.name + ']()'; const pos = Math.min(_inlineImgInsertPos, ta.value.length);
+    const before = ta.value.substring(0, pos), after = ta.value.substring(pos);
+    const lead = (before && !before.endsWith('\n')) ? '\n' : ''; const trail = (after && !after.startsWith('\n')) ? '\n' : '';
+    const placeholder = lead + token + trail; ta.value = before + placeholder + after; commit();
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const base64 = e.target.result.split(',')[1];
+      google.script.run.withSuccessHandler(r => { if (r && r.ok && r.url) { ta.value = ta.value.replace(token, '![](' + r.url + ')'); showToast('แทรกรูปแล้ว', 'success'); } else { ta.value = ta.value.replace(placeholder, ''); showToast('อัปโหลดรูปไม่สำเร็จ: ' + (r && r.error ? r.error : 'unknown'), 'error'); } commit(); }).withFailureHandler(err => { ta.value = ta.value.replace(placeholder, ''); showToast('อัปโหลดรูปไม่สำเร็จ: ' + (err && err.message ? err.message : err), 'error'); commit(); }).annAdminUploadImage(file.name, file.type, base64);
+    };
+    reader.readAsDataURL(file);
+  }
+  function switchImgTab(tab) { document.querySelectorAll('#an .img-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab)); document.getElementById('img-tab-upload').style.display = tab === 'upload' ? '' : 'none'; document.getElementById('img-tab-url').style.display = tab === 'url' ? '' : 'none'; }
+  function uploadImage(input, slot) {
+    const files = input.files; if (!files || !files.length) return;
+    const statusEl = document.getElementById('upload-' + slot + '-status'); statusEl.textContent = 'กำลังอัพโหลด...';
+    let done = 0, total = files.length, uploaded = [];
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const base64 = e.target.result.split(',')[1];
+        google.script.run.withSuccessHandler(r => {
+          done++;
+          if (r && r.ok && r.url) {
+            uploaded.push(r.url); statusEl.textContent = 'อัพโหลด ' + done + '/' + total;
+            if (slot === 'header') { document.getElementById('ed-header-image').value = r.url; document.getElementById('upload-header-preview').innerHTML = '<img class="img-thumb" src="' + r.url + '" alt="header preview">'; }
+            else { const cur = document.getElementById('ed-body-images').value.trim(); document.getElementById('ed-body-images').value = (cur ? cur + ',' : '') + uploaded.join(','); renderBodyImagePreviews(); }
+            if (done === total) statusEl.textContent = 'อัพโหลดเสร็จ ' + total + ' รูป';
+          } else statusEl.textContent = 'พลาด: ' + (r && r.error ? r.error : 'unknown');
+        }).withFailureHandler(e => { statusEl.textContent = 'พลาด: ' + (e.message || e); }).annAdminUploadImage(file.name, file.type, base64);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  function renderBodyImagePreviews() { const urls = document.getElementById('ed-body-images').value.split(',').map(s => s.trim()).filter(Boolean); document.getElementById('upload-body-preview').innerHTML = urls.map(u => '<img class="img-thumb" src="' + u + '" alt="body" onclick="window.open(\'' + u + '\',\'_blank\')">').join(''); }
+  function previewLineFlex() {
+    const title = document.getElementById('ed-title').value || '(ไม่มีหัวข้อ)'; const body = document.getElementById('ed-body').value || '';
+    const catSel = document.getElementById('ed-category'); const catLabel = catSel.options[catSel.selectedIndex] ? catSel.options[catSel.selectedIndex].textContent : 'ทั่วไป';
+    const headerImg = document.getElementById('ed-header-image').value.trim(); const annIdEl = document.getElementById('ed-ann-id-preview'); const annId = (annIdEl.textContent || '').split(' ')[0] || 'A-XXX/2026';
+    const tParts = []; if (editing.branches.size) tParts.push(editing.branches.size + ' สาขา'); if (editing.departments.size) tParts.push(editing.departments.size + ' แผนก'); if (editing.positions.size) tParts.push(editing.positions.size + ' ตำแหน่ง');
+    const targetLine = tParts.length ? 'ถึง: ' + tParts.join(' · ') : '(ส่งทุกคน)'; const bodyShort = body.substring(0, 200) + (body.length > 200 ? '...' : ''); const reqAck = document.getElementById('ed-ack').checked;
+    const html = '<div style="background:white;border-radius:8px;border:1px solid #E2E8F0;padding:0;max-width:300px;font-family:sans-serif">' + (headerImg ? '<img src="' + headerImg + '" style="width:100%;border-radius:8px 8px 0 0;display:block;max-height:180px;object-fit:cover">' : '') + '<div style="padding:12px"><div style="font-size:9px;color:#94A3B8">ประกาศบริษัท · ' + annId + '</div><div style="font-size:10px;color:#3DC5B7;font-weight:600;margin-top:2px">[' + catLabel + ']</div><div style="font-size:14px;font-weight:600;color:#0D2F4F;margin-top:4px;line-height:1.3">' + escapeHtml(title) + '</div><div style="font-size:9px;color:#64748B;margin-top:2px">' + escapeHtml(targetLine) + '</div><hr style="border:0;border-top:1px solid #F1F5F9;margin:8px 0"><div style="font-size:11px;color:#475569;white-space:pre-wrap;line-height:1.5">' + escapeHtml(bodyShort) + '</div><div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">' + (reqAck ? '<button style="padding:6px;background:#3DC5B7;color:white;border:0;border-radius:4px;font-size:11px">รับทราบ</button>' : '') + '<button style="padding:6px;background:white;color:#475569;border:1px solid #E2E8F0;border-radius:4px;font-size:11px">อ่านเพิ่ม</button></div></div></div>';
+    document.getElementById('line-flex-preview').style.display = ''; document.getElementById('line-flex-preview-body').innerHTML = html;
+  }
+
+  /* ===== Editor open/close ===== */
+  function openEditor() {
+    if (!lookups) { showToast('ยังโหลดข้อมูลไม่เสร็จ', 'error'); return; }
+    document.getElementById('ed-modal-title').textContent = 'เขียนประกาศใหม่';
+    document.getElementById('ed-id').value = ''; document.getElementById('ed-title').value = ''; document.getElementById('ed-category').value = 'general';
+    document.getElementById('ed-body').value = ''; var _e = document.getElementById('ed-effective-date'); if (_e) _e.value = '';
+    edLoadFromHidden(); const _pw = document.getElementById('ed-paste-wrap'); if (_pw) _pw.style.display = 'none';
+    document.getElementById('ed-ack').checked = false; document.getElementById('ed-quiz').checked = false; document.getElementById('ed-scheduled').value = '';
+    document.getElementById('ed-header-image').value = ''; document.getElementById('ed-body-images').value = ''; document.getElementById('ed-send-mode').value = 'auto';
+    document.getElementById('ed-silent').checked = false; document.getElementById('ed-remind').checked = false;
+    document.getElementById('ed-remove-btn').style.display = ''; document.getElementById('ed-archive-btn').style.display = 'none';
+    editing = { branches: new Set(), positions: new Set(), departments: new Set(), tags: new Set(), employees: new Set(), exclude_employees: new Set() };
+    renderChips(); renderEmpPicker(); document.getElementById('preview-result').style.display = 'none';
+    document.getElementById('save-btn').innerHTML = ICONS.save + ' Save Draft'; document.getElementById('publish-btn').innerHTML = ICONS.bell + ' Publish';
+    if (!ANN_CATEGORIES.length) loadAnnCategories(); if (!ANN_PREFIXES.length) loadAnnPrefixes();
+    QUIZ_DRAFT = []; renderQuizDraft(); loadAnnIdPreview(); switchImgTab('upload');
+    ['upload-header-status', 'upload-body-status'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = 'ยังไม่ได้เลือก'; });
+    ['upload-header-preview', 'upload-body-preview', 'line-flex-preview-body'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+    document.getElementById('line-flex-preview').style.display = 'none'; document.getElementById('editor-bg').classList.add('active');
+  }
+  function openEditorWithData(a) {
+    openEditor();
+    document.getElementById('ed-modal-title').textContent = 'แก้ไข ' + (a.title || a.ann_id);
+    document.getElementById('ed-id').value = a.ann_id; document.getElementById('ed-title').value = a.title || ''; document.getElementById('ed-category').value = a.category || 'general';
+    document.getElementById('ed-body').value = a.body_md || ''; edLoadFromHidden();
+    document.getElementById('ed-ack').checked = a.requires_ack; document.getElementById('ed-quiz').checked = a.requires_quiz;
+    try { var _qj = a.quiz_json; var _q = _qj ? (typeof _qj === 'string' ? JSON.parse(_qj) : _qj) : []; QUIZ_DRAFT = Array.isArray(_q) ? _q.map(function (x) { return { q: x.q || '', choices: (x.choices && x.choices.length ? x.choices : ['', '', '', '']), correct: x.correct || 0 }; }) : []; } catch (e) { QUIZ_DRAFT = []; }
+    renderQuizDraft();
+    if (a.status === 'published' || a.status === 'archived') {
+      document.getElementById('save-btn').style.display = 'none'; document.getElementById('publish-btn').style.display = 'none';
+      const remBtn = document.getElementById('ed-remove-btn'), arcBtn = document.getElementById('ed-archive-btn');
+      if (a.status === 'published') { remBtn.style.display = ''; remBtn.textContent = IS_OWNER ? 'ลบจริง' : 'ขอลบ'; arcBtn.style.display = IS_OWNER ? '' : 'none'; }
+      else { remBtn.style.display = IS_OWNER ? '' : 'none'; remBtn.textContent = 'ลบจริง'; arcBtn.style.display = 'none'; }
+    } else { document.getElementById('save-btn').style.display = ''; document.getElementById('publish-btn').style.display = ''; document.getElementById('ed-remove-btn').textContent = 'ลบ'; }
+    editing.branches = new Set(a.target_branches); editing.positions = new Set(a.target_positions); editing.departments = new Set(a.target_departments);
+    editing.tags = new Set(a.target_tags); editing.employees = new Set(a.target_employees); editing.exclude_employees = new Set(a.target_exclude_employees);
+    document.getElementById('ed-header-image').value = a.header_image || ''; document.getElementById('ed-body-images').value = (a.body_images || []).join(', ');
+    document.getElementById('ed-send-mode').value = a.send_mode || 'auto'; document.getElementById('ed-silent').checked = !!a.silent_push; document.getElementById('ed-remind').checked = !!a.remind_24h;
+    var _ef = document.getElementById('ed-effective-date'); if (_ef) _ef.value = a.effective_date ? String(a.effective_date).slice(0, 10) : '';
+    if (a.scheduled_at) { const d = new Date(a.scheduled_at); if (!isNaN(d.getTime())) { const pad = n => String(n).padStart(2, '0'); document.getElementById('ed-scheduled').value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); } }
+    else document.getElementById('ed-scheduled').value = '';
+    renderChips(); renderEmpPicker();
+  }
+  function closeEditor() { document.getElementById('editor-bg').classList.remove('active'); document.getElementById('save-btn').style.display = ''; document.getElementById('publish-btn').style.display = ''; }
+  function renderChips() {
+    const renderGroup = (containerId, items, set, cls) => {
+      document.getElementById(containerId).innerHTML = (items || []).map(it => { const sel = set.has(it.id || it.name); return '<div class="chip ' + (sel ? 'selected ' + (cls || '') : '') + '" data-id="' + escapeAttr(it.id || it.name) + '" onclick="toggleChip(\'' + (set === editing.branches ? 'branches' : set === editing.positions ? 'positions' : set === editing.departments ? 'departments' : 'tags') + '\', this)">' + escapeHtml(it.name || it.label) + '</div>'; }).join('');
+    };
+    renderGroup('cg-branches', lookups.branches, editing.branches, '');
+    renderGroup('cg-positions', lookups.positions, editing.positions, '');
+    const deptItems = (ANN_PREFIXES.length ? ANN_PREFIXES : lookups.departments).map(p => ({ id: p.id, name: p.id + ' · ' + (p.label || p.name) }));
+    renderGroup('cg-departments', deptItems, editing.departments, 'dept-chip');
+    renderGroup('cg-tags', lookups.tags, editing.tags, 'tag-chip');
+  }
+  function toggleChip(group, el) { const id = el.getAttribute('data-id'); const set = editing[group]; if (set.has(id)) set.delete(id); else set.add(id); renderChips(); if (group === 'departments') loadAnnIdPreview(); }
+  const EMP_TEMP_RE = /(ทดลอง|พาร์|part|intern|นักศึกษา|ฝึกงาน)/i;
+  function renderEmpPicker() {
+    const q = (document.getElementById('ed-emp-search').value || '').toLowerCase(); const permEl = document.getElementById('ed-emp-permanent-only'); const permOnly = permEl ? permEl.checked : false;
+    const filtered = (lookups.employees || []).filter(e => { if (q && !(e.name + ' ' + e.nickname).toLowerCase().includes(q)) return false; if (permOnly && EMP_TEMP_RE.test(e.emp_type || '')) return false; return true; });
+    document.getElementById('emp-picker').innerHTML = filtered.slice(0, 100).map(e => { const inc = editing.employees.has(e.id); const exc = editing.exclude_employees.has(e.id); const noLine = e.has_line === false; return '<div class="emp-row ' + (inc ? 'selected' : '') + (exc ? ' excluded' : '') + '" onclick="toggleEmp(\'' + escapeAttr(e.id) + '\', event)"><input type="checkbox" ' + (inc ? 'checked' : '') + ' style="pointer-events:none"><div style="flex:1">' + escapeHtml(e.nickname || e.name) + ' <span style="color:var(--text-faint);font-size:10px">' + escapeHtml(e.name) + '</span>' + (noLine ? ' <span style="color:#B91C1C;font-size:10px;font-weight:500">● ไม่มี LINE</span>' : '') + '</div>' + (exc ? '<span class="target-status ts-unopened">excluded</span>' : '') + '</div>'; }).join('') || '<div style="padding:14px;text-align:center;font-size:11px;color:var(--text-faint)">ไม่มีรายชื่อพนักงาน (lookups ว่างบน dashboard)</div>';
+  }
+  function filterEmpPicker() { renderEmpPicker(); }
+  function toggleEmp(empId, event) { if (event && event.shiftKey) { if (editing.exclude_employees.has(empId)) editing.exclude_employees.delete(empId); else { editing.exclude_employees.add(empId); editing.employees.delete(empId); } } else { if (editing.employees.has(empId)) editing.employees.delete(empId); else { editing.employees.add(empId); editing.exclude_employees.delete(empId); } } renderEmpPicker(); }
+  function previewTargets() {
+    const payload = buildTargetPayload(); document.getElementById('preview-btn').disabled = true;
+    google.script.run.withSuccessHandler(r => { document.getElementById('preview-btn').disabled = false; if (r && r.error) { showToast(r.error, 'error'); return; } renderPreview(r); }).withFailureHandler(e => { document.getElementById('preview-btn').disabled = false; showToast('Error: ' + e.message, 'error'); }).annAdminPreviewTargets(payload);
+  }
+  function renderPreview(r) {
+    document.getElementById('preview-result').style.display = ''; document.getElementById('pv-count').textContent = r.count || 0;
+    document.getElementById('pv-sub').textContent = (r.line_linked_count || 0) + ' link LINE · ' + (r.no_line_count || 0) + ' ไม่ได้ link';
+    document.getElementById('pv-list').innerHTML = (r.sample || []).slice(0, 12).map(s => '<li>' + escapeHtml(s.nickname || s.name) + ' — ' + escapeHtml(s.branch_name) + ' / ' + escapeHtml(s.position_name) + (s.line_linked ? '' : ' <span style="color:var(--danger)">(no LINE)</span>') + '</li>').join('') + (r.count > 12 ? '<li style="color:var(--text-faint)">... อีก ' + (r.count - 12) + ' คน</li>' : '');
+    const warn = document.getElementById('pv-warn');
+    if (r.no_line_count > 0) { warn.style.display = ''; warn.textContent = 'ระวัง: ' + r.no_line_count + ' คน ไม่ได้ link LINE'; }
+    else if (r.count === 0) { warn.style.display = ''; warn.textContent = 'ไม่มี target — ตรวจ criteria (lookups ว่างบน dashboard → preview รายคนยังไม่พร้อม)'; }
+    else warn.style.display = 'none';
+  }
+  function buildTargetPayload() { return { target_branches: Array.from(editing.branches), target_positions: Array.from(editing.positions), target_departments: Array.from(editing.departments), target_tags: Array.from(editing.tags), target_employees: Array.from(editing.employees), target_exclude_employees: Array.from(editing.exclude_employees), quiz_json: QUIZ_DRAFT && QUIZ_DRAFT.length ? JSON.stringify(QUIZ_DRAFT.filter(q => q.q && q.q.trim())) : '', kpi_link_enabled: false }; }
+  function buildPayload() { const imgsRaw = document.getElementById('ed-body-images').value || ''; const bodyImgs = imgsRaw.split(',').map(s => s.trim()).filter(Boolean); return Object.assign({ title: document.getElementById('ed-title').value.trim(), body_md: document.getElementById('ed-body').value, category: document.getElementById('ed-category').value.trim() || 'general', requires_ack: document.getElementById('ed-ack').checked, requires_quiz: document.getElementById('ed-quiz').checked, kpi_weight: 0, scheduled_at: document.getElementById('ed-scheduled').value || '', effective_date: (document.getElementById('ed-effective-date') || {}).value || '', header_image: document.getElementById('ed-header-image').value.trim(), body_images_json: bodyImgs, send_mode: document.getElementById('ed-send-mode').value || 'auto', silent_push: document.getElementById('ed-silent').checked, remind_24h: document.getElementById('ed-remind').checked }, buildTargetPayload()); }
+  let SAVE_INFLIGHT = false;
+  function _setSaveButtons(disabled) { const sb2 = document.getElementById('save-btn'), pb = document.getElementById('publish-btn'); if (sb2) sb2.disabled = disabled; if (pb) pb.disabled = disabled; }
+  function saveAnn(thenPublish) {
+    if (SAVE_INFLIGHT) return; const payload = buildPayload();
+    if (!payload.title) { showToast('ระบุ title', 'error'); return; } if (!payload.body_md) { showToast('ระบุเนื้อหา', 'error'); return; }
+    const totalImgs = (payload.header_image ? 1 : 0) + (payload.body_images_json || []).length;
+    if (payload.send_mode === 'carousel' && totalImgs < 2) { if (!confirm('Send mode = carousel แต่มีรูปแค่ ' + totalImgs + ' รูป — ต้องการต่อ?')) return; }
+    if (payload.send_mode === 'single_hero' && totalImgs === 0) { if (!confirm('Send mode = single hero แต่ไม่มีรูป — ต้องการต่อ?')) return; }
+    if (thenPublish && !confirm('Publish ทันที? — ส่ง LINE multicast ตอนนี้เลย')) return;
+    const isEdit = !!document.getElementById('ed-id').value; const annId = document.getElementById('ed-id').value;
+    SAVE_INFLIGHT = true; _setSaveButtons(true);
+    const done = () => { SAVE_INFLIGHT = false; _setSaveButtons(false); };
+    const fail = (e) => { done(); showToast('Error: ' + (e && e.message ? e.message : e), 'error'); };
+    const onSave = (r) => {
+      if (r && r.error) { done(); showToast(r.error, 'error'); return; }
+      const id = isEdit ? annId : r.ann_id;
+      if (thenPublish) { google.script.run.withSuccessHandler(p => { done(); if (p && p.error) { showToast(p.error, 'error'); return; } showToast('Published — ส่งหา ' + (p.target_count || 0) + ' คน', 'success'); closeEditor(); loadList(); }).withFailureHandler(fail).annAdminPublish(id); }
+      else { done(); showToast('บันทึกแล้ว', 'success'); closeEditor(); loadList(); }
+    };
+    if (isEdit) google.script.run.withSuccessHandler(onSave).withFailureHandler(fail).annAdminUpdate(annId, payload);
+    else google.script.run.withSuccessHandler(onSave).withFailureHandler(fail).annAdminCreate(payload);
+  }
+  function archiveAnn() { const annId = document.getElementById('ed-id').value; if (!annId) return; if (!confirm('Archive ประกาศนี้?')) return; google.script.run.withSuccessHandler(r => { if (r && r.error) { showToast(r.error, 'error'); return; } showToast('Archived', 'success'); closeEditor(); loadList(); }).withFailureHandler(e => showToast('Error: ' + e.message, 'error')).annAdminArchive(annId); }
+  function removeAnn() {
+    const annId = document.getElementById('ed-id').value; if (!annId) return;
+    const a = ((allData && allData.announcements) || []).find(x => x.ann_id === annId); const status = a ? a.status : 'draft';
+    if (status === 'published') { if (IS_OWNER) ownerDeleteAnn(null, annId, true); else requestRemoveAnn(null, annId, true); return; }
+    if (!confirm('ลบประกาศนี้?\nลบแล้วกู้คืนไม่ได้')) return;
+    google.script.run.withSuccessHandler(r => { if (r && r.error) { showToast(r.error, 'error'); return; } showToast('ลบแล้ว', 'success'); closeEditor(); loadList(); }).withFailureHandler(e => showToast('Error: ' + e.message, 'error')).annAdminRemove(annId, { mode: 'hard' });
+  }
+  function ownerDeleteAnn(event, annId, fromEditor) {
+    if (event) { event.stopPropagation(); event.preventDefault(); } if (!annId) return;
+    const a = ((allData && allData.announcements) || []).find(x => x.ann_id === annId); const title = (a && a.title) || annId;
+    const hard = confirm('ลบประกาศ "' + title + '" แบบไหน?\n\nOK = ลบจริง (กู้คืนไม่ได้)\nCancel = ไปต่อเพื่อเลือกย้าย Archive'); let mode;
+    if (hard) mode = 'hard'; else { if (!confirm('ย้ายประกาศ "' + title + '" ไป Archive แทน?')) return; mode = 'archive'; }
+    google.script.run.withSuccessHandler(r => { if (r && r.error) { showToast(r.error, 'error'); return; } showToast(mode === 'archive' ? 'ย้ายไป Archive แล้ว' : 'ลบประกาศแล้ว', 'success'); if (fromEditor) closeEditor(); loadList(); }).withFailureHandler(e => showToast('Error: ' + e.message, 'error')).annAdminRemove(annId, { mode: mode });
+  }
+  function requestRemoveAnn(event, annId, fromEditor) {
+    if (event) { event.stopPropagation(); event.preventDefault(); } if (!annId) return;
+    const a = ((allData && allData.announcements) || []).find(x => x.ann_id === annId); const title = (a && a.title) || annId;
+    const reason = prompt('ขอลบประกาศ "' + title + '"\nระบุเหตุผล:', ''); if (reason === null) return;
+    google.script.run.withSuccessHandler(r => { if (r && r.error) { if (r.is_owner) { ownerDeleteAnn(null, annId, fromEditor); return; } showToast(r.error, 'error'); return; } if (r && r.is_owner) { ownerDeleteAnn(null, annId, fromEditor); return; } showToast('ส่งคำขอแล้ว', 'success'); if (fromEditor) closeEditor(); }).withFailureHandler(e => showToast('Error: ' + e.message, 'error')).annAdminRequestRemove(annId, reason);
+  }
+  function quickRemoveAnn(event, annId) { if (event) { event.stopPropagation(); event.preventDefault(); } if (!annId) return; const a = ((allData && allData.announcements) || []).find(x => x.ann_id === annId); const title = (a && a.title) || annId; if (!confirm('ลบ draft "' + title + '" ?')) return; google.script.run.withSuccessHandler(r => { if (r && r.error) { showToast(r.error, 'error'); return; } showToast('ลบ draft แล้ว', 'success'); loadList(); }).withFailureHandler(e => showToast('Error: ' + e.message, 'error')).annAdminRemove(annId); }
+  function quickRemoveScheduled(event, annId) { if (event) { event.stopPropagation(); event.preventDefault(); } if (!annId) return; const a = ((allData && allData.announcements) || []).find(x => x.ann_id === annId); const title = (a && a.title) || annId; const when = (a && a.scheduled_at) ? '\nตั้งเวลาส่ง: ' + new Date(a.scheduled_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''; if (!confirm('ลบประกาศที่ตั้งเวลาไว้ "' + title + '" ?' + when)) return; google.script.run.withSuccessHandler(r => { if (r && r.error) { showToast(r.error, 'error'); return; } showToast('ลบประกาศที่ตั้งเวลาไว้แล้ว', 'success'); loadList(); }).withFailureHandler(e => showToast('Error: ' + e.message, 'error')).annAdminRemove(annId); }
+
+  /* ===== Detail ===== */
+  function openDetail(annId) {
+    document.getElementById('detail-bg').classList.add('active'); document.getElementById('d-title').textContent = 'กำลังโหลด...';
+    google.script.run.withSuccessHandler(d => { if (!d || d.error || !d.announcement) { showToast((d && d.error) ? d.error : 'โหลดรายละเอียดไม่สำเร็จ', 'error'); closeDetail(); return; } currentDetail = d; renderDetail(d); }).withFailureHandler(e => { showToast('Error: ' + e.message, 'error'); closeDetail(); }).annAdminGetDetail(annId);
+  }
+  function renderDetail(d) {
+    if (!d || !d.announcement) { showToast('โหลดรายละเอียดไม่สำเร็จ', 'error'); closeDetail(); return; }
+    const a = d.announcement; const c = d.counts || {};
+    const annIdEl = document.getElementById('d-ann-id-badge'); if (annIdEl) annIdEl.textContent = a.ann_id || '(no id)';
+    document.getElementById('d-title').textContent = a.title; document.getElementById('d-sub').textContent = '[' + a.category + '] · ' + a.status + ' · ' + (a.published_at || a.created_at);
+    document.getElementById('d-stats').innerHTML = ['<div class="stat-box"><div class="v">' + c.total + '</div><div class="l">targets</div></div>', '<div class="stat-box unopened"><div class="v">' + c.unopened + '</div><div class="l">unopened</div></div>', '<div class="stat-box"><div class="v">' + c.opened + '</div><div class="l">opened (' + c.open_rate + '%)</div></div>', '<div class="stat-box received"><div class="v">' + c.acknowledged + '</div><div class="l">ack (' + c.ack_rate + '%)</div></div>'].join('');
+    document.getElementById('d-body').innerHTML = renderBody(a.body_md);
+    document.getElementById('d-targets').innerHTML = (d.target_list || []).map(t => { const status = t.acknowledged ? '<span class="target-status ts-acked">' + ICONS.check + ' acked</span>' : t.opened ? '<span class="target-status ts-opened">opened</span>' : '<span class="target-status ts-unopened">unopened</span>'; const cls = t.acknowledged ? 'acked' : t.opened ? 'opened' : 'unopened'; return '<div class="target-row ' + cls + '"><div><div class="target-name">' + escapeHtml(t.employee_nickname || t.employee_name) + '</div><div class="target-meta">' + escapeHtml(t.branch_name) + ' · ' + escapeHtml(t.position_name) + (t.line_linked ? '' : ' · <span style="color:var(--danger)">no LINE</span>') + '</div></div><div>' + status + '</div><div style="font-size:10px;color:var(--text-faint)">' + escapeHtml(t.ack_at || t.opened_at || '—') + '</div></div>'; }).join('') || '<div style="padding:14px;text-align:center;font-size:11px;color:var(--text-faint)">ไม่มี target list (dashboard ยังไม่เก็บสถานะการอ่านรายคน)</div>';
+    document.getElementById('d-remind-btn').style.display = (a.status === 'published' && c.unopened + (c.opened - c.acknowledged) > 0) ? '' : 'none';
+    document.getElementById('d-edit-btn').style.display = (a.status === 'draft' || a.status === 'scheduled') ? '' : 'none';
+    const resendBtn = document.getElementById('d-resend-btn'); if (resendBtn) resendBtn.style.display = (a.status === 'published') ? '' : 'none';
+  }
+  function renderBody(text) {
+    const lines = String(text || '').split('\n');
+    function inlineFmt(str) { let s = escapeHtml(str); s = s.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>'); s = s.replace(/(^|[^\*])\*([^\*\n]+)\*([^\*]|$)/g, '$1<em>$2</em>$3'); s = s.replace(/!\[[^\]]*\]\(([^)]+)\)/g, function (m, url) { if (!/^https?:\/\//i.test(url)) return ''; return '<img src="' + url + '" alt="" style="max-width:100%;border-radius:6px;margin:6px 0">'; }); return s; }
+    function isSep(l) { return /^\s*\|?[\s:|\-]+\|?\s*$/.test(l) && l.indexOf('-') >= 0; }
+    function splitRow(l) { return l.trim().replace(/^\||\|$/g, '').split('|').map(function (c) { return c.trim(); }); }
+    let out = '', i = 0;
+    while (i < lines.length) {
+      if (/^\s*\|.*\|\s*$/.test(lines[i]) && i + 1 < lines.length && isSep(lines[i + 1])) {
+        const rows = [splitRow(lines[i])]; i += 2;
+        while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(splitRow(lines[i])); i++; }
+        let t = '<table style="border-collapse:collapse;width:100%;margin:8px 0;font-size:13px;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden"><thead><tr>';
+        rows[0].forEach(function (c) { t += '<th style="background:#0D2F4F;color:#fff;text-align:left;padding:7px 9px;font-weight:700;font-size:12px">' + inlineFmt(c) + '</th>'; });
+        t += '</tr></thead><tbody>';
+        for (let r = 1; r < rows.length; r++) { const bg = (r % 2 === 0) ? 'background:#F8FAFC;' : ''; t += '<tr>'; rows[r].forEach(function (c) { t += '<td style="border-top:1px solid #E2E8F0;padding:7px 9px;' + bg + '">' + inlineFmt(c) + '</td>'; }); t += '</tr>'; }
+        t += '</tbody></table>'; out += t;
+      } else { out += inlineFmt(lines[i]); if (i < lines.length - 1) out += '\n'; i++; }
+    }
+    return out;
+  }
+  /* ===== Resend ===== */
+  let resendEditing = { branches: new Set(), positions: new Set(), departments: new Set(), employees: new Set(), exclude_employees: new Set() };
+  function resendAnnouncement() {
+    if (!currentDetail || !currentDetail.announcement) return; if (!ANN_PREFIXES.length) loadAnnPrefixes();
+    const a = currentDetail.announcement; const c = currentDetail.counts || {};
+    document.getElementById('r-ann-id').textContent = a.ann_id; document.getElementById('r-count-all').textContent = (c.total || 0) + ' คน · ทุกคนใน target list';
+    document.getElementById('r-count-unacked').textContent = ((c.total || 0) - (c.acknowledged || 0)) + ' คน · ยังไม่กดรับทราบ'; document.getElementById('r-count-unopened').textContent = (c.unopened || 0) + ' คน · ยังไม่อ่าน';
+    resendEditing = { branches: new Set(), positions: new Set(), departments: new Set(), employees: new Set(), exclude_employees: new Set() };
+    document.getElementById('r-custom-panel').style.display = 'none'; document.querySelector('#an input[name="r-mode"][value="all"]').checked = true; updateResendPreview();
+    document.querySelectorAll('#an input[name="r-mode"]').forEach(r => { r.onchange = function () { document.getElementById('r-custom-panel').style.display = this.value === 'custom' ? '' : 'none'; if (this.value === 'custom') rRenderChips(); updateResendPreview(); }; });
+    document.getElementById('resend-bg').classList.add('active');
+  }
+  function closeResend() { document.getElementById('resend-bg').classList.remove('active'); }
+  function updateResendPreview() { const mode = (document.querySelector('#an input[name="r-mode"]:checked') || {}).value || 'all'; const c = (currentDetail && currentDetail.counts) || {}; let n = 0; if (mode === 'all') n = c.total || 0; else if (mode === 'unacked') n = (c.total || 0) - (c.acknowledged || 0); else if (mode === 'unopened') n = c.unopened || 0; else if (mode === 'custom') n = '~ (ขึ้นกับเงื่อนไข)'; document.getElementById('r-final-count').textContent = n; }
+  function rRenderChips() {
+    if (!lookups) return; const dept = (ANN_PREFIXES.length) ? ANN_PREFIXES.map(p => ({ id: p.id, name: p.id + ' · ' + p.label })) : lookups.departments;
+    const renderG = (id, items, set) => { document.getElementById(id).innerHTML = (items || []).map(it => { const sel = set.has(it.id || it.name); return '<div class="' + (sel ? 'chip selected' : 'chip') + '" data-id="' + escapeAttr(it.id || it.name) + '" onclick="rToggleChip(\'' + (set === resendEditing.branches ? 'branches' : set === resendEditing.positions ? 'positions' : 'departments') + '\', this)">' + escapeHtml(it.name || it.label) + '</div>'; }).join(''); };
+    renderG('r-cg-branches', lookups.branches, resendEditing.branches); renderG('r-cg-positions', lookups.positions, resendEditing.positions); renderG('r-cg-departments', dept, resendEditing.departments); rRenderEmpPicker();
+  }
+  function rToggleChip(group, el) { const id = el.getAttribute('data-id'); const set = resendEditing[group]; if (set.has(id)) set.delete(id); else set.add(id); rRenderChips(); }
+  function rRenderEmpPicker() { const q = ((document.getElementById('r-emp-search') || {}).value || '').toLowerCase(); const filtered = (lookups.employees || []).filter(e => !q || ((e.name || '') + ' ' + (e.nickname || '')).toLowerCase().includes(q)); document.getElementById('r-emp-picker').innerHTML = filtered.slice(0, 50).map(e => { const inc = resendEditing.employees.has(e.id); const exc = resendEditing.exclude_employees.has(e.id); return '<div class="emp-row ' + (inc ? 'selected' : '') + (exc ? ' excluded' : '') + '" onclick="rToggleEmp(\'' + e.id + '\', event)">' + escapeHtml(e.nickname || e.name) + ' <span style="color:var(--text-faint)">' + escapeHtml(e.branch_id) + '</span>' + (inc ? '<span class="target-status ts-acked">+</span>' : '') + (exc ? '<span class="target-status ts-unopened">×</span>' : '') + '</div>'; }).join(''); }
+  function rToggleEmp(empId, ev) { if (ev && ev.shiftKey) { if (resendEditing.exclude_employees.has(empId)) resendEditing.exclude_employees.delete(empId); else { resendEditing.exclude_employees.add(empId); resendEditing.employees.delete(empId); } } else { if (resendEditing.employees.has(empId)) resendEditing.employees.delete(empId); else { resendEditing.employees.add(empId); resendEditing.exclude_employees.delete(empId); } } rRenderEmpPicker(); }
+  function rFilterEmp() { rRenderEmpPicker(); }
+  function confirmResend() {
+    try {
+      if (!currentDetail || !currentDetail.announcement) { alert('ไม่พบข้อมูลประกาศ'); return; }
+      const annId = currentDetail.announcement.ann_id; const mode = (document.querySelector('#an input[name="r-mode"]:checked') || {}).value || 'all'; const btn = document.getElementById('r-send-btn'); if (!btn) return;
+      btn.disabled = true; btn.textContent = 'กำลังส่ง...'; const opts = { mode: mode };
+      if (mode === 'custom') { opts.target_branches = Array.from(resendEditing.branches); opts.target_positions = Array.from(resendEditing.positions); opts.target_departments = Array.from(resendEditing.departments); opts.target_employees = Array.from(resendEditing.employees); opts.target_exclude_employees = Array.from(resendEditing.exclude_employees); if (!opts.target_branches.length && !opts.target_positions.length && !opts.target_departments.length && !opts.target_employees.length) { alert('Custom mode · ต้องเลือกอย่างน้อย 1 criteria'); btn.disabled = false; btn.textContent = 'ส่งซ้ำ'; return; } }
+      google.script.run.withSuccessHandler(r => { btn.disabled = false; btn.textContent = 'ส่งซ้ำ'; if (r && r.error) { showToast(r.error, 'error'); return; } showToast((r && r.message) ? r.message : ('ส่งซ้ำสำเร็จ · ' + (r && r.count ? r.count + ' คน' : '')), 'success'); closeResend(); }).withFailureHandler(e => { btn.disabled = false; btn.textContent = 'ส่งซ้ำ'; showToast('ส่งซ้ำพลาด: ' + (e.message || e), 'error'); }).annAdminResend(annId, opts);
+    } catch (err) { alert('JS error ใน confirmResend: ' + err.message); const b2 = document.getElementById('r-send-btn'); if (b2) { b2.disabled = false; b2.textContent = 'ส่งซ้ำ'; } }
+  }
+  function editFromDetail() { if (!currentDetail) return; closeDetail(); openEditorWithData(currentDetail.announcement); }
+  function remindUnacked() { if (!currentDetail) return; if (!confirm('ส่ง LINE เตือนคนที่ยังไม่ ack ทั้งหมด?')) return; google.script.run.withSuccessHandler(r => { if (r && r.error) { showToast(r.error, 'error'); return; } if (r.message) showToast(r.message, 'success'); else showToast('ส่งซ้ำหา ' + (r.sent || 0) + ' คน', 'success'); }).withFailureHandler(e => showToast('Error: ' + e.message, 'error')).annAdminRemindUnacked(currentDetail.announcement.ann_id); }
+  function closeDetail() { document.getElementById('detail-bg').classList.remove('active'); currentDetail = null; }
+
+  /* ===== role gating ===== */
+  function loadWhoAmI() { google.script.run.withSuccessHandler(r => { if (r && r.ok) { IS_OWNER = !!r.is_owner; MY_ROLE = r.role || ''; } applyOwnerGating(); }).withFailureHandler(_ => { applyOwnerGating(); }).annAdminWhoAmI(); }
+  function applyOwnerGating() { const archTab = document.querySelector('#an .tab[data-tab="archived"]'); if (archTab) archTab.style.display = IS_OWNER ? '' : 'none'; if (!IS_OWNER && currentTab === 'archived') { setTab('all'); return; } if (allData && currentView === 'list') renderListView(); }
+
+  /* ===== expose fn ที่ inline onclick/markup ต้องเรียก ไปยัง window ===== */
+  const _exp = { showHelp, HELP, loadList, openEditor, setView, setTab, onFiltersChanged, clearAllFilters, msToggle, msToggleOpen, msAll, msNone, renderListView, calPrev, calNext, calToday, selectDay, openDetail, closeEditor, saveAnn, archiveAnn, removeAnn, ownerDeleteAnn, requestRemoveAnn, quickRemoveAnn, quickRemoveScheduled, closeDetail, editFromDetail, remindUnacked, resendAnnouncement, closeResend, confirmResend, rToggleChip, rToggleEmp, rFilterEmp, previewTargets, previewLineFlex, toggleChip, toggleEmp, filterEmpPicker, switchImgTab, uploadImage, rtFormat, rtInsertImage, rtUploadImageAtCursor, onInlineImagePicked, edAddText, edAddTable, edTogglePaste, edImportPaste, edFetchSheetLink, edAddCol, edAddRow, edDelCol, edDelRow, quizAdd, quizRemove, quizUpdate };
+  Object.keys(_exp).forEach(k => { window[k] = _exp[k]; });
+
+  /* ===== Init ===== */
+  loadWhoAmI();
+  loadList();
 }
