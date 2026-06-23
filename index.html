@@ -222,6 +222,9 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="incident"><i class="ti ti-alert-triangle"></i>รายงานเหตุการณ์<span class="ct" id="ct-incident"></span></div>
       <div class="sb-label">บัญชี (Accountant)</div>
       <div class="sb-item" data-view="accexp"><i class="ti ti-receipt"></i>คีย์รายจ่าย<span class="ct" id="ct-accexp"></span></div>
+      <div class="sb-item" data-view="accpr"><i class="ti ti-file-invoice"></i>คำขอจ่าย·อนุมัติ<span class="ct" id="ct-accpr"></span></div>
+      <div class="sb-item" data-view="accpetty"><i class="ti ti-wallet"></i>เงินสดย่อย<span class="ct" id="ct-accpetty"></span></div>
+      <div class="sb-item" data-view="accsales"><i class="ti ti-chart-line"></i>ยอดขาย·variance<span class="ct" id="ct-accsales"></span></div>
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
@@ -370,6 +373,78 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div id="expStat"></div>
       <div id="expList"></div>
     </section>
+    <section class="view" data-view="accpr">
+      <div class="sec"><span class="sec-bar"></span>คำขอจ่าย · อนุมัติ<span class="sec-c">Native Supabase · บัญชี</span></div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:10px;color:var(--navy)">สร้างคำขอจ่ายใหม่</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input id="prTitle" placeholder="เรื่อง / รายการ" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="prAmount" type="number" step="0.01" placeholder="จำนวนเงิน (บาท)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <select id="prMethod" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"><option value="transfer">โอน</option><option value="petty">เงินสดย่อย</option><option value="cash">เงินสด</option></select>
+          <select id="prPriority" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"><option value="normal">ปกติ</option><option value="urgent">ด่วน</option></select>
+          <input id="prVendor" placeholder="ผู้รับเงิน / vendor" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="prBranch" placeholder="สาขา" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="prDue" type="date" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <select id="prReqBy" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"><option value="">— ผู้ขอ (ดึงจาก HR) —</option></select>
+        </div>
+        <input id="prNotes" placeholder="หมายเหตุ (ไม่บังคับ)" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="prPost" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ส่งคำขอ</button>
+          <span id="prMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+      </div>
+      <div id="prStat"></div>
+      <div id="prList"></div>
+    </section>
+    <section class="view" data-view="accpetty">
+      <div class="sec"><span class="sec-bar"></span>เงินสดย่อย<span class="sec-c">Native Supabase · บัญชี</span></div>
+      <div id="pettyBal" style="margin-bottom:14px"></div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:10px;color:var(--navy)">บันทึกรายการเงินสดย่อย</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input id="peBranch" placeholder="สาขา (เช่น BR00)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="peDate" type="date" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="peDesc" placeholder="รายละเอียด" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="peAmount" type="number" step="0.01" placeholder="จำนวน (จ่าย=ติดลบ)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="peCategory" placeholder="หมวด" style="grid-column:1/3;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="pePost" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึกรายการ</button>
+          <span id="peMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+      </div>
+      <details style="margin-bottom:14px"><summary style="cursor:pointer;font-size:13px;color:var(--text-muted);padding:4px 0">+ เปิดรอบเงินสดย่อยใหม่ (รายเดือน/สาขา)</summary>
+        <div class="card" style="padding:14px;margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input id="pcBranch" placeholder="สาขา" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="pcMonth" placeholder="YYYY-MM" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;width:110px">
+          <input id="pcOpening" type="number" placeholder="ยอดยกมา" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;width:120px">
+          <button id="pcPost" style="padding:9px 16px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">เปิดรอบ</button>
+          <span id="pcMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+      </details>
+      <div id="pettyLedger"></div>
+    </section>
+    <section class="view" data-view="accsales">
+      <div class="sec"><span class="sec-bar"></span>ยอดขาย · ตรวจ variance<span class="sec-c">Native Supabase · บัญชี</span></div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:4px;color:var(--navy)">บันทึกยอดขายรายวัน</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">ใส่ได้หลายแหล่ง · ระบบเทียบ variance อัตโนมัติ (ต่าง >1000 = alert)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input id="dsBranch" placeholder="สาขา (เช่น sly)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dsDate" type="date" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dsJera" type="number" placeholder="JERA POS" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dsReceipt" type="number" placeholder="ใบเสร็จ" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dsSheet" type="number" placeholder="Sheet" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dsBrief" type="number" placeholder="Morning brief" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="dsPost" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึกยอด</button>
+          <span id="dsMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+      </div>
+      <div id="dsStat"></div>
+      <div id="dsList"></div>
+    </section>
     <section class="view" data-view="events">
       <div class="sec"><span class="sec-bar"></span>เหตุการณ์ทั้งหมด<span class="sec-c"><span class="dot"></span>realtime</span></div>
       <div class="card"><div id="eventsAll"></div></div>
@@ -388,7 +463,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',accexp:'คีย์รายจ่าย',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -416,6 +491,7 @@ function tbl(rows,cols,opt={}){
  if(!rows||!rows.length)return '<table><tr><td class="empty-td">'+(opt.empty||'— ยังไม่มีข้อมูล —')+'</td></tr></table>';
  let h='<table><thead><tr>'+cols.map(c=>'<th>'+c.h+'</th>').join('')+'</tr></thead><tbody>';
  rows.forEach((r,i)=>{h+='<tr'+(opt.flash&&i===0?' class="flash"':'')+'>'+cols.map(c=>{
+   if(c.render)return '<td>'+c.render(r)+'</td>';
    let v=esc(r[c.k]);
    if(c.t==='status')v='<span class="pill '+(r[c.k]||'')+'">'+v+'</span>';
    else if(c.t==='mono')v='<span class="mono">'+v+'</span>';
@@ -714,6 +790,97 @@ async function postExpense(){
  loadAccExp();
 }
 
+// ===== Wave 1: คำขอจ่าย + อนุมัติ (acc_payment_request) =====
+const _prTone={pending:'warn',approved:'ok',rejected:'danger'},_prTxt={pending:'รออนุมัติ',approved:'อนุมัติแล้ว',rejected:'ปฏิเสธ'};
+async function fillPrEmp(){
+ const {data}=await sb.from('employees').select('employee_id,full_name').order('full_name').limit(300);
+ const sel=$('prReqBy'); if(!sel)return; const cur=sel.value;
+ sel.innerHTML='<option value="">— ผู้ขอ (ดึงจาก HR) —</option>'+(data||[]).map(e=>'<option value="'+esc(e.employee_id)+'">'+esc(e.full_name||e.employee_id)+'</option>').join('');
+ sel.value=cur;
+}
+function prCard(p){
+ const st=p.status||'pending';
+ let h='<div class="card" style="padding:14px;margin-bottom:10px;border-left:3px solid var(--'+(st==='approved'?'teal':'navy')+')">';
+ h+='<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><div style="font-weight:600;color:var(--navy);font-size:14px">'+esc(p.title||'-')+(p.priority==='urgent'?' <span class="ppill danger">ด่วน</span>':'')+'</div><div style="font-weight:600;color:#047857;white-space:nowrap">฿'+esc(Number(p.amount||0).toLocaleString())+'</div></div>';
+ h+='<div style="font-size:12px;color:#475569;margin:5px 0">ผู้ขอ: '+esc(p.requested_by_name||p.requested_by||'-')+' · '+esc(p.branch_id||'-')+' · '+esc(p.payment_method||'')+(p.due_date?' · ครบกำหนด '+esc(p.due_date):'')+'</div>';
+ h+='<div style="font-size:11px"><span class="ppill '+(_prTone[st]||'muted')+'">'+(_prTxt[st]||st)+'</span> <span style="color:var(--text-faint)">'+(st==='approved'?'โดย '+esc(p.approver||''):st==='rejected'?esc(p.reason||''):'')+'</span></div>';
+ if(st==='pending')h+='<div style="margin-top:8px;display:flex;gap:6px"><button data-approve="'+esc(p.pr_id)+'" style="padding:6px 14px;background:var(--teal);color:#0D2F4F;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">อนุมัติ</button><button data-reject="'+esc(p.pr_id)+'" style="padding:6px 14px;background:#FEE2E2;color:#B91C1C;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">ปฏิเสธ</button></div>';
+ return h+'</div>';
+}
+async function loadPR(){
+ try{
+  fillPrEmp(); if($('prDue')&&!$('prDue').value)$('prDue').value=new Date().toISOString().slice(0,10);
+  const {data}=await sb.functions.invoke('acc_payment_request',{body:{}});
+  const prs=(data&&data.prs)||[], pending=(data&&data.total_pending)||0;
+  $('prStat').innerHTML=statHero([{eyebrow:'PENDING',big:pending,unit:'รายการ',sub:'รออนุมัติ',tone:'amber'},{eyebrow:'ALL',big:prs.length,unit:'รายการ',sub:'คำขอทั้งหมด',tone:'navy'}]);
+  $('prList').innerHTML=prs.length?prs.map(prCard).join(''):emptyCard('ยังไม่มีคำขอจ่าย');
+  $('ct-accpr').textContent=pending||'';
+  $('prList').querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>prAct(b.dataset.approve,'approve'));
+  $('prList').querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>{const r=prompt('เหตุผลที่ปฏิเสธ?');if(r!==null)prAct(b.dataset.reject,'reject',r);});
+ }catch(e){console.error('pr',e);}
+}
+async function prAct(pr_id,action,reason){ await sb.functions.invoke('acc_payment_request',{body:{action,pr_id,reason:reason||''}}); loadPR(); }
+async function postPR(){
+ const amt=Number($('prAmount').value||0), title=$('prTitle').value.trim();
+ if(!title){$('prMsg').textContent='ใส่เรื่องก่อน';return;} if(!(amt>0)){$('prMsg').textContent='ใส่จำนวนเงิน';return;}
+ const btn=$('prPost');btn.disabled=true;$('prMsg').textContent='กำลังส่ง…';
+ const {data,error}=await sb.functions.invoke('acc_payment_request',{body:{action:'create',title,amount:amt,payment_method:$('prMethod').value,vendor_id:$('prVendor').value,branch_id:$('prBranch').value,priority:$('prPriority').value,due_date:$('prDue').value,requested_by:$('prReqBy').value,notes:$('prNotes').value}});
+ btn.disabled=false; if(error||(data&&data.error)){$('prMsg').textContent='ผิดพลาด';return;}
+ $('prTitle').value='';$('prAmount').value='';$('prVendor').value='';$('prNotes').value='';$('prMsg').textContent='ส่งแล้ว ✓'; loadPR();
+}
+
+// ===== Wave 1: เงินสดย่อย (acc_petty) =====
+function pettyBalCard(b){
+ const low=b.low;
+ return '<div class="acard" style="--ac:'+(low?'#B91C1C':'#0F766E')+'"><div class="ic" style="background:'+(low?'#FEF2F2':'#E6F7F5')+';color:'+(low?'#B91C1C':'#0F766E')+'"><i class="ti ti-cash"></i></div><div class="n">฿'+Number(b.balance||0).toLocaleString()+'</div><div class="lb">'+esc(b.branch_id)+(low?' · ต่ำ!':'')+'</div></div>';
+}
+async function loadPetty(){
+ try{
+  if($('peDate')&&!$('peDate').value)$('peDate').value=new Date().toISOString().slice(0,10);
+  const {data}=await sb.functions.invoke('acc_petty',{body:{}});
+  const bals=(data&&data.balances)||[], entries=(data&&data.entries)||[];
+  $('pettyBal').innerHTML='<div class="stats">'+(bals.length?bals.map(pettyBalCard).join(''):'')+'</div>'+(bals.length?'':emptyCard('ยังไม่มีรอบเงินสดย่อย'));
+  $('pettyLedger').innerHTML='<div class="card"><div class="sec" style="margin:0 0 6px"><span class="sec-bar"></span>รายการล่าสุด</div>'+tbl(entries,[{h:'รหัส',k:'entry_id',t:'mono'},{h:'วันที่',k:'date'},{h:'รายละเอียด',k:'description'},{h:'หมวด',k:'category'},{h:'สาขา',k:'branch_id'},{h:'จำนวน',k:'amount'}],{empty:'ยังไม่มีรายการ'})+'</div>';
+  $('ct-accpetty').textContent=bals.filter(b=>b.low).length||'';
+ }catch(e){console.error('petty',e);}
+}
+async function postPettyEntry(){
+ const amt=Number($('peAmount').value||0), br=$('peBranch').value.trim();
+ if(!br){$('peMsg').textContent='ใส่สาขา';return;} if(!amt){$('peMsg').textContent='ใส่จำนวน';return;}
+ const btn=$('pePost');btn.disabled=true;$('peMsg').textContent='กำลังบันทึก…';
+ const {data,error}=await sb.functions.invoke('acc_petty',{body:{action:'add_entry',branch_id:br,date:$('peDate').value,description:$('peDesc').value,amount:amt,category:$('peCategory').value,cycle_id:'PC-'+($('peDate').value||'').slice(0,7)+'-'+br}});
+ btn.disabled=false; if(error||(data&&data.error)){$('peMsg').textContent='ผิดพลาด';return;}
+ $('peDesc').value='';$('peAmount').value='';$('peCategory').value='';$('peMsg').textContent='บันทึกแล้ว ✓'; loadPetty();
+}
+async function postPettyCycle(){
+ const br=$('pcBranch').value.trim(), m=$('pcMonth').value.trim(), op=Number($('pcOpening').value||0);
+ if(!br||!m){$('pcMsg').textContent='ใส่สาขา+เดือน';return;}
+ const btn=$('pcPost');btn.disabled=true;$('pcMsg').textContent='…';
+ const {error}=await sb.functions.invoke('acc_petty',{body:{action:'open_cycle',branch_id:br,month:m,opening_balance:op}});
+ btn.disabled=false; $('pcMsg').textContent=error?'ผิดพลาด':'เปิดรอบแล้ว ✓'; loadPetty();
+}
+
+// ===== Wave 1: ยอดขาย + variance (acc_daily_sales) =====
+async function loadSales(){
+ try{
+  if($('dsDate')&&!$('dsDate').value)$('dsDate').value=new Date().toISOString().slice(0,10);
+  const {data}=await sb.functions.invoke('acc_daily_sales',{body:{}});
+  const sales=(data&&data.sales)||[], sm=(data&&data.summary)||{};
+  $('dsStat').innerHTML=statHero([{eyebrow:'ALERTS',big:sm.alerts||0,unit:'',sub:'ยอดต่าง >1000',tone:'amber'},{eyebrow:'WARN',big:sm.warns||0,unit:'',sub:'ต่างเล็กน้อย',tone:'info'},{eyebrow:'RECORDS',big:sm.total_records||sales.length,unit:'',sub:'บันทึกแล้ว',tone:'navy'}]);
+  $('dsList').innerHTML='<div class="card">'+tbl(sales,[{h:'วันที่',k:'date'},{h:'สาขา',k:'branch_id'},{h:'JERA',k:'jera'},{h:'ใบเสร็จ',k:'receipt'},{h:'Sheet',k:'sheet'},{h:'Brief',k:'brief'},{h:'variance',k:'variance'},{h:'สถานะ',k:'status',t:'status'}],{empty:'ยังไม่มียอด'})+'</div>';
+  $('ct-accsales').textContent=(sm.alerts||0)||'';
+ }catch(e){console.error('sales',e);}
+}
+async function postSales(){
+ const br=$('dsBranch').value.trim(); if(!br){$('dsMsg').textContent='ใส่สาขา';return;}
+ const num=id=>{const v=$(id).value;return v===''?undefined:Number(v);};
+ const btn=$('dsPost');btn.disabled=true;$('dsMsg').textContent='…';
+ const {data,error}=await sb.functions.invoke('acc_daily_sales',{body:{action:'record',branch_id:br,date:$('dsDate').value,jera:num('dsJera'),receipt:num('dsReceipt'),sheet:num('dsSheet'),brief:num('dsBrief')}});
+ btn.disabled=false; if(error||(data&&data.error)){$('dsMsg').textContent='ผิดพลาด';return;}
+ $('dsMsg').textContent='บันทึก ✓ variance '+(data.variance||0)+' ('+(data.status||'')+')';
+ ['dsJera','dsReceipt','dsSheet','dsBrief'].forEach(i=>$(i).value=''); loadSales();
+}
+
 async function loadAll(flash){
  const q=(t,c,o={})=>sb.from(t).select(c).order(o.by||'updated_at',{ascending:false}).limit(o.lim||50);
  const [ev,br,em,pr,pm,ap,src,evAll]=await Promise.all([
@@ -771,6 +938,9 @@ function start(){
  document.querySelectorAll('.sb-item').forEach(i=>i.onclick=()=>showView(i.dataset.view));
  $('annPost').onclick=postAnnounce;
  $('expPost').onclick=postExpense; loadAccExp();
+ $('prPost').onclick=postPR; loadPR();
+ $('pePost').onclick=postPettyEntry; $('pcPost').onclick=postPettyCycle; loadPetty();
+ $('dsPost').onclick=postSales; loadSales();
  ['leavereq','otreq','pinfo','incident'].forEach(mountWrite);
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
