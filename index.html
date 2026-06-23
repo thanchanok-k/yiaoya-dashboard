@@ -143,6 +143,10 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="digest"><i class="ti ti-sun"></i>สรุปวันนี้<span class="ct" id="ct-digest"></span></div>
       <div class="sb-item" data-view="balance"><i class="ti ti-calendar-stats"></i>วันลาคงเหลือ<span class="ct" id="ct-balance"></span></div>
       <div class="sb-item" data-view="kpisum"><i class="ti ti-trophy"></i>KPI สรุป<span class="ct" id="ct-kpisum"></span></div>
+      <div class="sb-item" data-view="contract"><i class="ti ti-file-text"></i>สัญญาใกล้หมด<span class="ct" id="ct-contract"></span></div>
+      <div class="sb-item" data-view="anniv"><i class="ti ti-confetti"></i>ครบรอบงาน<span class="ct" id="ct-anniv"></span></div>
+      <div class="sb-item" data-view="leaveana"><i class="ti ti-chart-pie"></i>วิเคราะห์ลา</div>
+      <div class="sb-item" data-view="otsum"><i class="ti ti-clock-hour-4"></i>สรุป OT</div>
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
@@ -214,6 +218,22 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sec"><span class="sec-bar"></span>KPI สรุป/วิเคราะห์<span class="sec-c">คำนวณสดบน Supabase</span></div>
       <div class="card"><div id="kpisum"></div></div>
     </section>
+    <section class="view" data-view="contract">
+      <div class="sec"><span class="sec-bar"></span>สัญญาใกล้หมดอายุ<span class="sec-c">Supabase · 60 วัน + เลยกำหนด</span></div>
+      <div class="card"><div id="contract"></div></div>
+    </section>
+    <section class="view" data-view="anniv">
+      <div class="sec"><span class="sec-bar"></span>ครบรอบการทำงาน<span class="sec-c">Supabase · 30 วันข้างหน้า</span></div>
+      <div class="card"><div id="anniv"></div></div>
+    </section>
+    <section class="view" data-view="leaveana">
+      <div class="sec"><span class="sec-bar"></span>วิเคราะห์การลา<span class="sec-c">Supabase</span></div>
+      <div class="card"><div id="leaveana"></div></div>
+    </section>
+    <section class="view" data-view="otsum">
+      <div class="sec"><span class="sec-bar"></span>สรุป OT<span class="sec-c">Supabase</span></div>
+      <div class="card"><div id="otsum"></div></div>
+    </section>
     <section class="view" data-view="events">
       <div class="sec"><span class="sec-bar"></span>เหตุการณ์ทั้งหมด<span class="sec-c"><span class="dot"></span>realtime</span></div>
       <div class="card"><div id="eventsAll"></div></div>
@@ -232,7 +252,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -278,7 +298,7 @@ async function latestByEntity(eventType, keyField, lim){
 async function renderHrFunctions(){
  const hsec=t=>'<div style="font-weight:600;color:var(--ink,#0f172a);margin:16px 4px 6px">'+t+'</div>';
  try{
-  const [dg,bal,ks]=await Promise.all([sb.functions.invoke('hr_daily_digest'),sb.functions.invoke('hr_leave_balance'),sb.functions.invoke('hr_kpi_summary')]);
+  const [dg,bal,ks,ca,an,la,ot]=await Promise.all([sb.functions.invoke('hr_daily_digest'),sb.functions.invoke('hr_leave_balance'),sb.functions.invoke('hr_kpi_summary'),sb.functions.invoke('hr_contract_alert'),sb.functions.invoke('hr_anniversary'),sb.functions.invoke('hr_leave_analytics'),sb.functions.invoke('hr_ot_summary')]);
   const d=dg.data||{},bd=d.birthdays||[],pr=d.probation||[],ol=d.on_leave_today||[];
   $('digest').innerHTML=
     hsec('🎂 วันเกิด 14 วันข้างหน้า ('+bd.length+')')+tbl(bd,[{h:'ชื่อเล่น',k:'nickname'},{h:'ชื่อ-สกุล',k:'name'},{h:'วันเกิด',k:'date'},{h:'อีก (วัน)',k:'in_days'},{h:'อายุครบ',k:'turning'}],{empty:'ไม่มีวันเกิดช่วงนี้'})
@@ -296,6 +316,23 @@ async function renderHrFunctions(){
    +hsec('รายสาขา')+tbl(kp.by_branch||[],[{h:'สาขา',k:'branch_id'},{h:'คะแนนเฉลี่ย',k:'avg_score'},{h:'จำนวนคน',k:'employees'}],{empty:'-'})
    +hsec('รายคน (เรียงคะแนนงวดล่าสุด)')+tbl(kp.by_employee||[],[{h:'ชื่อเล่น',k:'nickname'},{h:'ชื่อ-สกุล',k:'name'},{h:'สาขา',k:'branch_id'},{h:'งวดล่าสุด',k:'latest_period'},{h:'คะแนนล่าสุด',k:'latest_score'},{h:'เฉลี่ย',k:'avg_score'},{h:'งวด',k:'periods'}],{empty:'ยังไม่มี KPI'});
   $('ct-kpisum').textContent=(kp.employees_scored)||'';
+  const c=ca.data||{};
+  $('contract').innerHTML=tbl(c.expiring||[],[{h:'ชื่อเล่น',k:'nickname'},{h:'ชื่อ-สกุล',k:'name'},{h:'สาขา',k:'branch_id'},{h:'สัญญาหมด',k:'contract_end_date'},{h:'อีก (วัน)',k:'days_left'}],{empty:'ไม่มีสัญญาใกล้หมด'});
+  $('ct-contract').textContent=(c.count)||'';
+  const a=an.data||{};
+  $('anniv').innerHTML=tbl(a.upcoming||[],[{h:'ชื่อเล่น',k:'nickname'},{h:'ชื่อ-สกุล',k:'name'},{h:'สาขา',k:'branch_id'},{h:'เริ่มงาน',k:'start_date'},{h:'ครบรอบ',k:'anniversary_date'},{h:'อีก (วัน)',k:'in_days'},{h:'ครบ (ปี)',k:'years_completing'},{h:'อายุงาน',k:'tenure_text'}],{empty:'ไม่มีครบรอบช่วงนี้'});
+  $('ct-anniv').textContent=(a.count)||'';
+  const lz=la.data||{};
+  $('leaveana').innerHTML=
+    '<div style="padding:6px 4px;color:#64748b;font-size:12px">ปี '+(lz.year||'')+' · รวม '+(lz.total_requests||0)+' ใบ · '+(lz.total_days||0)+' วัน</div>'
+   +hsec('ตามประเภท')+tbl(lz.by_type||[],[{h:'ประเภท',k:'leave_type'},{h:'จำนวนใบ',k:'count'},{h:'รวมวัน',k:'total_days'}],{empty:'-'})
+   +hsec('ลามากสุด (Top 10)')+tbl(lz.top_leavers||[],[{h:'ชื่อเล่น',k:'nickname'},{h:'ชื่อ-สกุล',k:'name'},{h:'รวมวัน',k:'total_days'}],{empty:'-'})
+   +hsec('ตามสาขา')+tbl(lz.by_branch||[],[{h:'สาขา',k:'branch_id'},{h:'จำนวนใบ',k:'count'},{h:'รวมวัน',k:'total_days'}],{empty:'-'});
+  const o=ot.data||{};
+  $('otsum').innerHTML=
+    '<div style="padding:6px 4px;color:#64748b;font-size:12px">ปี '+(o.year||'')+' · รวม '+(o.total_hours||0)+' ชม. · '+(o.total_requests||0)+' คำขอ'+(o.hours_field_used?(' · ช่อง: '+o.hours_field_used):'')+'</div>'
+   +hsec('รายคน')+tbl(o.by_employee||[],[{h:'ชื่อเล่น',k:'nickname'},{h:'ชื่อ-สกุล',k:'name'},{h:'สาขา',k:'branch_id'},{h:'รวม ชม.',k:'total_hours'},{h:'คำขอ',k:'count'}],{empty:'ไม่มี OT'})
+   +hsec('รายสาขา')+tbl(o.by_branch||[],[{h:'สาขา',k:'branch_id'},{h:'รวม ชม.',k:'total_hours'},{h:'คำขอ',k:'count'}],{empty:'-'});
  }catch(e){ console.error('hr fn',e); $('digest').innerHTML='<div class="empty-td" style="padding:14px">โหลดฟังก์ชันไม่ได้: '+e.message+'</div>'; }
 }
 
