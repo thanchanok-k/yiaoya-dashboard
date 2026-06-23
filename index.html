@@ -460,6 +460,99 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div id="dsStat"></div>
       <div id="dsList"></div>
     </section>
+    <section class="view" data-view="accdigest">
+      <div class="sec"><span class="sec-bar"></span>สรุปวันนี้ · บัญชี<span class="sec-c">Edge Function · acc_digest · อ่านอย่างเดียว</span></div>
+      <div id="adgBanner"></div>
+      <div id="adgStat"></div>
+      <div id="adgLists"></div>
+    </section>
+    <section class="view" data-view="accpayroll">
+      <div class="sec"><span class="sec-bar"></span>เงินเดือน<span class="sec-c">Edge Function · acc_payroll</span></div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:10px;color:var(--navy)">คำนวณเงินเดือน</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <select id="plEmp" style="grid-column:1/3;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"><option value="">— เลือกพนักงาน (ดึงจาก HR) —</option></select>
+          <input id="plPeriod" placeholder="งวด (YYYY-MM)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="plBase" type="number" step="0.01" placeholder="เงินเดือนฐาน (บาท)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="plAllow" type="number" step="0.01" placeholder="เบี้ยเลี้ยง/allowances (ไม่บังคับ)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="plOt" type="number" step="0.01" placeholder="ชั่วโมง OT (ไม่บังคับ)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="plLate" type="number" placeholder="สาย (นาที, ไม่บังคับ)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="plDilig" type="number" step="0.01" placeholder="เบี้ยขยัน/diligence (ไม่บังคับ)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="plCalc" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">คำนวณ</button>
+          <button id="plCommit" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:none">ยืนยัน (commit)</button>
+          <span id="plMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+        <div id="plBreak" style="margin-top:12px"></div>
+      </div>
+      <div id="plStat"></div>
+      <div id="plList"></div>
+    </section>
+    <section class="view" data-view="accdf">
+      <div class="sec"><span class="sec-bar"></span>ค่า DF หมอ<span class="sec-c">Edge Function · acc_doctor_fee</span></div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:10px;color:var(--navy)">บันทึก timesheet หมอ</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input id="dfDocId" placeholder="รหัสหมอ (doctor_id)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dfDocName" placeholder="ชื่อหมอ" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dfDate" type="date" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dfHours" type="number" step="0.01" placeholder="ชั่วโมง" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dfRate" type="number" step="0.01" placeholder="ค่าตอบแทน/ชม. (rate_per_hour)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dfSign" type="number" step="0.01" placeholder="ค่าเซ็น (sign_fee, ไม่บังคับ)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dfBranch" placeholder="สาขา (branch_id)" style="grid-column:1/3;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="dfAdd" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">บันทึก timesheet</button>
+          <span id="dfMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+      </div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:10px;color:var(--navy)">คำนวณ DF (ตามงวด)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+          <input id="dfcDocId" placeholder="รหัสหมอ" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dfcDocName" placeholder="ชื่อหมอ" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <input id="dfcPeriod" placeholder="งวด (YYYY-MM)" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;width:140px">
+          <button id="dfCalc" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">คำนวณ</button>
+          <button id="dfCommit" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:none">ยืนยัน (commit)</button>
+          <span id="dfcMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+        <div id="dfBreak"></div>
+      </div>
+      <div id="dfStat"></div>
+      <div id="dfList"></div>
+      <div id="dfTs"></div>
+    </section>
+    <section class="view" data-view="acctax">
+      <div class="sec"><span class="sec-bar"></span>ภาษี (ภงด./ปกส)<span class="sec-c">Edge Function · acc_tax</span></div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div id="txTabs" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+          <input id="txPeriod" type="month" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <button id="txRun" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ออกรายงาน</button>
+          <button id="txCsv" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ดาวน์โหลด CSV</button>
+          <span id="txMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+      </div>
+      <div id="txStat"></div>
+      <div id="txList"></div>
+    </section>
+    <section class="view" data-view="accbank">
+      <div class="sec"><span class="sec-bar"></span>ไฟล์โอนธนาคาร<span class="sec-c">Edge Function · acc_bankfile</span></div>
+      <div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:10px;color:var(--navy)">สร้างไฟล์โอน (bank batch)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div id="bkTabs" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+          <input id="bkPeriod" type="month" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <button id="bkGen" style="padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">สร้างไฟล์</button>
+          <button id="bkCsv" style="padding:9px 18px;background:var(--teal);color:#04342C;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:none">ดาวน์โหลด CSV</button>
+          <span id="bkMsg" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+        <div class="note" style="margin-top:12px;margin-bottom:0"><i class="ti ti-info-circle ni"></i><div>กระทบยอด (reconcile) ทำผ่านการ import statement ในขั้นถัดไป · หน้านี้สร้างไฟล์ + ดูประวัติ</div></div>
+      </div>
+      <div id="bkStat"></div>
+      <div id="bkList"></div>
+    </section>
     <section class="view" data-view="events">
       <div class="sec"><span class="sec-bar"></span>เหตุการณ์ทั้งหมด<span class="sec-c"><span class="dot"></span>realtime</span></div>
       <div class="card"><div id="eventsAll"></div></div>
@@ -919,6 +1012,241 @@ async function postSales(){
  ['dsJera','dsReceipt','dsSheet','dsBrief'].forEach(i=>$(i).value=''); loadSales();
 }
 
+// ===== Wave 2-5 shared helpers =====
+const _baht=v=>'฿'+Number(v||0).toLocaleString(undefined,{maximumFractionDigits:2});
+const _curMonth=()=>new Date().toISOString().slice(0,7);
+function downloadCsv(filename,csv){
+ const b=new Blob(['﻿'+(csv||'')],{type:'text/csv;charset=utf-8'});
+ const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=filename||'export.csv';a.click();URL.revokeObjectURL(u);
+}
+// shared employee picker filler (ดึงจาก HR roster)
+async function fillEmpSel(selId,placeholder){
+ const sel=$(selId); if(!sel)return; const cur=sel.value;
+ const {data}=await sb.from('employees').select('employee_id,full_name').order('full_name').limit(300);
+ sel.innerHTML='<option value="">'+(placeholder||'— เลือกพนักงาน (ดึงจาก HR) —')+'</option>'+(data||[]).map(e=>'<option value="'+esc(e.employee_id)+'">'+esc(e.full_name||e.employee_id)+'</option>').join('');
+ sel.value=cur;
+}
+
+// ===== Wave 5: สรุปวันนี้ · บัญชี (acc_digest · GET only) =====
+async function loadAccDigest(){
+ try{
+  const {data}=await sb.functions.invoke('acc_digest');
+  const d=data||{}, pa=d.pending_approvals||{}, ov=pa.overdue||[], pl=d.petty_low||[], va=d.variance_alerts||[], ds=d.due_soon||[];
+  $('adgBanner').innerHTML=d.summary_text?'<div class="note" style="margin-bottom:14px"><i class="ti ti-sparkles ni"></i><div>'+esc(d.summary_text)+(d.date?' <span style="color:var(--text-faint)">· '+esc(d.date)+'</span>':'')+'</div></div>':'';
+  $('adgStat').innerHTML=statHero([
+   {eyebrow:'PENDING APPROVALS',big:(pa.count!=null?pa.count:0),unit:'รายการ',sub:(ov.length?ov.length+' เลยกำหนด':'รออนุมัติ'),tone:(ov.length?'amber':'')},
+   {eyebrow:'PETTY LOW',big:pl.length,unit:'สาขา',sub:'เงินสดย่อยต่ำ',tone:(pl.length?'amber':'navy')},
+   {eyebrow:'VARIANCE',big:va.length,unit:'',sub:'ยอดไม่ตรง',tone:(va.length?'amber':'info')},
+   {eyebrow:'DUE SOON',big:ds.length,unit:'',sub:'ใกล้ครบกำหนด',tone:'info'},
+  ]);
+  let lh='';
+  if(ov.length){lh+=grp('รออนุมัติ · เลยกำหนด',ov.length);lh+='<div class="tcard">'+tbl(ov,[{h:'รหัส',k:'pr_id',t:'mono'},{h:'เรื่อง',k:'title'},{h:'จำนวน',k:'amount',render:r=>_baht(r.amount)},{h:'ครบกำหนด',k:'due_date'}],{empty:'-'})+'</div>';}
+  if(pl.length){lh+=grp('เงินสดย่อยต่ำ',pl.length);lh+='<div class="tcard">'+tbl(pl,[{h:'สาขา',k:'branch_id'},{h:'คงเหลือ',k:'balance',render:r=>_baht(r.balance)}],{empty:'-'})+'</div>';}
+  if(va.length){lh+=grp('ยอดไม่ตรง (variance)',va.length);lh+='<div class="tcard">'+tbl(va,[{h:'วันที่',k:'date'},{h:'สาขา',k:'branch_id'},{h:'variance',k:'variance',render:r=>_baht(r.variance)}],{empty:'-'})+'</div>';}
+  if(ds.length){lh+=grp('ใกล้ครบกำหนด',ds.length);lh+='<div class="tcard">'+tbl(ds,[{h:'รหัส',k:'pr_id',t:'mono'},{h:'เรื่อง',k:'title'},{h:'จำนวน',k:'amount',render:r=>_baht(r.amount)},{h:'ครบกำหนด',k:'due_date'}],{empty:'-'})+'</div>';}
+  $('adgLists').innerHTML=lh||emptyCard('วันนี้ไม่มีรายการที่ต้องดำเนินการ');
+  $('ct-accdigest').textContent=((pa.count||0)+pl.length+va.length+ds.length)||'';
+ }catch(e){ console.error('accdigest',e); $('adgLists').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e.message)+'</span></div>'; }
+}
+
+// ===== Wave 2: เงินเดือน (acc_payroll) =====
+let _plLast=null;
+function plFields(){
+ const f={action:'calc',employee_id:$('plEmp').value,period:$('plPeriod').value.trim(),base_salary:Number($('plBase').value||0)};
+ const allow=$('plAllow').value, ot=$('plOt').value, late=$('plLate').value, dil=$('plDilig').value;
+ if(allow!=='')f.allowances=Number(allow); if(ot!=='')f.ot_hours=Number(ot);
+ if(late!=='')f.late_minutes=Number(late); if(dil!=='')f.diligence=Number(dil);
+ return f;
+}
+function plBreakCard(b,note,name){
+ const row=(l,v,sign)=>'<div class="pc-row"><span class="l">'+esc(l)+'</span><span class="r">'+(sign||'')+_baht(v)+'</span></div>';
+ let h='<div class="card" style="padding:16px;border-left:3px solid var(--teal)">';
+ h+='<div style="font-weight:600;color:var(--navy);margin-bottom:10px">'+esc(name||'')+(note?' <span style="font-size:11px;font-weight:400;color:var(--teal-ink)">· '+esc(note)+'</span>':'')+'</div>';
+ h+='<div class="pc-mt" style="border-top:none;margin-top:0;padding-top:0">'
+  +row('Gross',b.gross)
+  +(b.ot_pay?row('+ OT',b.ot_pay,'+'):'')
+  +(b.sso?row('− ปกส (SSO)',b.sso,'−'):'')
+  +(b.wht?row('− หัก ณ ที่จ่าย (WHT)',b.wht,'−'):'')
+  +(b.pit?row('− ภาษีเงินได้ (PIT)',b.pit,'−'):'')
+  +(b.late_deduction?row('− หักสาย',b.late_deduction,'−'):'')
+  +(b.deductions?row('− หักอื่นๆ',b.deductions,'−'):'')
+  +'</div>';
+ h+='<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Net</span><span style="font-size:28px;font-weight:700;color:var(--teal-ink)">'+_baht(b.net)+'</span></div>';
+ return h+'</div>';
+}
+async function plCalc(){
+ if(!$('plEmp').value){$('plMsg').textContent='เลือกพนักงานก่อน';return;}
+ if(!$('plPeriod').value.trim()){$('plMsg').textContent='ใส่งวด (YYYY-MM)';return;}
+ const btn=$('plCalc');btn.disabled=true;$('plMsg').textContent='กำลังคำนวณ…';
+ const {data,error}=await sb.functions.invoke('acc_payroll',{body:plFields()});
+ btn.disabled=false;
+ if(error||(data&&data.error)){$('plMsg').textContent='ผิดพลาด: '+((data&&data.error)||error.message);return;}
+ const b=(data&&data.breakdown)||{};
+ const note=data&&data.hub_pulled?'ดึงจาก HR อัตโนมัติ (ลา/OT)':'';
+ $('plBreak').innerHTML=plBreakCard(b,note,(data&&data.full_name)||'');
+ _plLast=plFields(); $('plCommit').style.display=''; $('plMsg').textContent='ตรวจแล้วกด ยืนยัน';
+}
+async function plCommit(){
+ if(!_plLast){$('plMsg').textContent='คำนวณก่อน';return;}
+ const btn=$('plCommit');btn.disabled=true;$('plMsg').textContent='กำลังบันทึก…';
+ const {data,error}=await sb.functions.invoke('acc_payroll',{body:Object.assign({},_plLast,{action:'commit'})});
+ btn.disabled=false;
+ if(error||(data&&data.error)){$('plMsg').textContent='ผิดพลาด';return;}
+ $('plMsg').textContent='บันทึกแล้ว ✓'; $('plCommit').style.display='none'; $('plBreak').innerHTML=''; _plLast=null;
+ loadPayroll();
+}
+async function plMarkPaid(pay_id){
+ await sb.functions.invoke('acc_payroll',{body:{action:'mark_paid',pay_id}}); loadPayroll();
+}
+async function loadPayroll(){
+ try{
+  fillEmpSel('plEmp'); if($('plPeriod')&&!$('plPeriod').value)$('plPeriod').value=_curMonth();
+  const {data}=await sb.functions.invoke('acc_payroll',{body:{period:$('plPeriod').value.trim()}});
+  const rows=(data&&data.payroll)||[], t=(data&&data.totals)||{};
+  $('plStat').innerHTML=statHero([
+   {eyebrow:'PAYSLIPS',big:(t.count!=null?t.count:rows.length),unit:'รายการ',sub:'งวดนี้',tone:'navy'},
+   {eyebrow:'TOTAL NET',big:_baht(t.total_net),unit:'',sub:'ยอดจ่ายสุทธิ',tone:'info'},
+   {eyebrow:'PAID',big:(t.paid_count||0),unit:'รายการ',sub:'จ่ายแล้ว',tone:''},
+  ]);
+  $('plList').innerHTML='<div class="card">'+tbl(rows,[
+   {h:'รหัส',k:'pay_id',t:'mono'},{h:'พนักงาน',k:'full_name'},{h:'งวด',k:'period'},
+   {h:'Gross',k:'gross',render:r=>_baht(r.gross)},{h:'Net',k:'net',render:r=>_baht(r.net)},
+   {h:'สถานะ',render:r=>'<span class="pill '+(r.status==='paid'?'posted':'pending')+'">'+(r.status==='paid'?'จ่ายแล้ว':'คำนวณแล้ว')+'</span>'},
+   {h:'จัดการ',render:r=>r.status==='paid'?'<span class="mono">'+esc(String(r.paid_at||'').slice(0,10))+'</span>':'<button class="wf-appr ok" style="background:#ECFDF5;color:#047857;padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" data-paypaid="'+esc(r.pay_id)+'">จ่ายแล้ว</button>'}
+  ],{empty:'ยังไม่มีรายการเงินเดือนงวดนี้'})
+   +(t.count?'<div style="padding:11px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);display:flex;gap:18px;flex-wrap:wrap"><span>รวม Gross: <b>'+_baht(t.total_gross)+'</b></span><span>รวม SSO: <b>'+_baht(t.total_sso)+'</b></span><span>รวม WHT: <b>'+_baht(t.total_wht)+'</b></span><span>รวม Net: <b style="color:var(--teal-ink)">'+_baht(t.total_net)+'</b></span></div>':'')
+   +'</div>';
+  $('plList').querySelectorAll('[data-paypaid]').forEach(b=>b.onclick=()=>plMarkPaid(b.dataset.paypaid));
+  $('ct-accpayroll').textContent=((t.count||rows.length)-(t.paid_count||0))||'';
+ }catch(e){ console.error('payroll',e); }
+}
+
+// ===== Wave 3: ค่า DF หมอ (acc_doctor_fee) =====
+let _dfLast=null;
+async function dfAddTimesheet(){
+ const id=$('dfDocId').value.trim(); if(!id){$('dfMsg').textContent='ใส่รหัสหมอ';return;}
+ const btn=$('dfAdd');btn.disabled=true;$('dfMsg').textContent='กำลังบันทึก…';
+ const body={action:'add_timesheet',doctor_id:id,doctor_name:$('dfDocName').value,date:$('dfDate').value,hours:Number($('dfHours').value||0),rate_per_hour:Number($('dfRate').value||0),branch_id:$('dfBranch').value};
+ const sf=$('dfSign').value; if(sf!=='')body.sign_fee=Number(sf);
+ const {data,error}=await sb.functions.invoke('acc_doctor_fee',{body});
+ btn.disabled=false;
+ if(error||(data&&data.error)){$('dfMsg').textContent='ผิดพลาด: '+((data&&data.error)||error.message);return;}
+ $('dfHours').value='';$('dfRate').value='';$('dfSign').value='';$('dfMsg').textContent='บันทึกแล้ว ✓'; loadDF();
+}
+async function dfCalc(){
+ const id=$('dfcDocId').value.trim(); if(!id){$('dfcMsg').textContent='ใส่รหัสหมอ';return;}
+ if(!$('dfcPeriod').value.trim()){$('dfcMsg').textContent='ใส่งวด';return;}
+ const btn=$('dfCalc');btn.disabled=true;$('dfcMsg').textContent='กำลังคำนวณ…';
+ const {data,error}=await sb.functions.invoke('acc_doctor_fee',{body:{action:'calc',doctor_id:id,period:$('dfcPeriod').value.trim()}});
+ btn.disabled=false;
+ if(error||(data&&data.error)){$('dfcMsg').textContent='ผิดพลาด';return;}
+ const b=(data&&data.breakdown)||{};
+ $('dfBreak').innerHTML='<div class="card" style="padding:16px;border-left:3px solid var(--teal);margin-top:4px">'
+  +'<div class="pc-mt" style="border-top:none;margin-top:0;padding-top:0">'
+  +'<div class="pc-row"><span class="l">Gross</span><span class="r">'+_baht(b.gross)+'</span></div>'
+  +(b.wht?'<div class="pc-row"><span class="l">− หัก ณ ที่จ่าย</span><span class="r">−'+_baht(b.wht)+'</span></div>':'')
+  +'</div><div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Net</span><span style="font-size:28px;font-weight:700;color:var(--teal-ink)">'+_baht(b.net)+'</span></div></div>';
+ _dfLast={doctor_id:id,doctor_name:$('dfcDocName').value,period:$('dfcPeriod').value.trim(),breakdown:b};
+ $('dfCommit').style.display=''; $('dfcMsg').textContent='ตรวจแล้วกด ยืนยัน';
+}
+async function dfCommit(){
+ if(!_dfLast){$('dfcMsg').textContent='คำนวณก่อน';return;}
+ const btn=$('dfCommit');btn.disabled=true;$('dfcMsg').textContent='กำลังบันทึก…';
+ const {data,error}=await sb.functions.invoke('acc_doctor_fee',{body:Object.assign({action:'commit'},_dfLast)});
+ btn.disabled=false;
+ if(error||(data&&data.error)){$('dfcMsg').textContent='ผิดพลาด';return;}
+ $('dfcMsg').textContent='บันทึกแล้ว ✓'; $('dfCommit').style.display='none'; $('dfBreak').innerHTML=''; _dfLast=null; loadDF();
+}
+async function loadDF(){
+ try{
+  if($('dfDate')&&!$('dfDate').value)$('dfDate').value=new Date().toISOString().slice(0,10);
+  if($('dfcPeriod')&&!$('dfcPeriod').value)$('dfcPeriod').value=_curMonth();
+  const {data}=await sb.functions.invoke('acc_doctor_fee',{body:{}});
+  const calc=(data&&data.calculated)||[], ts=(data&&data.timesheets)||[], t=(data&&data.totals)||{};
+  $('dfStat').innerHTML=statHero([
+   {eyebrow:'DF RECORDS',big:(data&&data.count!=null?data.count:calc.length),unit:'งวด',sub:'คำนวณแล้ว',tone:'navy'},
+   {eyebrow:'GROSS',big:_baht(t.gross),unit:'',sub:'ยอดรวม',tone:'info'},
+   {eyebrow:'NET',big:_baht(t.net),unit:'',sub:'หลังหัก WHT',tone:''},
+  ]);
+  $('dfList').innerHTML='<div class="card"><div class="sec" style="margin:0"><span class="sec-bar"></span>DF ที่คำนวณแล้ว</div>'+tbl(calc,[
+   {h:'รหัส',k:'df_id',t:'mono'},{h:'หมอ',k:'doctor_name'},{h:'งวด',k:'period'},
+   {h:'Gross',k:'gross',render:r=>_baht(r.gross)},{h:'WHT',k:'wht',render:r=>_baht(r.wht)},{h:'Net',k:'net',render:r=>_baht(r.net)},
+   {h:'สถานะ',k:'pay_status',t:'status'}],{empty:'ยังไม่มี DF'})+'</div>';
+  $('dfTs').innerHTML='<div class="card" style="margin-top:14px"><div class="sec" style="margin:0"><span class="sec-bar"></span>Timesheet ledger</div>'+tbl(ts,[
+   {h:'รหัส',k:'timesheet_id',t:'mono'},{h:'หมอ',k:'doctor_name'},{h:'วันที่',k:'date'},{h:'ชม.',k:'hours'},
+   {h:'เรท',k:'rate_per_hour',render:r=>_baht(r.rate_per_hour)},{h:'ค่าเซ็น',k:'sign_fee',render:r=>_baht(r.sign_fee)},
+   {h:'สาขา',k:'branch_id'},{h:'DF',k:'df',render:r=>_baht(r.df)}],{empty:'ยังไม่มี timesheet'})+'</div>';
+  $('ct-accdf').textContent=calc.length||'';
+ }catch(e){ console.error('df',e); }
+}
+
+// ===== Wave 4: ภาษี (acc_tax) =====
+const TAX_FORMS=[{v:'pnd1',l:'ภงด.1'},{v:'pnd3',l:'ภงด.3'},{v:'pnd53',l:'ภงด.53'},{v:'sso',l:'ปกส'}];
+let _txForm='pnd1';
+function renderTaxTabs(){
+ $('txTabs').innerHTML=TAX_FORMS.map(f=>'<button data-txf="'+f.v+'" style="padding:8px 14px;border:1px solid '+(f.v===_txForm?'var(--navy)':'var(--border)')+';background:'+(f.v===_txForm?'var(--navy)':'#fff')+';color:'+(f.v===_txForm?'#fff':'var(--text)')+';border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">'+f.l+'</button>').join('');
+ $('txTabs').querySelectorAll('[data-txf]').forEach(b=>b.onclick=()=>{_txForm=b.dataset.txf;renderTaxTabs();runTax();});
+}
+async function runTax(){
+ if(!$('txPeriod').value){$('txPeriod').value=_curMonth();}
+ $('txMsg').textContent='กำลังออกรายงาน…';
+ const {data,error}=await sb.functions.invoke('acc_tax',{body:{action:'report',form:_txForm,period:$('txPeriod').value}});
+ if(error||(data&&data.error)){$('txMsg').textContent='ผิดพลาด: '+((data&&data.error)||error.message);return;}
+ $('txMsg').textContent='';
+ const rows=(data&&data.rows)||[], tot=(data&&data.totals)||{};
+ const cols=rows.length?Object.keys(rows[0]).map(k=>({h:k,k})):[];
+ $('txStat').innerHTML=statHero([
+  {eyebrow:'FORM',big:(TAX_FORMS.find(f=>f.v===_txForm)||{}).l||_txForm,sub:'งวด '+esc(data.period||$('txPeriod').value),tone:'navy'},
+  {eyebrow:'ROWS',big:(data.count!=null?data.count:rows.length),unit:'รายการ',sub:'จำนวนแถว',tone:'info'},
+ ]);
+ let totStrip='';
+ const tk=Object.keys(tot); if(tk.length)totStrip='<div style="padding:11px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);display:flex;gap:18px;flex-wrap:wrap">'+tk.map(k=>'<span>'+esc(k)+': <b>'+esc(typeof tot[k]==='number'?Number(tot[k]).toLocaleString():tot[k])+'</b></span>').join('')+'</div>';
+ $('txList').innerHTML='<div class="card">'+tbl(rows,cols,{empty:'ไม่มีข้อมูลงวดนี้'})+totStrip+'</div>';
+ $('ct-acctax').textContent=rows.length||'';
+}
+async function txDownloadCsv(){
+ $('txMsg').textContent='กำลังสร้าง CSV…';
+ const {data,error}=await sb.functions.invoke('acc_tax',{body:{action:'export_csv',form:_txForm,period:$('txPeriod').value||_curMonth()}});
+ if(error||(data&&data.error)){$('txMsg').textContent='ผิดพลาด';return;}
+ downloadCsv(data.filename||(_txForm+'.csv'),data.csv); $('txMsg').textContent='ดาวน์โหลดแล้ว ✓';
+}
+
+// ===== Wave 5: ไฟล์โอนธนาคาร (acc_bankfile) =====
+const BANK_TYPES=[{v:'payroll',l:'เงินเดือน'},{v:'df',l:'ค่า DF หมอ'},{v:'supplier',l:'ซัพพลายเออร์'}];
+let _bkType='payroll', _bkLast=null;
+function renderBankTabs(){
+ $('bkTabs').innerHTML=BANK_TYPES.map(f=>'<button data-bkf="'+f.v+'" style="padding:8px 14px;border:1px solid '+(f.v===_bkType?'var(--navy)':'var(--border)')+';background:'+(f.v===_bkType?'var(--navy)':'#fff')+';color:'+(f.v===_bkType?'#fff':'var(--text)')+';border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">'+f.l+'</button>').join('');
+ $('bkTabs').querySelectorAll('[data-bkf]').forEach(b=>b.onclick=()=>{_bkType=b.dataset.bkf;renderBankTabs();});
+}
+async function bkGenerate(){
+ if(!$('bkPeriod').value)$('bkPeriod').value=_curMonth();
+ $('bkMsg').textContent='กำลังสร้างไฟล์…';
+ const {data,error}=await sb.functions.invoke('acc_bankfile',{body:{action:'generate',batch_type:_bkType,period:$('bkPeriod').value}});
+ if(error||(data&&data.error)){$('bkMsg').textContent='ผิดพลาด: '+((data&&data.error)||error.message);return;}
+ _bkLast={filename:data.filename,csv:data.csv};
+ $('bkStat').innerHTML=statHero([
+  {eyebrow:'BATCH',big:(BANK_TYPES.find(f=>f.v===_bkType)||{}).l||_bkType,sub:'ไฟล์ '+esc(data.filename||''),tone:'navy'},
+  {eyebrow:'RECORDS',big:(data.count||0),unit:'รายการ',sub:'ในไฟล์',tone:'info'},
+  {eyebrow:'TOTAL',big:_baht(data.total),unit:'',sub:'ยอดรวมโอน',tone:''},
+ ]);
+ $('bkCsv').style.display=''; $('bkMsg').textContent='สร้างแล้ว ✓ กดดาวน์โหลด';
+}
+function bkDownloadCsv(){
+ if(!_bkLast){$('bkMsg').textContent='สร้างไฟล์ก่อน';return;}
+ downloadCsv(_bkLast.filename||'bankfile.csv',_bkLast.csv); $('bkMsg').textContent='ดาวน์โหลดแล้ว ✓';
+}
+async function loadBankHistory(){
+ try{
+  const {data}=await sb.functions.invoke('acc_bankfile',{body:{}});
+  const items=(data&&(data.files||data.history||data.batches))||[];
+  $('bkList').innerHTML='<div class="card"><div class="sec" style="margin:0"><span class="sec-bar"></span>ประวัติไฟล์โอน</div>'+tbl(items,[
+   {h:'ไฟล์',k:'filename',t:'mono'},{h:'ประเภท',k:'batch_type'},{h:'งวด',k:'period'},
+   {h:'รายการ',k:'count'},{h:'ยอดรวม',k:'total',render:r=>_baht(r.total)},{h:'สร้างเมื่อ',k:'created_at',render:r=>esc(String(r.created_at||'').slice(0,16).replace('T',' '))}
+  ],{empty:'ยังไม่มีไฟล์โอน'})+'</div>';
+  $('ct-accbank').textContent=items.length||'';
+ }catch(e){ console.error('bankfile',e); }
+}
+
 // ===== หน้าเบิกค่าใช้จ่าย — ลอก expense_claim.html เดิมเป๊ะ (scoped #xp) =====
 function mountExpense(){ if(!$('wrap-expense'))return;
  $('wrap-expense').innerHTML=`
@@ -1028,6 +1356,11 @@ function start(){
  $('prPost').onclick=postPR; loadPR();
  $('pePost').onclick=postPettyEntry; $('pcPost').onclick=postPettyCycle; loadPetty();
  $('dsPost').onclick=postSales; loadSales();
+ loadAccDigest();
+ $('plCalc').onclick=plCalc; $('plCommit').onclick=plCommit; loadPayroll();
+ $('dfAdd').onclick=dfAddTimesheet; $('dfCalc').onclick=dfCalc; $('dfCommit').onclick=dfCommit; loadDF();
+ renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
+ renderBankTabs(); $('bkPeriod').value=_curMonth(); $('bkGen').onclick=bkGenerate; $('bkCsv').onclick=bkDownloadCsv; loadBankHistory();
  ['leavereq','otreq','pinfo','incident','oneonone','probreview','survey'].forEach(mountWrite);
  mountExpense();
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
