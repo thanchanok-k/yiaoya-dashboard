@@ -139,6 +139,9 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="leaves"><i class="ti ti-calendar-off"></i>การลา<span class="ct" id="ct-leaves"></span></div>
       <div class="sb-item" data-view="ot"><i class="ti ti-clock"></i>OT<span class="ct" id="ct-ot"></span></div>
       <div class="sb-item" data-view="kpi"><i class="ti ti-chart-bar"></i>KPI<span class="ct" id="ct-kpi"></span></div>
+      <div class="sb-label">ฟังก์ชัน · Supabase</div>
+      <div class="sb-item" data-view="digest"><i class="ti ti-sun"></i>สรุปวันนี้<span class="ct" id="ct-digest"></span></div>
+      <div class="sb-item" data-view="balance"><i class="ti ti-calendar-stats"></i>วันลาคงเหลือ<span class="ct" id="ct-balance"></span></div>
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
@@ -198,6 +201,14 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sec"><span class="sec-bar"></span>KPI</div>
       <div class="card"><div id="kpi"></div></div>
     </section>
+    <section class="view" data-view="digest">
+      <div class="sec"><span class="sec-bar"></span>สรุป HR วันนี้<span class="sec-c">ฟังก์ชันรันบน Supabase (shadow ของ HR Apps Script)</span></div>
+      <div class="card"><div id="digest"></div></div>
+    </section>
+    <section class="view" data-view="balance">
+      <div class="sec"><span class="sec-bar"></span>ยอดวันลาคงเหลือ<span class="sec-c">คำนวณสดบน Supabase</span></div>
+      <div class="card"><div id="balance"></div></div>
+    </section>
     <section class="view" data-view="events">
       <div class="sec"><span class="sec-bar"></span>เหตุการณ์ทั้งหมด<span class="sec-c"><span class="dot"></span>realtime</span></div>
       <div class="card"><div id="eventsAll"></div></div>
@@ -216,7 +227,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -258,6 +269,25 @@ async function latestByEntity(eventType, keyField, lim){
  return out;
 }
 
+// ฟังก์ชัน HR ที่ย้ายมา Supabase — เรียก Edge Function (รันบน hub · ไม่แตะ Apps Script)
+async function renderHrFunctions(){
+ const hsec=t=>'<div style="font-weight:600;color:var(--ink,#0f172a);margin:16px 4px 6px">'+t+'</div>';
+ try{
+  const [dg,bal]=await Promise.all([sb.functions.invoke('hr_daily_digest'),sb.functions.invoke('hr_leave_balance')]);
+  const d=dg.data||{},bd=d.birthdays||[],pr=d.probation||[],ol=d.on_leave_today||[];
+  $('digest').innerHTML=
+    hsec('🎂 วันเกิด 14 วันข้างหน้า ('+bd.length+')')+tbl(bd,[{h:'ชื่อเล่น',k:'nickname'},{h:'ชื่อ-สกุล',k:'name'},{h:'วันเกิด',k:'date'},{h:'อีก (วัน)',k:'in_days'},{h:'อายุครบ',k:'turning'}],{empty:'ไม่มีวันเกิดช่วงนี้'})
+   +hsec('📋 ทดลองงานต้องประเมิน ('+pr.length+')')+tbl(pr,[{h:'ชื่อเล่น',k:'nickname'},{h:'ชื่อ-สกุล',k:'name'},{h:'สถานะ',k:'probation_status'},{h:'ครบกำหนด',k:'due_date'},{h:'อีก (วัน)',k:'due_in_days'}],{empty:'ไม่มี'})
+   +hsec('🌴 ลาวันนี้ ('+ol.length+')')+tbl(ol,[{h:'ชื่อเล่น',k:'nickname'},{h:'ประเภท',k:'leave_type'},{h:'เริ่ม',k:'start'},{h:'ถึง',k:'end'},{h:'เหตุผล',k:'reason'}],{empty:'ไม่มีคนลาวันนี้'});
+  $('ct-digest').textContent=(bd.length+pr.length+ol.length)||'';
+  const b=bal.data||{},qa=b.quota||{};
+  $('balance').innerHTML=
+    '<div style="padding:6px 4px;color:#64748b;font-size:12px">ปี '+(b.year||'')+' · โควต้า: พักร้อน '+qa.annual+' · ป่วย '+qa.sick+' · กิจ '+qa.personal+' วัน/ปี (ค่า default กม.แรงงาน — ปรับให้ตรงนโยบายบริษัทได้)</div>'
+   +tbl(b.rows||[],[{h:'ชื่อเล่น',k:'nickname'},{h:'ชื่อ-สกุล',k:'name'},{h:'สาขา',k:'branch_id'},{h:'พักร้อนเหลือ',k:'left_annual'},{h:'ป่วยเหลือ',k:'left_sick'},{h:'กิจเหลือ',k:'left_personal'},{h:'ใช้รวม',k:'total_used'}],{empty:'ยังไม่มีข้อมูลลาปีนี้'});
+  $('ct-balance').textContent=(b.count)||'';
+ }catch(e){ console.error('hr fn',e); $('digest').innerHTML='<div class="empty-td" style="padding:14px">โหลดฟังก์ชันไม่ได้: '+e.message+'</div>'; }
+}
+
 async function loadAll(flash){
  const q=(t,c,o={})=>sb.from(t).select(c).order(o.by||'updated_at',{ascending:false}).limit(o.lim||50);
  const [ev,br,em,pr,pm,ap,src,evAll]=await Promise.all([
@@ -277,6 +307,7 @@ async function loadAll(flash){
    latestByEntity('ot.updated','request_id',400),
    latestByEntity('kpi.scored','score_id',400),
  ]);
+ renderHrFunctions();
  const d={events:ev.data||[],branches:br.data||[],employees:em.data||[],prices:pr.data||[],payments:pm.data||[],appointments:ap.data||[]};
  const stats=[
   {n:d.events.length,lb:'Events',ic:'ti-activity',bg:'#EFF6FF',fg:'#1D4ED8'},
