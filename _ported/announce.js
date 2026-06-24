@@ -68,9 +68,29 @@ function an2ToBool(v) {
   return s === 'true' || s === 'yes' || s === '1' || s === 'y';
 }
 
-// lookups stub — backend ไม่มี employees/branches/positions เต็ม → คืนว่าง (chips/picker จะว่าง · ไม่ error)
-function an2BuildLookups() {
-  return { branches: [], positions: [], departments: [], tags: [], employees: [] };
+// lookups — ดึงตัวเลือก filter จาก target ของประกาศจริง (กรองได้ตรงค่า + นับจำนวน)
+var AN2_BRANCH_NAME = { BR00: 'สำนักงานใหญ่ · HQ', BR01: 'Yiaoya · ศาลายา' };
+function an2BuildLookups(items) {
+  items = items || [];
+  function distinct(key, nameMap) {
+    var m = {};
+    items.forEach(function (a) {
+      (a[key] || []).forEach(function (v) {
+        v = String(v == null ? '' : v).trim(); if (!v) return;
+        m[v] = (m[v] || 0) + 1;
+      });
+    });
+    return Object.keys(m).sort().map(function (v) {
+      return { id: v, name: (nameMap && nameMap[v]) ? (nameMap[v] + ' (' + v + ')') : v, count: m[v] };
+    });
+  }
+  return {
+    branches: distinct('target_branches', AN2_BRANCH_NAME),
+    positions: distinct('target_positions'),
+    departments: distinct('target_departments'),
+    tags: distinct('target_tags'),
+    employees: [],
+  };
 }
 
 var ANN_BACKEND = {
@@ -83,7 +103,7 @@ var ANN_BACKEND = {
     return sb.functions.invoke('hr_announce', { body: { action: 'list' } }).then(function (res) {
       var data = (res && res.data) || {};
       var items = (data.announcements || []).map(an2MapRow);
-      return { announcements: items, lookups: an2BuildLookups(), stats: {} };
+      return { announcements: items, lookups: an2BuildLookups(items), stats: {} };
     });
   },
   // detail — { announcement, counts, target_list }
