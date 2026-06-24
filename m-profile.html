@@ -1,0 +1,146 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>โปรไฟล์ของฉัน · Yiaoya</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 96px;max-width:480px;margin:0 auto}
+.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
+.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
+.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
+.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
+.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
+.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+input,textarea,select{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;background:#fff}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.flbl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+.dl{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #F1F2F4;font-size:14px}
+.dl:last-child{border-bottom:none}
+.dl .k{color:var(--muted);flex-shrink:0}
+.dl .v{color:var(--text);font-weight:600;text-align:right;word-break:break-word}
+.field{margin-bottom:11px}
+.cta{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 14px;background:rgba(241,245,249,.96);border-top:1px solid var(--border);backdrop-filter:blur(6px)}
+.cta button{width:100%;padding:14px;background:var(--teal);color:#04342C;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}
+.cta button:disabled{opacity:.45}
+.msg{text-align:center;font-size:13px;margin-top:7px;min-height:18px;line-height:1.5}
+.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
+a.lk{color:var(--teal);font-weight:700;text-decoration:none}
+</style></head>
+<body>
+<div class="head"><div class="eb">YIAOYA · HR</div><h1>โปรไฟล์ของฉัน</h1><div class="who" id="who">—</div></div>
+<div id="app" style="display:none">
+  <div class="card"><div class="sec"><span class="num">1</span>ข้อมูลของฉัน</div>
+    <div id="profile"><div class="hint">กำลังโหลด…</div></div>
+    <div class="hint">ข้อมูลนี้แสดงจากระบบ HR · ถ้าจะแก้ไขให้ใช้ฟอร์มด้านล่าง</div></div>
+  <div class="card"><div class="sec"><span class="num">2</span>ขอแก้ข้อมูล</div>
+    <div class="note" style="margin-bottom:12px">คำขอจะส่งให้ HR ตรวจสอบก่อน · ข้อมูลจะยังไม่ถูกแก้ทันที · ใช้เวลา 1–2 วันทำการ</div>
+    <div class="field"><label class="flbl">ต้องการแก้ข้อมูลอะไร</label>
+      <select id="fField"><option value="">— เลือก —</option></select></div>
+    <div class="field"><label class="flbl">ข้อมูลใหม่</label>
+      <textarea id="fNew" rows="2" maxlength="300" placeholder="กรอกข้อมูลที่ถูกต้อง"></textarea></div>
+    <div class="field" id="attBox" style="display:none"><label class="flbl">เอกสารยืนยัน (URL)</label>
+      <input type="url" id="fAtt" placeholder="https://drive.google.com/...">
+      <div class="hint">ประเภทนี้ต้องแนบเอกสาร เช่น สำเนาทะเบียนสมรส / หน้าสมุดบัญชี (เห็นเลขที่ + ชื่อบัญชี) · ลิงก์ Google Drive</div></div>
+    <div class="field"><label class="flbl">เหตุผล (ถ้ามี)</label>
+      <textarea id="fReason" rows="2" maxlength="300" placeholder="ทำไมต้องเปลี่ยน · เช่น ย้ายที่อยู่ / เปลี่ยนธนาคาร"></textarea></div>
+  </div>
+</div>
+<div class="cta" id="cta" style="display:none"><button id="send" disabled>ส่งคำขอแก้ข้อมูล</button><div class="msg" id="msg"></div></div>
+<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL,ANON);
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// request_type whitelist — ตรงกับ hr_personal_info_request edge fn (REQUEST_TYPES)
+const TYPES=[
+  {key:'phone',             label:'เบอร์โทรศัพท์',               att:false},
+  {key:'address',           label:'ที่อยู่ปัจจุบัน',             att:true },
+  {key:'marital_status',    label:'สถานภาพสมรส',                att:true },
+  {key:'dependent',         label:'ผู้อยู่ในอุปการะ',           att:true },
+  {key:'emergency_contact', label:'ผู้ติดต่อกรณีฉุกเฉิน',       att:false},
+  {key:'bank_account',      label:'บัญชีธนาคาร (รับเงินเดือน)',  att:true },
+  {key:'other',             label:'อื่นๆ',                       att:false},
+];
+let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
+let ME=null;
+const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
+async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
+async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
+
+// แถวข้อมูลแบบอ่านอย่างเดียว — แสดงเฉพาะ field ที่มีค่า
+function dl(rows){
+  const out=rows.filter(([,v])=>v!=null&&String(v).trim()!=='')
+    .map(([k,v])=>`<div class="dl"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('');
+  return out||'<div class="hint">ยังไม่มีข้อมูลในระบบ</div>';
+}
+function renderProfile(p){
+  $('profile').innerHTML=dl([
+    ['ชื่อ-สกุล', p.full_name||p.name],
+    ['ชื่อเล่น', p.nickname],
+    ['รหัสพนักงาน', p.employee_id],
+    ['ตำแหน่ง', p.position||p.job_title||p.role],
+    ['แผนก', p.department],
+    ['สาขา', p.branch_name||p.branch_id],
+    ['อีเมล', p.email],
+    ['เบอร์โทร', p.phone||p.phone_number],
+    ['วันเริ่มงาน', p.start_date||p.hire_date||p.join_date],
+    ['สถานภาพ', p.employment_status||p.status],
+  ]);
+}
+
+function selType(){return TYPES.find(t=>t.key===$('fField').value)||null;}
+function onTypeChange(){const t=selType();$('attBox').style.display=t&&t.att?'block':'none';validate();}
+function validate(){
+  const t=selType(); const nv=$('fNew').value.trim();
+  let ok=!!t&&!!nv;
+  if(t&&t.att&&!$('fAtt').value.trim())ok=false;
+  $('send').disabled=!ok;
+}
+
+async function init(){
+  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
+  $('who').textContent=(ID.employee_name||ID.display_name||'')+' · '+ID.employee_id;
+  let {data:s}=await sb.auth.getSession();
+  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
+  $('app').style.display='block';$('cta').style.display='block';
+  $('fField').innerHTML='<option value="">— เลือก —</option>'+TYPES.map(t=>`<option value="${t.key}">${esc(t.label)}</option>`).join('');
+  $('fField').onchange=onTypeChange;
+  $('fNew').oninput=validate;$('fAtt').oninput=validate;
+  // โหลดโปรไฟล์จาก event employee.updated
+  try{
+    const r=await api('hr_list?type=employee.updated&limit=3000');
+    const items=(r&&(r.items||r.data))||[];
+    for(const it of items){const p=it.payload||it;if(p.employee_id===ID.employee_id){ME=p;break;}}
+    if(ME)renderProfile(ME);
+    else $('profile').innerHTML='<div class="hint">ไม่พบข้อมูลของคุณในระบบ HR · ติดต่อ HR ได้</div>';
+  }catch(e){$('profile').innerHTML='<div class="hint">โหลดข้อมูลไม่สำเร็จ</div>';}
+  $('send').onclick=submit;
+}
+
+async function submit(){
+  const t=selType();if(!t)return;
+  const new_value=$('fNew').value.trim();
+  const att=$('fAtt').value.trim();
+  if(t.att&&!att){$('msg').style.color='#b91c1c';$('msg').textContent='ประเภทนี้ต้องแนบเอกสารยืนยัน';return;}
+  // old_value = ค่าปัจจุบันจากโปรไฟล์ (ถ้ารู้) เพื่อให้ HR เห็น before→after
+  const oldMap={phone:ME&&(ME.phone||ME.phone_number),address:ME&&ME.current_address,marital_status:ME&&ME.marital_status,
+    emergency_contact:ME&&ME.emergency_contact,bank_account:ME&&ME.bank_account};
+  $('send').disabled=true;$('msg').style.color='var(--muted)';$('msg').textContent='กำลังส่ง…';
+  const r=await api('hr_personal_info_request',{
+    employee_id:ID.employee_id,
+    field:t.key,
+    new_value,
+    old_value:oldMap[t.key]||'',
+    attachment_url:t.att?att:'',
+    reason:$('fReason').value.trim(),
+  });
+  if(r.error){$('send').disabled=false;$('msg').style.color='#b91c1c';$('msg').textContent='ผิดพลาด: '+r.error;return;}
+  $('msg').style.color='#0f766e';$('msg').textContent='ส่งคำขอแล้ว ('+(r.id||'')+') · HR จะ review ภายใน 1–2 วันทำการ';
+}
+init();
+</script></body></html>

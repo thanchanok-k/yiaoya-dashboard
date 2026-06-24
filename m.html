@@ -1,0 +1,49 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>พนักงาน · Yiaoya</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.5.0/dist/tabler-icons.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--bg:#F8F9FA;--text:#333333}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:14px;max-width:480px;margin:0 auto}
+.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:18px;margin-bottom:14px;display:flex;align-items:center;gap:13px}
+.av{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;flex-shrink:0}
+.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
+.head .nm{font-size:17px;font-weight:600;margin-top:2px}.head .sub{font-size:12px;color:#bfe3da;margin-top:1px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.tile{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 14px;text-decoration:none;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.05);display:block}
+.tile i{font-size:26px;color:#0F766E}
+.tile .t{font-size:14.5px;font-weight:600;color:var(--navy);margin-top:9px}
+.tile .d{font-size:11.5px;color:var(--muted);margin-top:2px}
+.soon{opacity:.5}.soon .t::after{content:' · เร็วๆนี้';font-weight:400;color:var(--muted);font-size:11px}
+.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
+a.lk{color:#0F766E;font-weight:700;text-decoration:none}
+.foot{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
+</style></head>
+<body>
+<div id="app" style="display:none">
+  <div class="head"><div class="av" id="av">—</div><div><div class="eb">YIAOYA · HR PORTAL</div><div class="nm" id="nm">—</div><div class="sub" id="sub">—</div></div></div>
+  <div class="grid">
+    <a class="tile" href="m-leave.html"><i class="ti ti-calendar-event"></i><div class="t">ยื่นใบลา</div><div class="d">Leave request</div></a>
+    <a class="tile" href="m-ot.html"><i class="ti ti-clock-hour-8"></i><div class="t">ขอ OT</div><div class="d">Overtime</div></a>
+    <a class="tile" href="m-incident.html"><i class="ti ti-alert-triangle"></i><div class="t">แจ้งเหตุการณ์</div><div class="d">Incident report</div></a>
+    <a class="tile" href="m-expense.html"><i class="ti ti-receipt"></i><div class="t">เบิกค่าใช้จ่าย</div><div class="d">Expense claim</div></a>
+    <a class="tile" href="m-profile.html"><i class="ti ti-user"></i><div class="t">โปรไฟล์ของฉัน</div><div class="d">My profile</div></a>
+    <a class="tile soon" href="#" onclick="return false"><i class="ti ti-speakerphone"></i><div class="t">ประกาศ</div><div class="d">Announcements</div></a>
+  </div>
+  <div class="foot">เยียวยา · ระบบพนักงาน · เข้าผ่าน LINE</div>
+</div>
+<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<script>
+(function(){
+  var ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
+  if(!ID||!ID.employee_id){ document.getElementById('block').style.display='block';
+    document.getElementById('blockmsg').innerHTML='ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>'; return; }
+  var nm=ID.employee_name||ID.display_name||'พนักงาน';
+  document.getElementById('app').style.display='block';
+  document.getElementById('nm').textContent=nm;
+  document.getElementById('sub').textContent=(ID.employee_id||'')+(ID.role?' · '+ID.role:'');
+  document.getElementById('av').textContent=nm.trim().slice(0,2);
+})();
+</script></body></html>

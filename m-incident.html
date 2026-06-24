@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>แจ้งเหตุการณ์ / Incident · Yiaoya</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 96px;max-width:480px;margin:0 auto}
+.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
+.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
+.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
+.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
+.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
+.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+.req::after{content:"*";color:#DC2626;margin-left:3px;font-weight:700}
+input,textarea,select{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;background:#fff}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.flbl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{padding:8px 13px;border:1px solid var(--border);border-radius:99px;font-size:13px;cursor:pointer;background:#fff}
+.chip.on{background:var(--teal);color:#04342C;border-color:var(--teal);font-weight:700}
+.sev{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.sev .chip{border-radius:10px;text-align:center;line-height:1.45}
+.sev .chip small{display:block;font-size:10.5px;color:var(--muted);font-weight:400}
+.sev .chip.on small{color:#04342C}
+.toggle{display:flex;align-items:center;gap:9px;font-size:13.5px;cursor:pointer;padding:2px 0}
+.toggle input{width:auto;padding:0}
+.cta{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 14px;background:rgba(241,245,249,.96);border-top:1px solid var(--border);backdrop-filter:blur(6px)}
+.cta button{width:100%;padding:14px;background:var(--teal);color:#04342C;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}
+.cta button:disabled{opacity:.45}
+.msg{text-align:center;font-size:13px;margin-top:7px;min-height:18px;line-height:1.5}
+.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
+a.lk{color:var(--teal);font-weight:700;text-decoration:none}
+</style></head>
+<body>
+<div class="head"><div class="eb">YIAOYA · HR</div><h1>แจ้งเหตุการณ์ / Incident</h1><div class="who" id="who">—</div></div>
+<div id="app" style="display:none">
+  <div class="note">เหตุการณ์ระดับรุนแรง (severe) หรือวิกฤต (critical) จะแจ้ง HR และผู้จัดการสาขาทันที · กรณีวิกฤตแจ้งถึงเจ้าของด้วย</div>
+  <div class="card"><div class="sec"><span class="num">1</span><span class="req">ประเภทเหตุการณ์</span></div>
+    <div class="chips" id="cat"></div></div>
+  <div class="card"><div class="sec"><span class="num">2</span><span class="req">ระดับความรุนแรง</span></div>
+    <div class="sev" id="sev"></div></div>
+  <div class="card"><div class="sec"><span class="num">3</span><span class="req">วันที่ + สถานที่</span></div>
+    <div class="row"><div><label class="flbl">วันที่เกิดเหตุ</label><input type="date" id="fDate"></div>
+      <div><label class="flbl">เวลา</label><input type="time" id="fTime"></div></div>
+    <label class="flbl" style="margin-top:10px">สถานที่</label>
+    <input id="fLoc" maxlength="120" placeholder="เช่น ห้องทรีตเมนต์ 2 / โถงหน้าร้าน / Lab"></div>
+  <div class="card"><div class="sec"><span class="num">4</span><span class="req">รายละเอียดเหตุการณ์</span></div>
+    <textarea id="fDetail" rows="3" maxlength="1000" placeholder="อะไรเกิดขึ้น · ใครเกี่ยวข้อง · เกิดขึ้นอย่างไร"></textarea></div>
+  <div class="card"><div class="sec"><span class="num">5</span>การแก้ไขทันที</div>
+    <textarea id="fAction" rows="2" maxlength="500" placeholder="สิ่งที่ทำทันทีเพื่อจัดการ · first aid / โทร 1669 / แจ้งผู้จัดการ"></textarea></div>
+  <div class="card"><div class="sec"><span class="num">6</span>การรักษา + หลักฐาน</div>
+    <label class="toggle"><input type="checkbox" id="fMed"><span>มีการรักษาพยาบาล (กท.16 / SSO)</span></label>
+    <div id="medWrap" style="display:none;margin-top:9px"><label class="flbl">ชื่อโรงพยาบาล / คลินิก</label>
+      <input id="fProvider" maxlength="120" placeholder="เช่น รพ. ศาลายา"></div>
+    <label class="flbl" style="margin-top:11px">URL รูป/วิดีโอ (ใช้ | คั่นหลายไฟล์)</label>
+    <input type="url" id="fAtt" placeholder="https://drive.google.com/..."><div class="hint">ไม่บังคับ</div></div>
+</div>
+<div class="cta" id="cta" style="display:none"><button id="send" disabled>แจ้งเหตุการณ์</button><div class="msg" id="msg"></div></div>
+<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL,ANON);
+const $=(id)=>document.getElementById(id);
+const CATEGORIES=[
+  {key:'injury',label:'บาดเจ็บ / Injury'},
+  {key:'near_miss',label:'เกือบเกิดเหตุ / Near-miss'},
+  {key:'equipment_damage',label:'อุปกรณ์เสียหาย / Equipment'},
+  {key:'security',label:'ความปลอดภัย / Security'},
+  {key:'patient_safety',label:'Patient safety'},
+  {key:'other',label:'อื่น ๆ'},
+];
+const SEVERITIES=[
+  {key:'minor',label:'เล็กน้อย',sub:'ไม่กระทบงาน'},
+  {key:'moderate',label:'ปานกลาง',sub:'กระทบงานบางส่วน'},
+  {key:'severe',label:'รุนแรง',sub:'ต้องหยุดงาน'},
+  {key:'critical',label:'วิกฤต',sub:'เสี่ยงชีวิต/ทรัพย์สินสูง'},
+];
+let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
+let cat='', sev='';
+const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
+async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
+async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function validate(){const ok=cat&&sev&&$('fDate').value&&$('fLoc').value.trim()&&$('fDetail').value.trim();$('send').disabled=!ok;}
+async function init(){
+  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
+  $('who').textContent=(ID.employee_name||ID.display_name)+' · '+ID.employee_id;
+  let {data:s}=await sb.auth.getSession();
+  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
+  $('app').style.display='block';$('cta').style.display='block';
+  $('fDate').max=todayStr();$('fDate').value=todayStr();
+  $('cat').innerHTML=CATEGORIES.map(c=>`<span class="chip" data-k="${c.key}">${c.label}</span>`).join('');
+  $('sev').innerHTML=SEVERITIES.map(c=>`<span class="chip" data-k="${c.key}">${c.label}<small>${c.sub}</small></span>`).join('');
+  $('cat').onclick=(e)=>{const c=e.target.closest('.chip');if(!c)return;cat=c.dataset.k;[...$('cat').children].forEach(x=>x.classList.toggle('on',x===c));validate();};
+  $('sev').onclick=(e)=>{const c=e.target.closest('.chip');if(!c)return;sev=c.dataset.k;[...$('sev').children].forEach(x=>x.classList.toggle('on',x===c));validate();};
+  $('fMed').onchange=()=>{$('medWrap').style.display=$('fMed').checked?'block':'none';};
+  ['fDate','fLoc','fDetail'].forEach(id=>$(id).oninput=validate);
+  $('send').onclick=submit;
+}
+async function submit(){
+  $('send').disabled=true;$('msg').style.color='var(--muted)';$('msg').textContent='กำลังส่ง…';
+  const r=await api('hr_incident',{
+    employee_id:ID.employee_id,
+    branch_id:ID.branch_id||'',
+    category:cat,
+    severity:sev,
+    detail:$('fDetail').value.trim(),
+    incident_date:$('fDate').value,
+    incident_time:$('fTime').value,
+    incident_location:$('fLoc').value.trim(),
+    immediate_action:$('fAction').value.trim(),
+    medical_attention:$('fMed').checked,
+    medical_provider:$('fMed').checked?$('fProvider').value.trim():'',
+    attachment_urls:$('fAtt').value.trim(),
+    reported_by:ID.employee_name||ID.display_name,
+  });
+  if(r.error){$('send').disabled=false;$('msg').style.color='#b91c1c';$('msg').textContent='ผิดพลาด: '+r.error;return;}
+  $('msg').style.color='#0f766e';$('msg').textContent='แจ้งเหตุการณ์แล้ว ('+(r.id||'')+') · HR และผู้จัดการได้รับแจ้งแล้ว';
+}
+init();
+</script></body></html>
