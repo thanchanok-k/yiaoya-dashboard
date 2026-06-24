@@ -44,10 +44,35 @@ async function run(){
     if(error||data?.error){ stopSpin(); msg('ยืนยันตัวตนไม่สำเร็จ: '+(data?.error||error.message)); return; }
     localStorage.setItem('yy_line_id', JSON.stringify({ uid:data.uid, display_name:data.display_name, employee_name:data.employee_name||data.display_name, employee_id:data.employee_id||'', role:data.role||'staff', verified:data.verified }));
     stopSpin();
-    if(!data.linked){ msg(`สวัสดีคุณ ${data.display_name} 👋<br><small>บัญชี LINE นี้ยังไม่ผูกกับพนักงาน — แจ้งแอดมินผูกให้ก่อน</small>`); }
-    else { msg(`ยินดีต้อนรับ ${data.employee_name||data.display_name} ✓`); }
-    document.querySelector('.card').insertAdjacentHTML('beforeend','<a class="btn" href="index.html">เข้าหน้าระบบ →</a>');
+    if(!data.linked){ showRequestForm(data, token); }
+    else { msg(`ยินดีต้อนรับ ${data.employee_name||data.display_name} ✓`);
+      document.querySelector('.card').insertAdjacentHTML('beforeend','<a class="btn" href="index.html">เข้าหน้าระบบ →</a>'); }
   }catch(e){ stopSpin(); msg('ผิดพลาด: '+e); }
+}
+
+// ฟอร์มขอสิทธิ์เข้าระบบ (พนักงานใหม่ที่ LINE ยังไม่ผูก) → ส่ง access.requested ให้ HR อนุมัติ
+function showRequestForm(data, token){
+  const esc=(s)=>String(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  msg(`สวัสดีคุณ ${esc(data.display_name)} 👋<br><small>บัญชี LINE นี้ยังไม่มีสิทธิ์ — กรอกคำขอเข้าระบบ แล้ว HR จะอนุมัติให้ค่ะ</small>`);
+  document.querySelector('.card').insertAdjacentHTML('beforeend', `
+    <div id="reqf" style="margin-top:16px;text-align:left">
+      <input id="rq_name" placeholder="ชื่อ-นามสกุล" value="${esc(data.display_name)}">
+      <input id="rq_branch" placeholder="สาขา (เช่น หนองบัว)">
+      <input id="rq_pos" placeholder="ตำแหน่ง (เช่น พยาบาล)">
+      <input id="rq_note" placeholder="หมายเหตุ (ถ้ามี)">
+      <button id="rq_send" class="btn" style="width:100%;border:0;cursor:pointer;margin-top:6px">ส่งคำขอเข้าระบบ</button>
+    </div>`);
+  document.querySelectorAll('#reqf input').forEach(i=>{ i.style.cssText='width:100%;margin:5px 0;padding:9px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:13px'; });
+  document.getElementById('rq_send').onclick=async()=>{
+    const btn=document.getElementById('rq_send'); btn.disabled=true; btn.textContent='กำลังส่ง…';
+    try{
+      const { data:r, error } = await sb.functions.invoke('line_login',{ body:{ action:'request', access_token:token,
+        full_name:rq_name.value.trim(), branch_id:rq_branch.value.trim(), position:rq_pos.value.trim(), note:rq_note.value.trim() }});
+      if(error||r?.error){ btn.disabled=false; btn.textContent='ส่งคำขอเข้าระบบ'; alert('ส่งไม่สำเร็จ: '+(r?.error||error.message)); return; }
+      document.getElementById('reqf').remove();
+      msg(`✅ ส่งคำขอเรียบร้อย<br><small>รอ HR อนุมัติ · ระบบจะแจ้งกลับทาง LINE เมื่ออนุมัติแล้วค่ะ</small>`);
+    }catch(e){ btn.disabled=false; btn.textContent='ส่งคำขอเข้าระบบ'; alert('ผิดพลาด: '+e); }
+  };
 }
 run();
 </script></body></html>
