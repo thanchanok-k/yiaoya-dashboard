@@ -318,15 +318,15 @@ function SV_MARKUP() {
   return [
     // help button bar (เดิมอยู่ใน .page-actions)
     '<div style="display:flex;justify-content:flex-end;margin-bottom:10px">',
-      '<button class="help-btn" onclick="showHelp()" title="คู่มือ">?</button>',
+      '<button class="help-btn" onclick="svShowHelp()" title="คู่มือ">?</button>',
     '</div>',
     // tabs
     '<div class="tabs">',
-      '<button class="tab active" data-tab="overview" onclick="switchTab(\'overview\')">Overview</button>',
-      '<button class="tab" data-tab="responses" onclick="switchTab(\'responses\')">Responses</button>',
-      '<button class="tab" data-tab="preview" onclick="switchTab(\'preview\')">Flex Preview</button>',
-      '<button class="tab" data-tab="send" onclick="switchTab(\'send\')">Manual Send</button>',
-      '<button class="tab" data-tab="trends" onclick="switchTab(\'trends\')">Trends</button>',
+      '<button class="tab active" data-tab="overview" onclick="svSwitchTab(\'overview\')">Overview</button>',
+      '<button class="tab" data-tab="responses" onclick="svSwitchTab(\'responses\')">Responses</button>',
+      '<button class="tab" data-tab="preview" onclick="svSwitchTab(\'preview\')">Flex Preview</button>',
+      '<button class="tab" data-tab="send" onclick="svSwitchTab(\'send\')">Manual Send</button>',
+      '<button class="tab" data-tab="trends" onclick="svSwitchTab(\'trends\')">Trends</button>',
     '</div>',
     // OVERVIEW
     '<div class="panel active" id="panel-overview">',
@@ -372,7 +372,7 @@ function SV_MARKUP() {
     '<div class="modal-overlay" id="detailModal">',
       '<div class="modal" style="max-width:720px">',
         '<div id="detailContent">กำลังโหลด...</div>',
-        '<div class="modal-actions"><button class="btn" onclick="closeDetailModal()">ปิด</button></div>',
+        '<div class="modal-actions"><button class="btn" onclick="svCloseDetailModal()">ปิด</button></div>',
       '</div>',
     '</div>',
     // Help Modal
@@ -398,7 +398,7 @@ function SV_MARKUP() {
           '</ul>',
           '<p><strong>Flex preview tab</strong> ใช้ sample data render bubble เหมือนใน LINE — ดูก่อนส่งจริง</p>',
         '</div>',
-        '<div class="modal-actions"><button class="btn btn-primary" onclick="closeHelp()">เข้าใจแล้ว</button></div>',
+        '<div class="modal-actions"><button class="btn btn-primary" onclick="svCloseHelp()">เข้าใจแล้ว</button></div>',
       '</div>',
     '</div>',
   ].join('');
@@ -478,7 +478,7 @@ function SV_RUN_PAGE_JS() {
     loadOverview();
   }
 
-  function switchTab(name) {
+  function svSwitchTab(name) {
     document.querySelectorAll('#sv .tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tab === name);
     });
@@ -536,7 +536,7 @@ function SV_RUN_PAGE_JS() {
   }
 
   function openResponseTab(type) {
-    switchTab('responses');
+    svSwitchTab('responses');
     document.getElementById('respType').value = type;
     loadResponses();
   }
@@ -631,7 +631,7 @@ function SV_RUN_PAGE_JS() {
                 ${showRating ? `<td class="center"><strong style="color:var(--teal)">${x.rating != null ? x.rating + '/5' : '-'}</strong></td>` : ''}
                 ${showOutcome ? `<td class="center">${pillOutcome(x.outcome)}</td>` : ''}
                 <td style="max-width:300px">${esc((x.comment || '').slice(0, 100))}${(x.comment || '').length > 100 ? '…' : ''}</td>
-                <td><button class="btn btn-sm" onclick="viewDetail('${res.type}', '${esc(String(x.response_id))}')">ดู</button></td>
+                <td><button class="btn btn-sm" onclick="svViewDetail('${res.type}', '${esc(String(x.response_id))}')">ดู</button></td>
               </tr>
             `).join('')}
           </tbody>
@@ -649,7 +649,7 @@ function SV_RUN_PAGE_JS() {
     return `<span class="pill pill-${k}">${esc(labels[k] || o)}</span>`;
   }
 
-  function viewDetail(type, responseId) {
+  function svViewDetail(type, responseId) {
     document.getElementById('detailContent').innerHTML = '<div class="loading">กำลังโหลด...</div>';
     document.getElementById('detailModal').classList.add('show');
     google.script.run
@@ -684,7 +684,7 @@ function SV_RUN_PAGE_JS() {
     document.getElementById('detailContent').innerHTML = html;
   }
 
-  function closeDetailModal() {
+  function svCloseDetailModal() {
     document.getElementById('detailModal').classList.remove('show');
   }
 
@@ -1027,8 +1027,8 @@ function SV_RUN_PAGE_JS() {
     document.getElementById('trendContent').innerHTML = html;
   }
 
-  function showHelp() { document.getElementById('helpModal').classList.add('show'); }
-  function closeHelp() { document.getElementById('helpModal').classList.remove('show'); }
+  function svShowHelp() { document.getElementById('helpModal').classList.add('show'); }
+  function svCloseHelp() { document.getElementById('helpModal').classList.remove('show'); }
 
   function onError(e) {
     svShowToast('Error: ' + (e && e.message ? e.message : e), 'error');
@@ -1039,11 +1039,11 @@ function SV_RUN_PAGE_JS() {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
   // ---- expose fn ที่ inline onclick / oninput / onchange ต้องใช้ → window ----
-  window.switchTab = switchTab;
+  window.svSwitchTab = svSwitchTab;
   window.openResponseTab = openResponseTab;
   window.loadResponses = loadResponses;
-  window.viewDetail = viewDetail;
-  window.closeDetailModal = closeDetailModal;
+  window.svViewDetail = svViewDetail;
+  window.svCloseDetailModal = svCloseDetailModal;
   window.exportResponsesCsv = exportResponsesCsv;
   window.loadPreview = loadPreview;
   window.loadSendTargets = loadSendTargets;
@@ -1053,8 +1053,8 @@ function SV_RUN_PAGE_JS() {
   window.bulkSendSelected = bulkSendSelected;
   window.forceCron = forceCron;
   window.loadTrend = loadTrend;
-  window.showHelp = showHelp;
-  window.closeHelp = closeHelp;
+  window.svShowHelp = svShowHelp;
+  window.svCloseHelp = svCloseHelp;
 
   // ---- start ----
   init();

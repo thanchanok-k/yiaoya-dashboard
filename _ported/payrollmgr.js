@@ -294,7 +294,7 @@ function PM2_MARKUP() {
 
     '<div class="page">',
     '  <div style="display:flex;justify-content:flex-end;align-items:start;margin-bottom:8px;">',
-    '    <button class="help-btn" onclick="showHelp()" title="คู่มือ">?</button>',
+    '    <button class="help-btn" onclick="pmShowHelp()" title="คู่มือ">?</button>',
     '  </div>',
 
     '  <div class="period-bar">',
@@ -306,11 +306,11 @@ function PM2_MARKUP() {
     '  </div>',
 
     '  <div class="tabs">',
-    '    <button class="tab active" data-tab="overview" onclick="switchTab(\'overview\')">Overview</button>',
-    '    <button class="tab" data-tab="payslips" onclick="switchTab(\'payslips\')">Payslips</button>',
-    '    <button class="tab" data-tab="compensation" onclick="switchTab(\'compensation\')">Compensation</button>',
-    '    <button class="tab" data-tab="accounting" onclick="switchTab(\'accounting\')">Accounting</button>',
-    '    <button class="tab" data-tab="history" onclick="switchTab(\'history\')">History</button>',
+    '    <button class="tab active" data-tab="overview" onclick="pmSwitchTab(\'overview\')">Overview</button>',
+    '    <button class="tab" data-tab="payslips" onclick="pmSwitchTab(\'payslips\')">Payslips</button>',
+    '    <button class="tab" data-tab="compensation" onclick="pmSwitchTab(\'compensation\')">Compensation</button>',
+    '    <button class="tab" data-tab="accounting" onclick="pmSwitchTab(\'accounting\')">Accounting</button>',
+    '    <button class="tab" data-tab="history" onclick="pmSwitchTab(\'history\')">History</button>',
     '  </div>',
 
     '  <div class="panel active" id="panel-overview">',
@@ -380,7 +380,7 @@ function PM2_MARKUP() {
     '<div class="modal-overlay" id="detailModal">',
     '  <div class="modal" style="max-width:720px;">',
     '    <div id="detailContent">กำลังโหลด...</div>',
-    '    <div class="modal-actions"><button class="btn" onclick="closeDetailModal()">ปิด</button></div>',
+    '    <div class="modal-actions"><button class="btn" onclick="pmCloseDetailModal()">ปิด</button></div>',
     '  </div>',
     '</div>',
 
@@ -406,7 +406,7 @@ function PM2_MARKUP() {
     '      <p><strong>Note:</strong> หลัง finalize period แล้ว — ห้ามแก้ entries · ต้องเรียก <code>Recalc Employee</code> หากต้องการ</p>',
     '      <p style="background:#FEF3C7;border:1px solid #D97706;color:#92400E;padding:10px 12px;border-radius:8px;margin-top:8px;">หมายเหตุ (Dashboard): หน้านี้บน dashboard <strong>อ่านอย่างเดียว</strong> — แสดงข้อมูลเงินเดือนที่ถูกคำนวณ/finalize ฝั่งบัญชีแล้ว · ปุ่มคำนวณ/สร้าง payslip/อนุมัติจ่าย จะแจ้งว่ายังไม่พร้อม</p>',
     '    </div>',
-    '    <div class="modal-actions"><button class="btn btn-primary" onclick="closeHelp()">เข้าใจแล้ว</button></div>',
+    '    <div class="modal-actions"><button class="btn btn-primary" onclick="pmCloseHelp()">เข้าใจแล้ว</button></div>',
     '  </div>',
     '</div>',
   ].join('\n');
@@ -475,7 +475,7 @@ function PM2_RUN_PAGE_JS() {
     loadHistory();
   }
 
-  function switchTab(name) {
+  function pmSwitchTab(name) {
     document.querySelectorAll('#pm2 .tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tab === name);
     });
@@ -647,7 +647,7 @@ function PM2_RUN_PAGE_JS() {
         <td class="right"><strong>${fmtBaht(x.net_pay)}</strong></td>
         <td class="center">${statusPills.join(' ')}</td>
         <td class="center">
-          <button class="btn btn-sm" onclick="viewDetail('${x.salary_id}')">View</button>
+          <button class="btn btn-sm" onclick="pmViewDetail('${x.salary_id}')">View</button>
           <button class="btn btn-sm" onclick="recalcEmp('${x.employee_id}')">Recalc</button>
         </td>
       </tr>
@@ -662,7 +662,7 @@ function PM2_RUN_PAGE_JS() {
     });
   }
 
-  function viewDetail(salaryId) {
+  function pmViewDetail(salaryId) {
     document.getElementById('detailContent').innerHTML = '<div class="loading">กำลังโหลด...</div>';
     document.getElementById('detailModal').classList.add('show');
     google.script.run
@@ -727,7 +727,7 @@ function PM2_RUN_PAGE_JS() {
     document.getElementById('detailContent').innerHTML = html;
   }
 
-  function closeDetailModal() {
+  function pmCloseDetailModal() {
     document.getElementById('detailModal').classList.remove('show');
   }
 
@@ -1068,12 +1068,12 @@ function PM2_RUN_PAGE_JS() {
 
   function jumpToPeriod(ym) {
     document.getElementById('periodInput').value = ym;
-    switchTab('overview');
+    pmSwitchTab('overview');
     loadPeriod();
   }
 
-  function showHelp() { document.getElementById('helpModal').classList.add('show'); }
-  function closeHelp() { document.getElementById('helpModal').classList.remove('show'); }
+  function pmShowHelp() { document.getElementById('helpModal').classList.add('show'); }
+  function pmCloseHelp() { document.getElementById('helpModal').classList.remove('show'); }
 
   function onError(e) {
     alert('Error: ' + (e && e.message ? e.message : e));
@@ -1086,7 +1086,7 @@ function PM2_RUN_PAGE_JS() {
   }
 
   // ---- ผูก fn ที่ inline onclick ใช้ ลง window (closure scope ไม่ถึง global onclick) ----
-  window.switchTab = switchTab;
+  window.pmSwitchTab = pmSwitchTab;
   window.loadPeriod = loadPeriod;
   window.previewCalc = previewCalc;
   window.runCalc = runCalc;
@@ -1094,8 +1094,8 @@ function PM2_RUN_PAGE_JS() {
   window.sendPayslipsLINE = sendPayslipsLINE;
   window.markPaid = markPaid;
   window.recalcEmp = recalcEmp;
-  window.viewDetail = viewDetail;
-  window.closeDetailModal = closeDetailModal;
+  window.pmViewDetail = pmViewDetail;
+  window.pmCloseDetailModal = pmCloseDetailModal;
   window.filterPayslips = filterPayslips;
   window.loadCompensation = loadCompensation;
   window.openCompModal = openCompModal;
@@ -1106,8 +1106,8 @@ function PM2_RUN_PAGE_JS() {
   window.generateAccounting = generateAccounting;
   window.reviewPartTime = reviewPartTime;
   window.jumpToPeriod = jumpToPeriod;
-  window.showHelp = showHelp;
-  window.closeHelp = closeHelp;
+  window.pmShowHelp = pmShowHelp;
+  window.pmCloseHelp = pmCloseHelp;
 
   // ---- init (แทน DOMContentLoaded ของหน้าเดิม) ----
   init();

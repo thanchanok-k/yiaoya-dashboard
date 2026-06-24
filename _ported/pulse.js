@@ -272,14 +272,14 @@ function PL_MARKUP() {
     '    </h1>',
     '    <div class="subtitle">รายไตรมาส · anonymous engagement · dedup ผ่าน hash · trend ระยะยาว</div>',
     '  </div>',
-    '  <div class="page-actions" id="yh-page-actions"><button class="btn-p" onclick="openCreate()">+ สร้าง survey</button></div>',
+    '  <div class="page-actions" id="yh-page-actions"><button class="btn-p" onclick="plOpenCreate()">+ สร้าง survey</button></div>',
     '</header>',
     // body
     '<div class="body" id="bodyWrap"><div class="empty">กำลังโหลด...</div></div>',
     // modal
-    '<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">',
+    '<div class="modal-bg" id="modalBg" onclick="if(event.target===this)plCloseModal()">',
     '  <div class="modal">',
-    '    <div class="modal-h"><div style="font-size:15px; font-weight:600;" id="mt"></div><button class="modal-x" onclick="closeModal()">×</button></div>',
+    '    <div class="modal-h"><div style="font-size:15px; font-weight:600;" id="mt"></div><button class="modal-x" onclick="plCloseModal()">×</button></div>',
     '    <div class="modal-b" id="mb"></div>',
     '  </div>',
     '</div>',
@@ -365,16 +365,16 @@ function PL_RUN_PAGE_JS() {
         <div class="smetric-r"><span class="smetric-l">ตอบแล้ว</span><span class="smetric-v">${s.received} (${responseRate}%)</span></div>
       </div>
       <div class="sactions">
-        ${s.status === 'draft' ? `<button class="rb p" onclick="openSurvey('${esc(s.survey_id)}')">เปิด survey</button>` : ''}
-        ${s.status === 'open' ? `<button class="rb" onclick="remindSurvey('${esc(s.survey_id)}')">เตือนซ้ำ</button>` : ''}
-        ${s.status === 'open' ? `<button class="rb warn" onclick="closeSurvey('${esc(s.survey_id)}')">ปิด survey</button>` : ''}
-        <button class="rb" onclick="viewAgg('${esc(s.survey_id)}')">ดูผล</button>
+        ${s.status === 'draft' ? `<button class="rb p" onclick="plOpenSurvey('${esc(s.survey_id)}')">เปิด survey</button>` : ''}
+        ${s.status === 'open' ? `<button class="rb" onclick="plRemindSurvey('${esc(s.survey_id)}')">เตือนซ้ำ</button>` : ''}
+        ${s.status === 'open' ? `<button class="rb warn" onclick="plCloseSurvey('${esc(s.survey_id)}')">ปิด survey</button>` : ''}
+        <button class="rb" onclick="plViewAgg('${esc(s.survey_id)}')">ดูผล</button>
       </div>
     </div>`;
   }
 
   // v1.10.60 — Reminder button
-  function remindSurvey(id) {
+  function plRemindSurvey(id) {
     if (!confirm('ส่งเตือนซ้ำให้ทุกคนที่ targeted? · คนที่ตอบแล้วจะเห็น "ตอบแล้ว" · ไม่กระทบ anonymity')) return;
     google.script.run.withSuccessHandler(r => {
       if (r && r.ok) alert('ส่งเตือนแล้ว · push ' + r.pushed + ' คน · response rate ' + r.response_rate_pct + '%');
@@ -383,7 +383,7 @@ function PL_RUN_PAGE_JS() {
   }
   function statusLabel(s) { return ({ draft: 'ร่าง', open: 'เปิดรับ', closed: 'ปิดแล้ว', archived: 'archived' })[s] || s; }
 
-  function openCreate() {
+  function plOpenCreate() {
     getById('mt').textContent = 'สร้าง Pulse Survey';
     const q = (new Date()).getMonth() < 3 ? 1 : (new Date()).getMonth() < 6 ? 2 : (new Date()).getMonth() < 9 ? 3 : 4;
     const yr = (new Date()).getFullYear() + 543;
@@ -402,13 +402,13 @@ function PL_RUN_PAGE_JS() {
         <textarea class="field-i" id="fDesc" rows="2">ขอความคิดเห็นจากทีมเพื่อปรับปรุงสภาพแวดล้อมการทำงาน</textarea></div>
       <div style="font-size:11px; color:var(--muted); margin-bottom:10px;">คำถามจะใช้ default 6 ข้อ · แก้ไขใน Sheet ได้</div>
       <div style="display:flex; gap:8px; justify-content:flex-end;">
-        <button class="rb" onclick="closeModal()">ยกเลิก</button>
-        <button class="rb p" onclick="saveSurvey()">บันทึก</button>
+        <button class="rb" onclick="plCloseModal()">ยกเลิก</button>
+        <button class="rb p" onclick="plSaveSurvey()">บันทึก</button>
       </div>`;
     getById('modalBg').classList.add('open');
   }
 
-  function saveSurvey() {
+  function plSaveSurvey() {
     const payload = {
       title: getById('fTitle').value.trim(),
       period_quarter: getById('fQuarter').value.trim(),
@@ -418,19 +418,19 @@ function PL_RUN_PAGE_JS() {
     };
     if (!payload.title || !payload.period_quarter) { alert('กรอกชื่อและรอบ'); return; }
     google.script.run.withSuccessHandler(r => {
-      if (r && r.ok) { closeModal(); reload(); }
+      if (r && r.ok) { plCloseModal(); reload(); }
       else alert('สร้างไม่สำเร็จ · ' + (r && r.error));
     }).pulseAdminCreate(payload);
   }
 
-  function openSurvey(id) {
+  function plOpenSurvey(id) {
     if (!confirm('เปิด survey + push noti ไปทุกคนตอนนี้?')) return;
     google.script.run.withSuccessHandler(r => {
       if (r && r.ok) reload();
       else alert('เปิดล้มเหลว · ' + (r && r.error));
     }).pulseAdminOpen(id);
   }
-  function closeSurvey(id) {
+  function plCloseSurvey(id) {
     if (!confirm('ปิด survey ตอนนี้?')) return;
     google.script.run.withSuccessHandler(r => {
       if (r && r.ok) reload();
@@ -438,7 +438,7 @@ function PL_RUN_PAGE_JS() {
     }).pulseAdminClose(id);
   }
 
-  function viewAgg(id) {
+  function plViewAgg(id) {
     google.script.run.withSuccessHandler(onAgg).pulseAdminAggregate(id);
   }
   function onAgg(r) {
@@ -483,11 +483,11 @@ function PL_RUN_PAGE_JS() {
     getById('modalBg').classList.add('open');
   }
 
-  function closeModal() { getById('modalBg').classList.remove('open'); }
+  function plCloseModal() { getById('modalBg').classList.remove('open'); }
 
   /* ===== expose fn ที่ inline onclick/markup ต้องเรียก ไปยัง window (prefix กันชน) ===== */
   const _exp = {
-    openCreate, saveSurvey, openSurvey, closeSurvey, remindSurvey, viewAgg, closeModal,
+    plOpenCreate, plSaveSurvey, plOpenSurvey, plCloseSurvey, plRemindSurvey, plViewAgg, plCloseModal,
   };
   Object.keys(_exp).forEach(k => { window[k] = _exp[k]; });
 

@@ -281,13 +281,13 @@ function TR_MARKUP() {
     '  <div class="st cp"><div class="st-n" id="stC">–</div><div class="st-l">เสร็จแล้ว</div></div>',
     '</div>',
     '<div class="tabs" id="tabs">',
-    '  <div class="tab act" onclick="setTab(\'courses\')">คอร์ส <span style="font-size:10px;color:var(--muted)" id="tcCourses"></span></div>',
-    '  <div class="tab" onclick="setTab(\'enrollments\')">Enrollments <span style="font-size:10px;color:var(--muted)" id="tcEnr"></span></div>',
+    '  <div class="tab act" onclick="trSetTab(\'courses\')">คอร์ส <span style="font-size:10px;color:var(--muted)" id="tcCourses"></span></div>',
+    '  <div class="tab" onclick="trSetTab(\'enrollments\')">Enrollments <span style="font-size:10px;color:var(--muted)" id="tcEnr"></span></div>',
     '</div>',
     '<div class="body" id="tableWrap"><div class="empty">กำลังโหลด...</div></div>',
-    '<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">',
+    '<div class="modal-bg" id="modalBg" onclick="if(event.target===this)trCloseModal()">',
     '  <div class="modal">',
-    '    <div class="modal-h"><div class="modal-t" id="mt">คอร์สใหม่</div><button class="modal-x" onclick="closeModal()">×</button></div>',
+    '    <div class="modal-h"><div class="modal-t" id="mt">คอร์สใหม่</div><button class="modal-x" onclick="trCloseModal()">×</button></div>',
     '    <div class="modal-b" id="mb"></div>',
     '    <div class="modal-f" id="mf"></div>',
     '  </div>',
@@ -373,7 +373,7 @@ function TR_RUN_PAGE_JS() {
     }).trainingAdminListEnrollments({});
   }
 
-  function setTab(t) {
+  function trSetTab(t) {
     _state.tab = t;
     document.querySelectorAll('#tr .tab').forEach(function (el, i) {
       el.classList.toggle('act', (i === 0 && t === 'courses') || (i === 1 && t === 'enrollments'));
@@ -475,7 +475,7 @@ function TR_RUN_PAGE_JS() {
       '</div>' +
       '<div class="field"><label class="field-l">URL syllabus / material</label>' +
       '<input class="field-i" type="url" id="fAtt" value="' + esc(c.attachment_url || '') + '"></div>';
-    document.getElementById('mf').innerHTML = '<button class="rb" onclick="closeModal()">ยกเลิก</button>' +
+    document.getElementById('mf').innerHTML = '<button class="rb" onclick="trCloseModal()">ยกเลิก</button>' +
       '<button class="rb p" onclick="saveCourse()">บันทึก</button>';
   }
 
@@ -497,7 +497,7 @@ function TR_RUN_PAGE_JS() {
     };
     if (!payload.title) { showToast('กรอกชื่อคอร์ส', 'error'); return; }
     google.script.run.withSuccessHandler(function (r) {
-      if (r && r.ok) { closeModal(); loadCourses(); }
+      if (r && r.ok) { trCloseModal(); loadCourses(); }
       else showToast('บันทึกล้มเหลว · ' + (r && r.error), 'error');
     }).trainingAdminUpsertCourse(payload);
   }
@@ -511,7 +511,7 @@ function TR_RUN_PAGE_JS() {
     }).trainingAdminAutoEnroll(courseId, {});
   }
 
-  function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+  function trCloseModal() { document.getElementById('modalBg').classList.remove('open'); }
   function esc(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
   // ---- ผูก fn ที่ inline onclick ต้องใช้ ลง window ----
@@ -519,8 +519,8 @@ function TR_RUN_PAGE_JS() {
   window.editCourse = editCourse;
   window.autoEnroll = autoEnroll;
   window.saveCourse = saveCourse;
-  window.closeModal = closeModal;
-  window.setTab = setTab;
+  window.trCloseModal = trCloseModal;
+  window.trSetTab = trSetTab;
 
   // ---- start (แทน DOMContentLoaded ของหน้าเดิม · DOM พร้อมแล้วตอน mount) ----
   init();

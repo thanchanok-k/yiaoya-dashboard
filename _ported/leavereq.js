@@ -356,9 +356,9 @@ function LV2_CSS() {
 function LV2_MARKUP() {
   return [
     '<div class="tab-row">',
-    '  <button class="tab-btn active" id="tab-pending" onclick="setTab(\'pending\')"></button>',
-    '  <button class="tab-btn" id="tab-history" onclick="setTab(\'history\')"></button>',
-    '  <button class="tab-btn" id="tab-balance" onclick="setTab(\'balance\')"></button>',
+    '  <button class="tab-btn active" id="tab-pending" onclick="lvSetTab(\'pending\')"></button>',
+    '  <button class="tab-btn" id="tab-history" onclick="lvSetTab(\'history\')"></button>',
+    '  <button class="tab-btn" id="tab-balance" onclick="lvSetTab(\'balance\')"></button>',
     '</div>',
     '',
     '<div class="stats cols-5" id="stats"></div>',
@@ -399,13 +399,13 @@ function LV2_MARKUP() {
     '      <div class="section-sub" id="section-sub">คำขอลาที่รอการอนุมัติจากหัวหน้า</div>',
     '    </div>',
     '    <button class="btn btn-sm" onclick="_cacheInvalidate(); loadCurrent(true)" id="refresh-btn" title="โหลดสด"></button>',
-    '    <button class="btn-icon" onclick="showHelp(HELP)" title="ช่วยเหลือ" id="help-btn" style="border:1px solid var(--border-strong);border-radius:50%"></button>',
+    '    <button class="btn-icon" onclick="lvShowHelp(HELP)" title="ช่วยเหลือ" id="help-btn" style="border:1px solid var(--border-strong);border-radius:50%"></button>',
     '  </div>',
     '  <div id="content" class="loading">กำลังโหลด...</div>',
     '</div>',
     '',
     '<!-- Detail Modal -->',
-    '<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">',
+    '<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)lvCloseModal()">',
     '  <div class="modal" style="max-width:600px">',
     '    <div class="modal-header">',
     '      <h2 id="modal-title">รายละเอียดคำขอลา</h2>',
@@ -413,7 +413,7 @@ function LV2_MARKUP() {
     '    </div>',
     '    <div class="modal-body" id="modal-body"></div>',
     '    <div class="modal-footer" id="modal-footer">',
-    '      <button class="btn" onclick="closeModal()">ปิด</button>',
+    '      <button class="btn" onclick="lvCloseModal()">ปิด</button>',
     '    </div>',
     '  </div>',
     '</div>',
@@ -471,12 +471,12 @@ function LV2_RUN_PAGE_JS() {
     setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(100px)'; }, 2800);
   }
   window.lv2Toast = showToast;
-  function showHelp(content) {
+  function lvShowHelp(content) {
     let bg = document.getElementById('lv-help-modal-bg');
     if (!bg) {
       bg = document.createElement('div'); bg.id = 'lv-help-modal-bg'; bg.className = 'modal-bg';
       bg.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9500;align-items:center;justify-content:center;padding:20px;display:none;backdrop-filter:blur(4px)';
-      bg.onclick = (e) => { if (e.target === bg) closeHelp(); };
+      bg.onclick = (e) => { if (e.target === bg) lvCloseHelp(); };
       // ใช้ token + class ของ #lv ผ่าน wrapper id=lv ที่ครอบ (append เข้าใน #lv เพื่อให้ scoped CSS ทำงาน)
       const host = document.getElementById('lv') || document.body;
       host.appendChild(bg);
@@ -485,11 +485,12 @@ function LV2_RUN_PAGE_JS() {
     bg.style.display = 'flex';
     bg.classList.add('active');
   }
-  function closeHelp() {
+  function lvCloseHelp() {
     const bg = document.getElementById('lv-help-modal-bg');
     if (bg) { bg.classList.remove('active'); bg.style.display = 'none'; }
   }
-  window.closeHelp = closeHelp;
+  window.lvShowHelp = lvShowHelp;
+  window.lvCloseHelp = lvCloseHelp;
   function renderHelpModal(c) {
     const sections = (c.sections || []).map(s => {
       const cls = s.type === 'warn' ? 'help-section-warn' : s.type === 'tip' ? 'help-section-tip' : '';
@@ -502,13 +503,13 @@ function LV2_RUN_PAGE_JS() {
           '<div><h2>' + escapeHtml(c.title || 'Help') + '</h2>',
           c.subtitle ? '<p style="font-size:12px;color:var(--text-muted);margin-top:4px">' + escapeHtml(c.subtitle) + '</p>' : '',
           '</div>',
-          '<button class="btn btn-icon" onclick="closeHelp()" title="ปิด" style="border:none;background:transparent">' + ICONS.close + '</button>',
+          '<button class="btn btn-icon" onclick="lvCloseHelp()" title="ปิด" style="border:none;background:transparent">' + ICONS.close + '</button>',
         '</div></div>',
         '<div class="modal-body">',
           c.intro ? '<div class="help-intro">' + escapeHtml(c.intro) + '</div>' : '',
           sections,
         '</div>',
-        '<div class="modal-footer"><button class="btn btn-primary" onclick="closeHelp()">เข้าใจแล้ว</button></div>',
+        '<div class="modal-footer"><button class="btn btn-primary" onclick="lvCloseHelp()">เข้าใจแล้ว</button></div>',
       '</div>',
     ].join('');
   }
@@ -581,7 +582,7 @@ function LV2_RUN_PAGE_JS() {
   document.getElementById('tab-history').innerHTML = ICONS.list + ' ประวัติ <span class="count" id="cnt-history">—</span>';
   document.getElementById('tab-balance').innerHTML = ICONS.chart + ' ยอดลาคงเหลือ <span class="count" id="cnt-balance">—</span>';
 
-  function setTab(tab) {
+  function lvSetTab(tab) {
     currentTab = tab;
     ['pending', 'history', 'balance'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', t === tab);
@@ -609,7 +610,7 @@ function LV2_RUN_PAGE_JS() {
     }
     loadCurrent();
   }
-  window.setTab = setTab;
+  window.lvSetTab = lvSetTab;
 
   function loadCurrent(forceReload) {
     const filter = {
@@ -729,7 +730,7 @@ function LV2_RUN_PAGE_JS() {
 
       let actions = '';
       if (showActions && r.status === 'pending') {
-        actions = '<button class="btn btn-sm" onclick="viewDetail(\'' + escapeAttr(r.request_id) + '\')">ดู</button>';
+        actions = '<button class="btn btn-sm" onclick="lvViewDetail(\'' + escapeAttr(r.request_id) + '\')">ดู</button>';
       } else {
         const statusPill = r.status === 'approved' ? '<span class="pill pill-success">approved</span>' :
           r.status === 'auto_approved' ? '<span class="pill pill-success">auto</span>' :
@@ -739,7 +740,7 @@ function LV2_RUN_PAGE_JS() {
       }
 
       return [
-        '<tr class="' + trClass + '" onclick="viewDetail(\'' + escapeAttr(r.request_id) + '\')" style="cursor:pointer">',
+        '<tr class="' + trClass + '" onclick="lvViewDetail(\'' + escapeAttr(r.request_id) + '\')" style="cursor:pointer">',
           '<td>',
             '<div style="font-weight:500">' + escapeHtml(r.employee_name) + warn + '</div>',
             '<div style="font-size:10px;color:var(--text-faint);font-family:monospace">' + escapeHtml(r.employee_id) + ' · ' + escapeHtml(r.branch_id) + '</div>',
@@ -843,15 +844,15 @@ function LV2_RUN_PAGE_JS() {
   }
   window.viewLeaveCert = viewLeaveCert;
 
-  function viewDetail(requestId) {
+  function lvViewDetail(requestId) {
     google.script.run
-      .withSuccessHandler(showDetail)
+      .withSuccessHandler(lvShowDetail)
       .withFailureHandler(onErr)
       .leaveAdminGetDetail(requestId);
   }
-  window.viewDetail = viewDetail;
+  window.lvViewDetail = lvViewDetail;
 
-  function showDetail(d) {
+  function lvShowDetail(d) {
     if (!d || d.error) { showToast(d ? d.error : 'error', 'error'); return; }
 
     document.getElementById('modal-title').textContent = 'คำขอลา · ' + d.employee_name;
@@ -915,20 +916,20 @@ function LV2_RUN_PAGE_JS() {
     // Action buttons
     if (d.status === 'pending') {
       document.getElementById('modal-footer').innerHTML = [
-        '<button class="btn" onclick="closeModal()">ปิด</button>',
+        '<button class="btn" onclick="lvCloseModal()">ปิด</button>',
         '<button class="btn btn-danger" style="background:var(--danger-bg);color:var(--danger);border-color:var(--danger-border)" onclick="rejectReq(\'' + escapeAttr(d.request_id) + '\')">Reject</button>',
         '<button class="btn btn-primary" onclick="approveReq(\'' + escapeAttr(d.request_id) + '\')">Approve</button>',
       ].join('');
     } else {
-      document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">ปิด</button>';
+      document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="lvCloseModal()">ปิด</button>';
     }
 
     document.getElementById('modal-bg').classList.add('active');
   }
-  window.showDetail = showDetail;
+  window.lvShowDetail = lvShowDetail;
 
-  function closeModal() { document.getElementById('modal-bg').classList.remove('active'); }
-  window.closeModal = closeModal;
+  function lvCloseModal() { document.getElementById('modal-bg').classList.remove('active'); }
+  window.lvCloseModal = lvCloseModal;
 
   function approveReq(id) {
     if (!confirm('Approve คำขอลานี้? (จะ update balance + time attendance + แจ้ง branch lead)')) return;
@@ -936,7 +937,7 @@ function LV2_RUN_PAGE_JS() {
       .withSuccessHandler(r => {
         if (r && r.error) { showToast(r.error, 'error'); return; }
         showToast('Approved', 'success');
-        closeModal();
+        lvCloseModal();
         _cacheInvalidate(); // v1.10.245 · mutation → invalidate ทุก tab
         loadCurrent(true);
       })
@@ -951,7 +952,7 @@ function LV2_RUN_PAGE_JS() {
       .withSuccessHandler(r => {
         if (r && r.error) { showToast(r.error, 'error'); return; }
         showToast('Rejected', 'success');
-        closeModal();
+        lvCloseModal();
         _cacheInvalidate(); // v1.10.245 · mutation → invalidate ทุก tab
         loadCurrent(true);
       })
@@ -960,5 +961,5 @@ function LV2_RUN_PAGE_JS() {
   }
   window.rejectReq = rejectReq;
 
-  setTab('pending');
+  lvSetTab('pending');
 }

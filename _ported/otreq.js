@@ -426,17 +426,17 @@ function OT_MARKUP() {
     '    <div class="subtitle">Check-in/out · OT request · ลิงค์ JERA fingerprint · LINE LIFF GPS</div>',
     '  </div>',
     '  <div class="page-actions" id="yh-page-actions">',
-    '    <button class="btn-help" onclick="showHelp(HELP)" title="ช่วยเหลือ" id="help-btn"></button>',
+    '    <button class="btn-help" onclick="otShowHelp(HELP)" title="ช่วยเหลือ" id="help-btn"></button>',
     '    <button class="btn btn-sm" onclick="reloadAll()" id="refresh-btn"></button>',
     '  </div>',
     '</header>',
 
     // tabs
     '<div class="tabs">',
-    '  <button class="tab active" id="tab-calendar" onclick="setTab(\'calendar\')"></button>',
-    '  <button class="tab tab-anomaly" id="tab-anomaly" onclick="setTab(\'anomaly\')"></button>',
-    '  <button class="tab" id="tab-ot" onclick="setTab(\'ot\')"></button>',
-    '  <button class="tab" id="tab-overview" onclick="setTab(\'overview\')"></button>',
+    '  <button class="tab active" id="tab-calendar" onclick="otSetTab(\'calendar\')"></button>',
+    '  <button class="tab tab-anomaly" id="tab-anomaly" onclick="otSetTab(\'anomaly\')"></button>',
+    '  <button class="tab" id="tab-ot" onclick="otSetTab(\'ot\')"></button>',
+    '  <button class="tab" id="tab-overview" onclick="otSetTab(\'overview\')"></button>',
     '</div>',
 
     '<div id="content" class="loading">กำลังโหลด...</div>',
@@ -601,7 +601,7 @@ function OT_RUN_PAGE_JS() {
     setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(100px)'; }, 2800);
   }
   window.ot2Toast = showToast;
-  function showHelp(content) {
+  function otShowHelp(content) {
     let bg = document.getElementById('ot-help-modal-bg');
     if (!bg) { bg = document.createElement('div'); bg.id = 'ot-help-modal-bg'; bg.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9500;align-items:center;justify-content:center;padding:20px;display:none'; bg.onclick = e => { if (e.target === bg) bg.style.display = 'none'; }; document.body.appendChild(bg); }
     const sections = (content.sections || []).map(s => {
@@ -659,7 +659,7 @@ function OT_RUN_PAGE_JS() {
   document.getElementById('tab-ot').innerHTML = ICONS.briefcase + ' OT Requests <span class="cnt" id="cnt-ot">—</span>';
   document.getElementById('tab-overview').innerHTML = ICONS.chart + ' OT Overview';
 
-  function setTab(tab) {
+  function otSetTab(tab) {
     currentTab = tab;
     document.querySelectorAll('.tabs .tab').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
@@ -669,7 +669,7 @@ function OT_RUN_PAGE_JS() {
     else if (tab === 'overview') loadOverview();
   }
 
-  function reloadAll() { setTab(currentTab); }
+  function reloadAll() { otSetTab(currentTab); }
 
   // ====== Calendar tab ======
   function loadCalendar() {
@@ -1404,9 +1404,9 @@ function OT_RUN_PAGE_JS() {
   }
 
   /* ===== ผูก fn ที่ inline onclick (ใน markup ของหน้านี้) ต้องเรียก → window ===== */
-  window.setTab = setTab;
+  window.otSetTab = otSetTab;
   window.reloadAll = reloadAll;
-  window.showHelp = showHelp;
+  window.otShowHelp = otShowHelp;
   window.HELP = HELP;
   window.calNav = calNav;
   window.calToday = calToday;
@@ -1434,5 +1434,5 @@ function OT_RUN_PAGE_JS() {
   window.closeProfModal = closeProfModal;
 
   // ===== Init (แก้จากเดิม: default = OT tab เพราะหน้านี้คือ "คำขอ OT") =====
-  setTab('ot');
+  otSetTab('ot');
 }
