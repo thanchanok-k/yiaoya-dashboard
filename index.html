@@ -2607,21 +2607,26 @@ function mountExpansion(){
  const B=n=>'฿'+Number(n||0).toLocaleString('th-TH',{maximumFractionDigits:0});
  const pcol=m=>m==null?'#64748B':m<=6?'#0F766E':m<=12?'#B45309':'#DC2626';
  $('expWrap').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลด ROI อุปกรณ์…</span></div>';
- sb.functions.invoke('expansion_roi').then(({data})=>{
-  const rows=(data&&data.rows)||[];
+ Promise.all([sb.functions.invoke('expansion_roi'),sb.functions.invoke('jera_daily_sales',{body:{action:'get',days:60}})]).then(([er,ds])=>{
+  const rows=((er&&er.data)||{}).rows||[];
   if(!rows.length){$('expWrap').innerHTML='<div class="empty-card"><i class="ti ti-building-plus"></i><span>ยังไม่มีข้อมูลอุปกรณ์</span></div>';return;}
   const J=x=>{if(typeof x==='string'){try{return JSON.parse(x);}catch(e){return null;}}return x;};
   rows.forEach(r=>{r.scenarios=J(r.scenarios)||[];if(!Array.isArray(r.scenarios))r.scenarios=[];r.actual=J(r.actual)||null;});
+  const dr=((ds&&ds.data)||{}).rows||[];
+  const nets=dr.map(r=>+r.net||0); const avgDay=nets.length?Math.round(nets.reduce((a,b)=>a+b,0)/nets.length):0;
+  const billsDay=dr.length?Math.round(dr.reduce((a,r)=>a+(+r.bills||0),0)/dr.length):0;
+  const monthRun=avgDay*30;
   const totCap=rows.reduce((a,r)=>a+ +r.price,0);
   const realMins=rows.map(r=>r.actual&&r.actual.real&&r.actual.real.length?Math.min.apply(null,r.actual.real.map(s=>+s.months)):null).filter(x=>x!=null);
   const kpi=(l,v,sub,c)=>'<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:13px 15px;border-top:3px solid '+c+'"><div style="font-size:10.5px;color:var(--text-muted,#64748B);font-weight:600">'+l+'</div><div style="font-size:20px;font-weight:800;color:var(--navy,#0D2F4F);margin-top:2px">'+v+'</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">'+(sub||'')+'</div></div>';
-  let h='<div style="font-size:12px;color:var(--text-muted,#64748B);margin-bottom:6px">ฐานข้อมูลลงทุนอุปกรณ์ สำหรับวางแผนเปิดสาขาใหม่</div>';
-  h+='<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#9A3412"><b>⚠️ คืนทุนจริง ≠ ที่ PDF ประมาณไว้</b> — PDF คิดที่ 10 คน/วัน แต่ <b>การใช้งานจริงจาก JERA</b> (เฉลี่ย มี.ค.–มิ.ย. 69) ต่ำกว่ามาก → คืนทุนนานกว่าที่คิด</div>';
-  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px">'
-   +kpi('รวมลงทุน (ครบทุกเครื่อง)',B(totCap),rows.length+' เครื่อง · BTL','#185FA5')
-   +kpi('คืนทุนจริง เร็วสุด',(realMins.length?Math.min.apply(null,realMins):'—')+' เดือน','จากการใช้งานจริง','#0F766E')
-   +kpi('เครื่องถูกสุด',B(Math.min.apply(null,rows.map(r=>+r.price))),'เริ่มต้นลงทุน','#C2410C')+'</div>';
-  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">';
+  // current branch actual
+  let h='<div class="card" style="padding:16px;margin-bottom:14px;border-left:4px solid #0F766E"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-building-store" style="color:#0F766E"></i> สาขาปัจจุบัน (ศาลายา) — ยอดขายจริง</div>'
+   +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">'
+   +kpi('ยอดขายเฉลี่ย/วัน',B(avgDay),dr.length+' วันล่าสุด (จริง)','#0F766E')
+   +kpi('ยอดขาย/เดือน (run-rate)',B(monthRun),'≈ เฉลี่ยรายวัน × 30','#185FA5')
+   +kpi('บิล/วัน',billsDay+' บิล','เฉลี่ยจริง','#C2410C')+'</div></div>';
+  h+='<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#9A3412"><b>⚠️ คืนทุนเครื่องจริง ≠ ที่ PDF ประมาณ</b> — PDF คิด 10 คน/วัน แต่ใช้งานจริง (JERA) 1–4 คน/วัน → คืนทุนนานกว่า</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:18px">';
   rows.forEach(r=>{
    const a=r.actual; const realBy={}; if(a&&a.real)a.real.forEach(s=>realBy[s.price]=+s.months);
    const realMs=a&&a.real?a.real.map(s=>+s.months):[]; const rMin=realMs.length?Math.min.apply(null,realMs):null,rMax=realMs.length?Math.max.apply(null,realMs):null;
@@ -2629,19 +2634,34 @@ function mountExpansion(){
    h+='<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:14px;padding:16px">'
      +'<div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font-size:15px;font-weight:800;color:var(--navy,#0D2F4F)">'+esc(r.device)+'</div><span style="background:#EFF6FF;color:#1D4ED8;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+esc(r.brand||"")+'</span></div>'
      +'<div style="font-size:23px;font-weight:800;color:#185FA5;margin:4px 0">'+B(r.price)+'</div>';
-   if(a&&realMs.length){
-     h+='<div style="background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px;padding:10px 12px;margin:6px 0"><div style="font-size:11px;color:#0F766E;font-weight:700">📍 คืนทุนจริง (จากการใช้งานจริง)</div><div style="font-size:20px;font-weight:800;color:'+pcol(rMin)+';margin:1px 0">'+rMin+'–'+rMax+' เดือน</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">ใช้จริง '+a.per_day+' ครั้ง/วัน · '+esc(a.note||"")+'</div><div style="font-size:10.5px;color:#94A3B8;margin-top:2px">PDF ประมาณ '+estMin+' ด. (สมมติ 10 คน/วัน)</div></div>';
-   } else {
-     h+='<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:10px 12px;margin:6px 0;font-size:12px;color:#B91C1C">⚠️ ไม่พบการใช้งานจริงใน JERA'+(a&&a.note?' — '+esc(a.note):'')+' · PDF ประมาณ '+estMin+' ด.</div>';
-   }
+   if(a&&realMs.length){h+='<div style="background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px;padding:10px 12px;margin:6px 0"><div style="font-size:11px;color:#0F766E;font-weight:700">📍 คืนทุนจริง (จากการใช้งานจริง)</div><div style="font-size:20px;font-weight:800;color:'+pcol(rMin)+';margin:1px 0">'+rMin+'–'+rMax+' เดือน</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">ใช้จริง '+a.per_day+' ครั้ง/วัน · '+esc(a.note||"")+'</div><div style="font-size:10.5px;color:#94A3B8;margin-top:2px">PDF ประมาณ '+estMin+' ด. (สมมติ 10 คน/วัน)</div></div>';}
+   else{h+='<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:10px 12px;margin:6px 0;font-size:12px;color:#B91C1C">⚠️ ไม่พบการใช้งานจริงใน JERA'+(a&&a.note?' — '+esc(a.note):'')+' · PDF ประมาณ '+estMin+' ด.</div>';}
    h+='<table style="width:100%;border-collapse:collapse;margin:8px 0"><thead><tr style="text-align:right"><th style="font-size:10px;color:var(--text-muted,#64748B);font-weight:600;padding:3px 0;text-align:left">ราคา/ครั้ง</th><th style="font-size:10px;color:var(--text-muted,#64748B);font-weight:600">PDF</th><th style="font-size:10px;color:#0F766E;font-weight:700">จริง</th></tr></thead><tbody>'
      +r.scenarios.map(sc=>'<tr style="text-align:right"><td style="font-size:12px;padding:3px 0;color:var(--navy,#0D2F4F);text-align:left">'+B(sc.price)+'</td><td style="font-size:12px;color:#94A3B8">'+sc.months+' ด.</td><td style="font-size:12px;font-weight:700;color:'+pcol(realBy[sc.price]!=null?realBy[sc.price]:null)+'">'+(realBy[sc.price]!=null?realBy[sc.price]+' ด.':'—')+'</td></tr>').join('')
-     +'</tbody></table>'
-     +'<div style="font-size:10.5px;color:var(--text-muted,#64748B);border-top:1px solid var(--border,#E2E8F0);padding-top:6px"><b>วัสดุ:</b> '+esc(r.refill||"-")+'</div>'
-     +'<div style="font-size:10.5px;color:var(--text-muted,#64748B);margin-top:3px"><b>ดูแล:</b> '+esc(r.maintenance||"-")+'</div></div>';
+     +'</tbody></table><div style="font-size:10.5px;color:var(--text-muted,#64748B);border-top:1px solid var(--border,#E2E8F0);padding-top:6px"><b>วัสดุ:</b> '+esc(r.refill||"-")+'</div><div style="font-size:10.5px;color:var(--text-muted,#64748B);margin-top:3px"><b>ดูแล:</b> '+esc(r.maintenance||"-")+'</div></div>';
   });
   h+='</div>';
+  // NEW BRANCH MODEL
+  h+='<div class="card" style="padding:18px;border:1px solid #C7E8E3;background:linear-gradient(135deg,#F0FDFA,#fff)"><div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:15px"><i class="ti ti-building-plus" style="color:#0F766E"></i> โมเดลสาขาใหม่ (ประมาณจากยอดจริงสาขาปัจจุบัน)</div>'
+   +'<div style="font-size:11.5px;color:var(--text-muted,#64748B);margin:4px 0 12px">เลือกเครื่องที่จะซื้อ + สมมติสาขาใหม่ทำได้กี่ % ของศาลายา → คำนวณคืนทุน</div>'
+   +'<div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F);margin-bottom:6px">1. เครื่องที่จะลงทุน</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">'
+   +rows.map((r,i)=>'<label style="display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:7px 11px;font-size:12px;cursor:pointer"><input type="checkbox" class="edChk" data-price="'+r.price+'" checked> '+esc(r.device)+' <b style="color:#185FA5">'+B(r.price)+'</b></label>').join('')+'</div>'
+   +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px">'
+   +'<div><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F)">2. สาขาใหม่ทำได้ ~<span id="edPerfV">60</span>% ของศาลายา</div><input type="range" id="edPerf" min="20" max="100" value="60" style="width:100%"></div>'
+   +'<div><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F)">3. กำไรขั้นต้น ~<span id="edMarV">40</span>%</div><input type="range" id="edMargin" min="20" max="70" value="40" style="width:100%"></div></div>'
+   +'<div id="edRes"></div>'
+   +'<div style="font-size:11px;color:#9A3412;background:#FFF7ED;border-radius:8px;padding:8px 12px;margin-top:12px">⚠️ คำนวณเฉพาะ<b>ค่าเครื่อง</b> เทียบกำไรขั้นต้น — <b>ยังไม่รวม</b>ค่าเช่า/ตกแต่ง/พนักงาน/ใบอนุญาต (ส่งข้อมูลพวกนี้มาเพิ่ม ผมทำคืนทุนทั้งสาขาให้)</div></div>';
   $('expWrap').innerHTML=h;
+  const recompute=()=>{let cap=0;document.querySelectorAll('.edChk').forEach(c=>{if(c.checked)cap+=+c.dataset.price;});
+   const perf=+$('edPerf').value,mar=+$('edMargin').value;$('edPerfV').textContent=perf;$('edMarV').textContent=mar;
+   const mRev=Math.round(monthRun*perf/100),mProfit=Math.round(mRev*mar/100),pb=mProfit>0?Math.round(cap/mProfit*10)/10:null;
+   $('edRes').innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">'
+    +kpi('ลงทุนค่าเครื่อง',B(cap),'รวมที่เลือก','#185FA5')
+    +kpi('คาดยอด/เดือน',B(mRev),perf+'% ของศาลายา','#0F766E')
+    +kpi('กำไรขั้นต้น/เดือน',B(mProfit),mar+'% margin','#7C3AED')
+    +kpi('คืนทุนค่าเครื่อง',(pb!=null?pb+' เดือน':'—'),'เฉพาะค่าเครื่อง','#C2410C')+'</div>';};
+  document.querySelectorAll('.edChk').forEach(c=>c.onchange=recompute);
+  $('edPerf').oninput=recompute;$('edMargin').oninput=recompute;recompute();
   const ct=$('ct-expansion');if(ct)ct.textContent=rows.length;
  }).catch(e=>{console.error('expansion',e);$('expWrap').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
 }
