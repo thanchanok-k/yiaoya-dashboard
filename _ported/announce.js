@@ -69,7 +69,14 @@ function an2ToBool(v) {
 }
 
 // lookups — ดึงตัวเลือก filter จาก target ของประกาศจริง (กรองได้ตรงค่า + นับจำนวน)
-var AN2_BRANCH_NAME = { BR00: 'สำนักงานใหญ่ · HQ', BR01: 'Yiaoya · ศาลายา' };
+var AN2_BRANCH_NAME = { BR00: 'สำนักงานใหญ่ · HQ', BR01: 'Yiaoya · ศาลายา', BR_SALAYA: 'ศาลายา' };
+var AN2_POSITION_NAME = {
+  'POS-OWN': 'ผู้บริหาร', 'POS-MKM': 'Marketing Manager', 'POS-MGR': 'ผู้จัดการ', 'POS-HR': 'HR',
+  'POS-ACC': 'บัญชี+จัดซื้อ', 'POS-CON': 'Content', 'POS-MKTA': 'ธุรการการตลาด', 'POS-PT': 'นักกายภาพ',
+  'POS-MAS': 'นักนวด', 'POS-CTR': 'เคาน์เตอร์', 'POS-SLS': 'เซลล์', 'POS-PILATES': 'ครูพิลาทิส',
+  'POS-DOCTOR': 'หมอ', 'POS-PT-PT': 'นักกายภาพ Part-Time', 'POS-EXT': 'บุคคลภายนอก',
+  'POS-COORD': 'ประสานงาน', 'POS-PT-NURSE': 'พยาบาล Part-Time',
+};
 function an2BuildLookups(items) {
   items = items || [];
   function distinct(key, nameMap) {
@@ -86,7 +93,7 @@ function an2BuildLookups(items) {
   }
   return {
     branches: distinct('target_branches', AN2_BRANCH_NAME),
-    positions: distinct('target_positions'),
+    positions: distinct('target_positions', AN2_POSITION_NAME),
     departments: distinct('target_departments'),
     tags: distinct('target_tags'),
     employees: [],
