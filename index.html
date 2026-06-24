@@ -27,12 +27,6 @@ body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,syste
 .sb-label .chev{font-size:13px;opacity:.55;transition:transform .15s}
 .sb-label.col .chev{transform:rotate(-90deg)}
 .sb-label .gcount{margin-left:auto;font-size:9px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.6);border-radius:8px;padding:1px 6px;font-weight:600;letter-spacing:0}
-.sb-sub{padding:6px 14px 6px 28px;font-size:11.5px;color:rgba(255,255,255,.58);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
-.sb-sub:hover{color:rgba(255,255,255,.88)}
-.sb-sub .chev{font-size:12px;opacity:.5;transition:transform .15s}
-.sb-sub.col .chev{transform:rotate(-90deg)}
-.sb-sub .gcount{margin-left:auto;font-size:9px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.55);border-radius:8px;padding:1px 6px;font-weight:600}
-.sb-item.lvl2{padding-left:36px;font-size:12.5px}
 .sb-search{margin:10px 12px 6px;position:relative}
 .sb-search input{width:100%;padding:7px 10px 7px 30px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:12px;outline:none}
 .sb-search input::placeholder{color:rgba(255,255,255,.45)}
@@ -784,13 +778,13 @@ let currentRole='director';
    ║  1. <div class="sb-item" data-view="X"><i class="ti ti-..."></i>ชื่อไทย</div> ║
    ║  2. <section class="view" data-view="X">...</section>  (กล่องเนื้อหา)         ║
    ║  3. VIEW_TITLE.X = 'ชื่อหัวข้อ'  (ไม่ใส่ = หัวข้อว่าง)                          ║
-   ║  4. เพิ่ม 'X' ใน NAV_TREE กลุ่ม/หมวดที่เหมาะ (ไม่ใส่ = ตกกอง "อื่น ๆ")          ║
+   ║  4. เพิ่ม 'X' ใน NAV_GROUPS กลุ่มที่เหมาะ (ไม่ใส่ = ตกกอง "อื่น ๆ")            ║
    ║  5. เพิ่ม 'X' ใน VIEWS_BY_ROLE ของ role ที่ควรเห็น (ไม่ใส่ = เห็นเฉพาะ director)║
    ║ ถ้าเป็น ported page (โหลดจาก _ported/X.js) เพิ่มอีก 3 จุด:                     ║
    ║  6. PORTED_FN.X='mountX'  7. PORTED_SCRIPT.X='_ported/X.js'  8. PORTED_WRAP.X='wrap-X' ║
    ║  + ใน section ใส่ <div id="wrap-X"></div> และไฟล์ _ported/X.js มี window.mountX ║
    ╚══════════════════════════════════════════════════════════════════════════╝
-   buildNav() จัดเรียงตาม NAV_TREE ตอน runtime (โดเมน→sub→เมนู · reuse element เดิม คงไอคอน/onclick/count) */
+   buildNav() จัดเรียงตาม NAV_GROUPS ตอน runtime (reuse element เดิม คงไอคอน/onclick/count) */
 /* โครง 3 ชั้น: โดเมน → (sub-category) → เมนู · โดเมนที่ไม่มี subs = เมนูตรง 1 ชั้น */
 const NAV_TREE=[
  {label:'ภาพรวม', views:['overview']},
@@ -849,7 +843,7 @@ function navAudit(){
   const W=[];
   secs.filter(v=>!items.includes(v)).forEach(v=>W.push('• "'+v+'": มี <section> แต่ไม่มีเมนู (เข้าไม่ถึง) → เพิ่ม sb-item (จุด 1)'));
   items.filter(v=>!secs.includes(v)&&v!=='overview').forEach(v=>W.push('• "'+v+'": มีเมนูแต่ไม่มี <section> (จุด 2)'));
-  items.filter(v=>!inG.has(v)).forEach(v=>W.push('• "'+v+'": ไม่อยู่ NAV_TREE → ตกกอง "อื่น ๆ" (จุด 4)'));
+  items.filter(v=>!inG.has(v)).forEach(v=>W.push('• "'+v+'": ไม่อยู่ NAV_GROUPS → ตกกอง "อื่น ๆ" (จุด 4)'));
   items.filter(v=>!VIEW_TITLE[v]).forEach(v=>W.push('• "'+v+'": ไม่มีใน VIEW_TITLE → หัวข้อว่าง (จุด 3)'));
   items.filter(v=>!inR.has(v)).forEach(v=>W.push('• "'+v+'": ไม่อยู่ใน role ใดเลย → เห็นเฉพาะ director (จุด 5)'));
   if(W.length){ console.warn('%c[navAudit] เมนูยังไม่ครบ '+W.length+' จุด — ดู DASHBOARD_เพิ่มเมนูใหม่.md','color:#D97706;font-weight:700');
@@ -875,37 +869,27 @@ function initAccordion(){
 function updateNav(){
  initAccordion(); const nav=$('sbnav'); if(!nav) return;
  const allowed=VIEWS_BY_ROLE[currentRole]||ALL_VIEWS;
- const searching=_navQ.length>0; const dS={}, sS={};
+ const searching=_navQ.length>0; const stat={};
  nav.querySelectorAll('.sb-item').forEach(it=>{
-  const d=it.dataset.dom, s=it.dataset.sub;
+  const g=it.dataset.grp;
   const roleOK=allowed.includes(it.dataset.view);
   const matchOK=!searching || it.textContent.toLowerCase().includes(_navQ);
-  const hidden=!searching && (_colDom.has(d) || (s&&_colSub.has(s)));
-  it.style.display=(roleOK&&matchOK&&!hidden)?'':'none';
-  dS[d]=dS[d]||{r:0,m:0}; if(roleOK)dS[d].r++; if(roleOK&&matchOK)dS[d].m++;
-  if(s){ sS[s]=sS[s]||{r:0,m:0}; if(roleOK)sS[s].r++; if(roleOK&&matchOK)sS[s].m++; }
+  const colHidden=!searching && _collapsed.has(g);
+  it.style.display=(roleOK&&matchOK&&!colHidden)?'':'none';
+  stat[g]=stat[g]||{r:0,m:0}; if(roleOK)stat[g].r++; if(roleOK&&matchOK)stat[g].m++;
  });
- nav.querySelectorAll('.sb-sub').forEach(sl=>{
-  const s=sl.dataset.sub, d=sl.dataset.dom, st=sS[s]||{r:0,m:0};
-  const domHidden=!searching && _colDom.has(d);
-  sl.style.display=(st.r>0 && (!searching||st.m>0) && !domHidden)?'':'none';
-  const gc=sl.querySelector('.gcount'); if(gc) gc.textContent=st.r||'';
-  sl.classList.toggle('col', !searching && _colSub.has(s));
- });
- nav.querySelectorAll('.sb-label').forEach(dl=>{
-  const d=dl.dataset.dom, st=dS[d]||{r:0,m:0};
-  dl.style.display=(st.r>0 && (!searching||st.m>0))?'':'none';
-  const gc=dl.querySelector('.gcount'); if(gc) gc.textContent=st.r||'';
-  dl.classList.toggle('col', !searching && _colDom.has(d));
+ nav.querySelectorAll('.sb-label').forEach(lb=>{
+  const g=lb.dataset.grp, gi=stat[g]||{r:0,m:0};
+  lb.style.display=(gi.r>0 && (!searching||gi.m>0))?'':'none';
+  const gc=lb.querySelector('.gcount'); if(gc) gc.textContent=gi.r||'';
+  lb.classList.toggle('col', !searching && _collapsed.has(g));
  });
 }
 function collapseToActive(){
  initAccordion();
  const active=document.querySelector('.sb-item.active');
- const ad=active?active.dataset.dom:null, as=active?active.dataset.sub:null;
- _colDom=new Set(); _colSub=new Set();
- document.querySelectorAll('#sbnav .sb-label').forEach(l=>{ if(l.dataset.dom!==ad) _colDom.add(l.dataset.dom); });
- document.querySelectorAll('#sbnav .sb-sub').forEach(l=>{ if(l.dataset.sub!==as) _colSub.add(l.dataset.sub); });
+ const ag=active?active.dataset.grp:null;
+ _collapsed=new Set(_navGroups.filter(g=>g!==ag));
 }
 function applyRole(role){
  if(!VIEWS_BY_ROLE[role]) role='director';
@@ -2732,14 +2716,7 @@ function mountHub360(){
    +kpi('ROAS รวม',(tAd?(tRev/tAd).toFixed(1):'—')+'x','รายได้÷แอด','#0D2F4F')
    +kpi('คนไข้ใหม่ (JERA)',N(tNewJ),'หน้าบ้าน','#0F766E')
    +kpi('ต้นทุน/คนไข้ใหม่',B(tAd/(tNewJ||1)),'แอด÷คนใหม่','#C2410C')+'</div>';
-  const icSeries=[{k:'rev',l:'รายได้',c:'#0F766E',v:rev,fmt:B},{k:'ad',l:'ค่าแอด',c:'#DC2626',v:adS,fmt:B},{k:'msg',l:'ทักแชท',c:'#185FA5',v:msg,fmt:N},{k:'newp',l:'คนไข้ใหม่',c:'#3DC5B7',v:newJ,fmt:N},{k:'pay',l:'คนไข้ใหม่จ่าย',c:'#C2410C',v:newDeptTot,fmt:N}];
-  const icDef={rev:1,ad:1,newp:1};const ICW=900,ICH=300,icPad=46;
-  const icX=i=>icPad+(months.length<=1?(ICW-icPad*2)/2:i*(ICW-icPad-16)/(months.length-1));
-  const icY=(val,mx)=>ICH-30-(mx?val/mx*(ICH-58):0);
-  const icIns=i=>{const r=rev[i],a=adS[i];const roas=a?(r/a).toFixed(1):null,conv=msg[i]?Math.round(newJ[i]/msg[i]*100):null,mom=i>0&&rev[i-1]?Math.round((r-rev[i-1])/rev[i-1]*100):null;const p=[];if(roas)p.push('ROAS '+roas+'x');if(conv!=null)p.push('ทัก→คนไข้ '+conv+'%');if(mom!=null)p.push('รายได้ '+(mom>=0?'+':'')+mom+'% MoM');return p.join(' · ')||'ดูข้อมูล';};
-  let icL='';icSeries.forEach(sr=>{const mx=Math.max(1,...sr.v);const pts=sr.v.map((val,i)=>icX(i)+','+icY(val,mx)).join(' ');icL+='<polyline class="icLine" data-k="'+sr.k+'" points="'+pts+'" fill="none" stroke="'+sr.c+'" stroke-width="2.6" style="display:'+(icDef[sr.k]?'':'none')+'"/>';});
-  let icG='';months.forEach((m,i)=>{if(months.length>12&&i%2)return;icG+='<text x="'+icX(i)+'" y="'+(ICH-9)+'" font-size="8" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
-  h+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:2px">กราฟรวมหลายมิติ — เลือกข้อมูลที่จะกระทบ</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:10px">ติ๊กเลือกเส้น · เลื่อนเมาส์/แตะบนกราฟ เพื่อดู insight จริงแต่ละเดือน (ปรับสเกลให้เทียบรูปทรงกันได้)</div><div style="display:flex;flex-wrap:wrap;gap:9px;margin-bottom:10px">'+icSeries.map(sr=>'<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;background:#F8FAFC;border:1px solid var(--border,#E2E8F0);border-radius:7px;padding:5px 10px"><input type="checkbox" id="ic_'+sr.k+'" '+(icDef[sr.k]?'checked':'')+'><span style="color:'+sr.c+';font-size:13px">●</span>'+sr.l+'</label>').join('')+'</div><div id="icChart" style="position:relative"><svg id="icSvg" viewBox="0 0 '+ICW+' '+ICH+'" style="width:100%;height:auto;display:block">'+icG+'<line id="icGuide" x1="0" y1="18" x2="0" y2="'+(ICH-26)+'" stroke="#3DC5B7" stroke-width="1.2" stroke-dasharray="3 3" style="opacity:0"></line>'+icL+'</svg><div id="icTip" style="position:absolute;pointer-events:none;background:#0D2F4F;color:#fff;padding:8px 11px;border-radius:8px;font-size:12px;opacity:0;transition:opacity .08s;z-index:6;min-width:150px;box-shadow:0 6px 18px rgba(0,0,0,.25)"></div></div></div>';
+  h+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:2px">กราฟรายเดือน — เลือกตัวชี้วัด + ชี้เพื่อดูรายละเอียด</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:10px">กดเลือกเส้นที่จะดู (มีแกนตัวเลขจริง) · เลื่อนเมาส์/แตะบนกราฟ เห็นรายได้แต่ละแผนก + คนไข้ใหม่/เก่า รายเดือน</div><div id="icTabs" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px"></div><div id="icChart" style="position:relative;touch-action:none"><div id="icSvgWrap"></div><div id="icTip" style="position:absolute;pointer-events:none;background:#0D2F4F;color:#fff;padding:9px 12px;border-radius:8px;font-size:12px;opacity:0;transition:opacity .08s;z-index:6;min-width:175px;box-shadow:0 6px 18px rgba(0,0,0,.28)"></div></div></div>';
   h+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">เงินเข้า (รายได้) vs เงินออก (ค่าแอด) รายเดือน</div>'
    +dualLine(months,[{name:'รายได้',color:'#0F766E',vals:rev},{name:'ค่าแอด',color:'#DC2626',vals:adS}])
    +'<div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--text-muted,#64748B)"><span><span style="display:inline-block;width:12px;height:3px;background:#0F766E;vertical-align:middle;margin-right:4px"></span>รายได้</span><span><span style="display:inline-block;width:12px;height:3px;background:#DC2626;vertical-align:middle;margin-right:4px"></span>ค่าแอด</span> · ช่องว่าง = กำไรขั้นต้นก่อนต้นทุนอื่น</div></div>';
@@ -2753,15 +2730,40 @@ function mountHub360(){
    +months.slice().reverse().map(m=>{const i=months.indexOf(m);const ro=adS[i]?(rev[i]/adS[i]).toFixed(1)+'x':'—';return '<tr style="text-align:right"><td style="padding:7px 10px;font-size:12px;text-align:left;font-weight:600;color:var(--navy,#0D2F4F)">'+mSh(m)+'</td><td style="padding:7px 10px;font-size:12px">'+B(adS[i])+'</td><td style="padding:7px 10px;font-size:12px;font-weight:700;color:#0F766E">'+B(rev[i])+'</td><td style="padding:7px 10px;font-size:12px;font-weight:700">'+ro+'</td><td style="padding:7px 10px;font-size:12px">'+N(msg[i])+'</td><td style="padding:7px 10px;font-size:12px">'+N(newJ[i])+'</td><td style="padding:7px 10px;font-size:12px;font-weight:600;color:#C2410C">'+N(newDeptTot[i])+'</td></tr>';}).join('')
    +'</tbody></table></div>';
   $('hubWrap').innerHTML=h;
-  (function(){const svgEl=$('icSvg');if(!svgEl)return;const guide=$('icGuide'),tip=$('icTip'),chart=$('icChart');
-   const onMove=ev=>{const rect=svgEl.getBoundingClientRect();let fx=(ev.clientX-rect.left)/rect.width;let idx=Math.round(fx*(months.length-1));idx=Math.max(0,Math.min(months.length-1,idx));
-    guide.setAttribute('x1',icX(idx));guide.setAttribute('x2',icX(idx));guide.style.opacity=1;
-    const active=icSeries.filter(sr=>{const c=$('ic_'+sr.k);return c&&c.checked;});
-    tip.innerHTML='<div style="font-weight:700;margin-bottom:3px">'+mLab(months[idx])+'</div>'+active.map(sr=>'<div style="font-size:11px"><span style="color:'+sr.c+'">●</span> '+sr.l+': <b>'+sr.fmt(sr.v[idx])+'</b></div>').join('')+'<div style="font-size:11px;color:#9FE6DD;margin-top:4px;border-top:1px solid rgba(255,255,255,.2);padding-top:4px">'+icIns(idx)+'</div>';
-    tip.style.opacity=1;const cr=chart.getBoundingClientRect();let lx=ev.clientX-cr.left+14;if(lx>cr.width-175)lx=cr.width-180;if(lx<0)lx=4;tip.style.left=lx+'px';tip.style.top=(ev.clientY-cr.top+8)+'px';};
-   svgEl.addEventListener('mousemove',onMove);svgEl.addEventListener('mouseleave',()=>{guide.style.opacity=0;tip.style.opacity=0;});
-   svgEl.addEventListener('touchmove',e=>{if(e.touches[0]){onMove(e.touches[0]);e.preventDefault();}},{passive:false});
-   icSeries.forEach(sr=>{const c=$('ic_'+sr.k);if(c)c.onchange=()=>{const pl=document.querySelector('.icLine[data-k="'+sr.k+'"]');if(pl)pl.style.display=c.checked?'':'none';};});})();
+  (function(){if(!$('icSvgWrap'))return;
+   const roasArr=months.map((m,i)=>adS[i]?Math.round(rev[i]/adS[i]*10)/10:0);
+   const M=[{k:'rev',l:'รายได้',c:'#0F766E',v:rev,money:1},{k:'ad',l:'ค่าแอด',c:'#DC2626',v:adS,money:1},{k:'msg',l:'ทักแชท',c:'#185FA5',v:msg},{k:'newp',l:'คนไข้ใหม่',c:'#3DC5B7',v:newJ},{k:'roas',l:'ROAS',c:'#0D2F4F',v:roasArr,suf:'x'}];
+   const auxDept=months.map(m=>{const o={};drows.filter(r=>r.month===m).forEach(r=>{o[r.dept]=(o[r.dept]||0)+ +r.amount;});return o;});
+   const auxNew=months.map(m=>drows.filter(r=>r.month===m&&r.new_patient).length);
+   const auxOld=months.map(m=>drows.filter(r=>r.month===m&&r.kind==='course'&&!r.new_patient).length);
+   const dcol2=d=>({'กระดูกและข้อ':'#0D2F4F','กายภาพ':'#185FA5','พิลาทิส':'#3DC5B7','นวด':'#C2410C','ผสม':'#7C3AED'})[d]||'#94A3B8';
+   const W=900,H=300,pad=54,n=months.length; let curK='rev';
+   const X=i=>pad+(n<=1?(W-pad*2)/2:i*(W-pad-16)/(n-1));
+   const cur=()=>M.find(x=>x.k===curK);
+   const fmtV=(sr,val)=>sr.money?B(val):(Math.round(val*10)/10)+(sr.suf||'');
+   function draw(){const sr=cur();const mx=Math.max(1,...sr.v);const Y=v=>H-34-(v/mx)*(H-60);
+     let g='';for(let k=0;k<=4;k++){const yy=H-34-(k/4)*(H-60);const lv=mx*k/4;g+='<line x1="'+pad+'" y1="'+yy+'" x2="'+(W-12)+'" y2="'+yy+'" stroke="#EEF2F6"/><text x="'+(pad-8)+'" y="'+(yy+3)+'" font-size="10" fill="#94A3B8" text-anchor="end">'+(sr.money?Bk(lv):(Math.round(lv*10)/10)+(sr.suf||''))+'</text>';}
+     months.forEach((m,i)=>{if(n>14&&i%2)return;g+='<text x="'+X(i)+'" y="'+(H-12)+'" font-size="9" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
+     const pts=sr.v.map((v,i)=>X(i)+','+Y(v)).join(' ');
+     g+='<polygon points="'+pad+','+(H-34)+' '+pts+' '+X(n-1)+','+(H-34)+'" fill="'+sr.c+'" opacity="0.09"/><polyline points="'+pts+'" fill="none" stroke="'+sr.c+'" stroke-width="2.8"/>';
+     sr.v.forEach((v,i)=>g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="2.7" fill="'+sr.c+'"/>');
+     g+='<line id="icGuide" x1="0" y1="14" x2="0" y2="'+(H-32)+'" stroke="'+sr.c+'" stroke-width="1.3" stroke-dasharray="3 3" style="opacity:0"></line>';
+     $('icSvgWrap').innerHTML='<svg id="icSvg" viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+g+'</svg>';}
+   $('icTabs').innerHTML=M.map(sr=>'<button class="icTab" data-k="'+sr.k+'" style="border:1px solid '+sr.c+';background:'+(sr.k===curK?sr.c:'#fff')+';color:'+(sr.k===curK?'#fff':sr.c)+';border-radius:8px;padding:6px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+sr.l+'</button>').join('');
+   const setTab=k=>{curK=k;document.querySelectorAll('.icTab').forEach(b=>{const sr=M.find(x=>x.k===b.dataset.k);b.style.background=b.dataset.k===k?sr.c:'#fff';b.style.color=b.dataset.k===k?'#fff':sr.c;});draw();};
+   document.querySelectorAll('.icTab').forEach(b=>b.onclick=()=>setTab(b.dataset.k));
+   draw();
+   const chart=$('icChart'),tip=$('icTip');
+   const onMove=cx=>{const sv=$('icSvg');if(!sv)return;const rect=sv.getBoundingClientRect();let fx=(cx-rect.left)/rect.width;let idx=Math.round(fx*(n-1));idx=Math.max(0,Math.min(n-1,idx));
+     const gd=$('icGuide');if(gd){gd.setAttribute('x1',X(idx));gd.setAttribute('x2',X(idx));gd.style.opacity=1;}
+     const sr=cur();const dep=auxDept[idx]||{};const tops=Object.entries(dep).sort((a,b)=>b[1]-a[1]).slice(0,4);
+     const roas=adS[idx]?(rev[idx]/adS[idx]).toFixed(1)+'x':'—';const conv=msg[idx]?Math.round(newJ[idx]/msg[idx]*100)+'%':'—';
+     tip.innerHTML='<div style="font-weight:700;margin-bottom:4px">'+mLab(months[idx])+'</div><div style="font-size:12px"><span style="color:'+sr.c+'">●</span> '+sr.l+': <b>'+fmtV(sr,sr.v[idx])+'</b></div><div style="font-size:10.5px;color:#9FE6DD;margin:4px 0">ROAS '+roas+' · ทัก→คนไข้ '+conv+'</div><div style="font-size:10.5px;color:rgba(255,255,255,.7);margin-bottom:3px">คนไข้ใหม่จ่าย '+auxNew[idx]+' · คนเก่า '+auxOld[idx]+'</div><div style="border-top:1px solid rgba(255,255,255,.18);padding-top:4px">'+(tops.length?tops.map(t=>'<div style="font-size:10.5px"><span style="color:'+dcol2(t[0])+'">●</span> '+esc(t[0])+' '+B(t[1])+'</div>').join(''):'<div style="font-size:10.5px;color:#999">ไม่มีข้อมูลแผนก</div>')+'</div>';
+     tip.style.opacity=1;const cr=chart.getBoundingClientRect();let lx=cx-cr.left+14;if(lx>cr.width-190)lx=cr.width-195;if(lx<0)lx=4;tip.style.left=lx+'px';tip.style.top='8px';};
+   chart.addEventListener('mousemove',e=>onMove(e.clientX));chart.addEventListener('mouseleave',()=>{tip.style.opacity=0;const gd=$('icGuide');if(gd)gd.style.opacity=0;});
+   chart.addEventListener('touchstart',e=>{if(e.touches[0])onMove(e.touches[0].clientX);},{passive:true});
+   chart.addEventListener('touchmove',e=>{if(e.touches[0]){onMove(e.touches[0].clientX);e.preventDefault();}},{passive:false});
+  })();
   const aiB=$('aiBtn');if(aiB)aiB.onclick=()=>{const o=$('aiOut');o.innerHTML='<div style="color:#0F766E;font-size:13px"><i class="ti ti-loader"></i> AI กำลังอ่านข้อมูลทั้งหมด…</div>';aiB.disabled=true;sb.functions.invoke('ai_consult').then(({data})=>{aiB.disabled=false;if(!data||!data.ok){o.innerHTML='<div style="color:#B45309;font-size:12.5px">'+((data&&data.need_key)?'⚠️ ยังไม่ได้เชื่อม AI key — ขอ GEMINI_API_KEY มาตั้งก่อนค่ะ':'วิเคราะห์ไม่ได้: '+esc((data&&data.error)||''))+'</div>';return;}const html=esc(data.analysis).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');o.innerHTML='<div style="font-size:13px;line-height:1.7;color:var(--navy,#0D2F4F)">'+html+'</div><div style="font-size:10px;color:var(--text-muted,#64748B);margin-top:8px">โดย '+esc(data.model||'AI')+' · อ่าน '+data.months+' เดือน</div>';}).catch(e=>{aiB.disabled=false;o.innerHTML='<div style="color:#DC2626;font-size:12px">error: '+esc(e&&e.message||e)+'</div>';});};
   const ct=$('ct-hub360');if(ct)ct.textContent='360°';
  }).catch(e=>{console.error('hub360',e);$('hubWrap').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
