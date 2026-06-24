@@ -254,6 +254,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-label">คลินิก · แผนก</div>
       <div class="sb-item" data-view="dept"><i class="ti ti-building-hospital"></i>รายได้ตามแผนก<span class="ct" id="ct-dept"></span></div>
       <div class="sb-label">โฆษณา · Ad Ops</div>
+      <div class="sb-item" data-view="mkt"><i class="ti ti-chart-histogram"></i>การตลาด · Timeline<span class="ct" id="ct-mkt"></span></div>
       <div class="sb-item" data-view="adops"><i class="ti ti-target-arrow"></i>โฆษณา · ROAS<span class="ct" id="ct-adops"></span></div>
       <div class="sb-item" data-view="adcreative"><i class="ti ti-movie"></i>ครีเอทีฟ · คลิป<span class="ct" id="ct-adcreative"></span></div>
             <div class="sb-label">จัดการ HR · Native</div>
@@ -639,6 +640,10 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
     <section class="view" data-view="puritem"><div class="sec"><span class="sec-bar"></span>สินค้า + ประวัติราคา<span class="sec-c">Native Supabase · pur_item</span></div><div id="wrap-puritem"></div></section>
     <section class="view" data-view="purrfq"><div class="sec"><span class="sec-bar"></span>เทียบราคา (RFQ)<span class="sec-c">Native Supabase · pur_rfq</span></div><div id="wrap-purrfq"></div></section>
     <section class="view" data-view="purstock"><div class="sec"><span class="sec-bar"></span>สต็อก (คงเหลือ / รับเข้า / เบิก / โอน / นับ)<span class="sec-c">Native Supabase · pur_stock</span></div><div id="wrap-purstock"></div></section>
+    <section class="view" data-view="mkt">
+      <div class="sec"><span class="sec-bar"></span>การตลาด · Timeline<span class="sec-c">Native Supabase · Meta + Google + JERA หน้าบ้าน · mkt_monthly</span></div>
+      <div id="mktWrap"></div>
+    </section>
     <section class="view" data-view="adops">
       <div class="sec"><span class="sec-bar"></span>โฆษณา · Ad Ops<span class="sec-c">Native Supabase · ad_daily × jera_daily_sales</span></div>
       <div id="adStat"></div>
@@ -689,7 +694,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',dept:'รายได้ตามแผนก'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',dept:'รายได้ตามแผนก'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -2467,6 +2472,59 @@ function mountDept(){
   const ct=$('ct-dept');if(ct)ct.textContent=months.length+' ด.';
  }).catch(e=>{console.error('dept',e);$('deptWrap').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดข้อมูลแผนกไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
 }
+function mountMkt(){
+ if(!$('mktWrap'))return;
+ const B=n=>'฿'+Number(n||0).toLocaleString('th-TH',{maximumFractionDigits:0});
+ const Bk=n=>n>=1000?(Math.round(n/100)/10)+'k':String(Math.round(n||0));
+ const N=n=>Number(n||0).toLocaleString('th-TH');
+ const TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+ const mSh=m=>{const p=(m||'').split('-');return (TH[(+p[1]||1)-1]||m)+(String(+p[0]+543)).slice(-2);};
+ const lineChart=(mons,series,kfmt)=>{const W=860,H=250,pad=46,n=mons.length;const mx=Math.max(1,...series.flatMap(s=>s.vals));
+   const X=i=>pad+(n<=1?(W-pad*2)/2:i*(W-pad-14)/(n-1));const Y=v=>H-26-(v/mx)*(H-50);
+   let g='';for(let k=0;k<=4;k++){const yy=H-26-(k/4)*(H-50);g+='<line x1="'+pad+'" y1="'+yy+'" x2="'+(W-14)+'" y2="'+yy+'" stroke="#EEF2F6"/><text x="'+(pad-6)+'" y="'+(yy+3)+'" font-size="9" fill="#94A3B8" text-anchor="end">'+(kfmt?Bk(mx*k/4):Math.round(mx*k/4))+'</text>';}
+   mons.forEach((m,i)=>{if(n>12&&i%2)return;g+='<text x="'+X(i)+'" y="'+(H-9)+'" font-size="8" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
+   series.forEach(s=>{const pts=s.vals.map((v,i)=>X(i)+','+Y(v)).join(' ');g+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="2.4"/>';s.vals.forEach((v,i)=>{g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="2.3" fill="'+s.color+'"><title>'+s.name+' '+mSh(mons[i])+': '+(kfmt?B(v):N(v))+'</title></circle>';});});
+   return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';};
+ const barChart=(mons,vals,color)=>{const W=860,H=180,pad=46,n=mons.length;const mx=Math.max(1,...vals);
+   const bw=(W-pad-14)/n*0.6;let g='';for(let k=0;k<=3;k++){const yy=H-24-(k/3)*(H-46);g+='<line x1="'+pad+'" y1="'+yy+'" x2="'+(W-14)+'" y2="'+yy+'" stroke="#EEF2F6"/><text x="'+(pad-6)+'" y="'+(yy+3)+'" font-size="9" fill="#94A3B8" text-anchor="end">'+B(mx*k/3)+'</text>';}
+   vals.forEach((v,i)=>{const x=pad+(n<=1?0:i*(W-pad-14)/n)+4;const h=(v/mx)*(H-46);g+='<rect x="'+x+'" y="'+(H-24-h)+'" width="'+bw+'" height="'+h+'" rx="2" fill="'+color+'"><title>'+mSh(mons[i])+': '+B(v)+'</title></rect>';if(n<=14)g+='<text x="'+(x+bw/2)+'" y="'+(H-9)+'" font-size="8" fill="#64748B" text-anchor="middle">'+mSh(mons[i])+'</text>';});
+   return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';};
+ $('mktWrap').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลด timeline การตลาด…</span></div>';
+ sb.functions.invoke('mkt_monthly').then(({data})=>{
+  const rows=(data&&data.rows)||[];const months=(data&&data.months)||[];
+  if(!rows.length){$('mktWrap').innerHTML='<div class="empty-card"><i class="ti ti-chart-line"></i><span>ยังไม่มีข้อมูล</span></div>';return;}
+  const get=(m,src)=>rows.find(r=>r.month===m&&r.source===src)||{};
+  const metaS=months.map(m=>+(get(m,'meta').spend||0)),googS=months.map(m=>+(get(m,'google').spend||0));
+  const totS=months.map((m,i)=>metaS[i]+googS[i]);
+  const msgs=months.map(m=>+(get(m,'meta').messages||0)),newp=months.map(m=>+(get(m,'jera').cnt||0));
+  const fo=months.map(m=>+(get(m,'fo03').leads||0));const hasFo=fo.some(x=>x>0);
+  const tSpend=totS.reduce((a,b)=>a+b,0),tMsg=msgs.reduce((a,b)=>a+b,0),tNew=newp.reduce((a,b)=>a+b,0);
+  const kpi=(l,v,sub,c)=>'<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:13px 15px;border-top:3px solid '+c+'"><div style="font-size:10.5px;color:var(--text-muted,#64748B);font-weight:600">'+l+'</div><div style="font-size:20px;font-weight:800;color:var(--navy,#0D2F4F);margin-top:2px">'+v+'</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">'+(sub||'')+'</div></div>';
+  let h='<div style="font-size:12px;color:var(--text-muted,#64748B);margin-bottom:12px">'+months.length+' เดือน ('+mSh(months[0])+'–'+mSh(months[months.length-1])+') · Meta + Google + JERA หน้าบ้าน'+(hasFo?' + FO03':'')+'</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px">'
+    +kpi('ค่าโฆษณารวม',B(tSpend),months.length+' เดือน','#3DC5B7')
+    +kpi('ทักแชท (Meta)',N(tMsg),'฿'+Math.round(tSpend/(tMsg||1))+'/แชท','#185FA5')
+    +kpi('คนไข้ใหม่ (JERA)',N(tNew),'หน้าบ้านจริง','#0D2F4F')
+    +kpi('ต้นทุน/คนไข้ใหม่',B(tSpend/(tNew||1)),'ค่าแอด ÷ คนไข้ใหม่','#C2410C')+'</div>';
+  // chart 1: spend by platform
+  h+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">ค่าโฆษณารายเดือน · แยก platform</div>'
+    +lineChart(months,[{name:'Meta',color:'#1877F2',vals:metaS},{name:'Google',color:'#EA4335',vals:googS},{name:'รวม',color:'#0D2F4F',vals:totS}],true)
+    +'<div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--text-muted,#64748B)"><span><span style="display:inline-block;width:12px;height:3px;background:#1877F2;vertical-align:middle;margin-right:4px"></span>Meta</span><span><span style="display:inline-block;width:12px;height:3px;background:#EA4335;vertical-align:middle;margin-right:4px"></span>Google</span><span><span style="display:inline-block;width:12px;height:3px;background:#0D2F4F;vertical-align:middle;margin-right:4px"></span>รวม</span></div></div>';
+  // chart 2: leads vs new patients
+  h+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">lead จากแอด ↔ คนไข้ใหม่จริง (หน้าบ้าน)</div>'
+    +lineChart(months,[{name:'ทักแชท (Meta)',color:'#185FA5',vals:msgs},{name:'คนไข้ใหม่ (JERA)',color:'#0F766E',vals:newp}].concat(hasFo?[{name:'lead FO03',color:'#C2410C',vals:fo}]:[]),false)
+    +'<div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--text-muted,#64748B)"><span><span style="display:inline-block;width:12px;height:3px;background:#185FA5;vertical-align:middle;margin-right:4px"></span>ทักแชท Meta</span><span><span style="display:inline-block;width:12px;height:3px;background:#0F766E;vertical-align:middle;margin-right:4px"></span>คนไข้ใหม่ JERA</span>'+(hasFo?'<span><span style="display:inline-block;width:12px;height:3px;background:#C2410C;vertical-align:middle;margin-right:4px"></span>FO03</span>':'')+'</div></div>';
+  // chart 3: cost per new patient
+  h+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">ต้นทุนค่าแอดต่อคนไข้ใหม่ 1 คน (รายเดือน)</div>'
+    +barChart(months,months.map((m,i)=>newp[i]?Math.round(totS[i]/newp[i]):0),'#3DC5B7')+'</div>';
+  // table
+  h+='<div class="card" style="padding:0;overflow:auto;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);padding:14px 16px 8px">ตารางรายเดือน</div><table style="width:100%;border-collapse:collapse;min-width:560px"><thead><tr style="background:#F8FAFC;text-align:right"><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B);text-align:left">เดือน</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B)">Meta</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B)">Google</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B)">รวมแอด</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B)">ทักแชท</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B)">คนไข้ใหม่</th><th style="padding:8px 10px;font-size:11px;color:var(--text-muted,#64748B)">฿/คนใหม่</th></tr></thead><tbody>'
+    +months.slice().reverse().map(m=>{const i=months.indexOf(m);const cpn=newp[i]?Math.round(totS[i]/newp[i]):0;return '<tr style="text-align:right"><td style="padding:7px 10px;font-size:12px;text-align:left;font-weight:600;color:var(--navy,#0D2F4F)">'+mSh(m)+'</td><td style="padding:7px 10px;font-size:12px">'+B(metaS[i])+'</td><td style="padding:7px 10px;font-size:12px">'+B(googS[i])+'</td><td style="padding:7px 10px;font-size:12px;font-weight:700">'+B(totS[i])+'</td><td style="padding:7px 10px;font-size:12px">'+N(msgs[i])+'</td><td style="padding:7px 10px;font-size:12px;font-weight:700;color:#0F766E">'+N(newp[i])+'</td><td style="padding:7px 10px;font-size:12px;font-weight:700;color:#C2410C">'+B(cpn)+'</td></tr>';}).join('')
+    +'</tbody></table></div>';
+  $('mktWrap').innerHTML=h;
+  const ct=$('ct-mkt');if(ct)ct.textContent=months.length+' ด.';
+ }).catch(e=>{console.error('mkt',e);$('mktWrap').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
+}
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
  sb.auth.getUser().then(({data})=>{
@@ -2494,7 +2552,7 @@ function start(){
  renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
  renderBankTabs(); $('bkPeriod').value=_curMonth(); $('bkGen').onclick=bkGenerate; $('bkCsv').onclick=bkDownloadCsv; loadBankHistory();
  if($('rcDate')&&!$('rcDate').value)$('rcDate').value=new Date().toISOString().slice(0,10); $('rcGen').onclick=rcGenerate;
- mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountDept();
+ mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountDept();mountMkt();
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
