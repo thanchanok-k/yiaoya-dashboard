@@ -130,6 +130,141 @@ function e3TenureLabel(startDate) {
   return m > 0 ? (y + ' ปี ' + m + ' เดือน') : (y + ' ปี');
 }
 
+/* ============================================================
+   ENRICH — ดึง event จริงต่อพนักงาน (KPI/ลา/OT/ลงเวลา/ประกาศ) ผ่าน hr_list
+   แล้วเติมเข้า metric strip + Activity Timeline + pane ที่เคย stub ว่าง
+   ปลอดภัย: fetch ล้ม/ไม่มีข้อมูล → คง empty state เดิม (no regression)
+   ============================================================ */
+var _e3TypeCache = {};
+function e3FetchType(type) {
+  if (_e3TypeCache[type]) return Promise.resolve(_e3TypeCache[type]);
+  return sb.functions.invoke('hr_list?type=' + encodeURIComponent(type)).then(function (res) {
+    var items = e3ToArr(res && res.data && res.data.items);
+    _e3TypeCache[type] = items; return items;
+  }).catch(function (e) { console.warn('[E3_ENRICH] ' + type + ' failed', e); return []; });
+}
+// เลือกค่าแรกที่ไม่ว่างจากชื่อ field หลายแบบ (อังกฤษ/ไทย — payload = แถวชีตดิบ)
+function e3Pick(o, keys) { o = o || {}; for (var i = 0; i < keys.length; i++) { var v = o[keys[i]]; if (v != null && String(v).trim() !== '') return v; } return ''; }
+function e3ForEmp(items, empId) {
+  return e3ToArr(items).filter(function (p) {
+    return String(e3Pick(p, ['employee_id', 'entity_id', 'รหัสพนักงาน', 'emp_id', 'EmployeeID'])) === String(empId);
+  });
+}
+function e3EvDate(p) { return e3Date(e3Pick(p, ['_at', 'occurred_at', 'date', 'created_at', 'updated_at', 'submitted_at', 'วันที่', 'วันที่บันทึก', 'timestamp'])); }
+function e3ThisMonth() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function e3Set(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; }
+function e3Metric(id, val, sub) {
+  var el = document.getElementById(id); if (!el) return;
+  var ml = el.querySelector('.ml'); var label = ml ? ml.outerHTML : '';
+  el.innerHTML = label + '<div class="mv">' + val + '</div><div class="mt">' + sub + '</div>';
+}
+
+function e3EnrichProfile(empId) {
+  if (!empId || typeof sb === 'undefined') return;
+  Promise.all([
+    e3FetchType('kpi.scored'), e3FetchType('leave.updated'), e3FetchType('ot.updated'),
+    e3FetchType('attendance.updated'), e3FetchType('attendance.monthly'), e3FetchType('announcement.posted'),
+  ]).then(function (r) {
+    var kpi = e3ForEmp(r[0], empId).sort(function (a, b) { return e3EvDate(b).localeCompare(e3EvDate(a)); });
+    var leave = e3ForEmp(r[1], empId);
+    var ot = e3ForEmp(r[2], empId);
+    var att = e3ForEmp(r[3], empId).concat(e3ForEmp(r[4], empId));
+    var ann = e3ToArr(r[5]);
+    try { e3FillMetrics(empId, kpi, leave, ot, att, ann); } catch (e) { console.warn(e); }
+    try { e3FillTimeline(kpi, leave, ot, att); } catch (e) { console.warn(e); }
+    try { e3FillLeaveBal(leave); } catch (e) { console.warn(e); }
+    try { e3FillKpiPane(kpi); } catch (e) { console.warn(e); }
+    try { e3FillTimePane(att, ot); } catch (e) { console.warn(e); }
+    try { e3FillEngagePane(ann); } catch (e) { console.warn(e); }
+  });
+}
+
+function e3FillMetrics(empId, kpi, leave, ot, att, ann) {
+  // KPI ล่าสุด
+  if (kpi.length) {
+    var k0 = kpi[0];
+    var score = e3Pick(k0, ['score', 'total_score', 'kpi_score', 'total', 'grade', 'เกรด', 'คะแนน', 'คะแนนรวม']);
+    var period = e3Pick(k0, ['period', 'period_id', 'month', 'รอบ', 'เดือน', 'งวด']);
+    e3Metric('e3mc-kpi', window.esc(String(score || '—')), period ? window.esc('รอบ ' + period) : (kpi.length + ' รายการ'));
+  } else e3Metric('e3mc-kpi', '—', 'ยังไม่มีข้อมูล KPI');
+  // มาทำงาน เดือนนี้
+  var mo = e3ThisMonth();
+  var attThis = att.filter(function (p) { return e3EvDate(p).indexOf(mo) === 0; });
+  if (att.length) e3Metric('e3mc-attend', String(attThis.length || att.length), attThis.length ? 'ครั้ง · เดือนนี้' : ('รวม ' + att.length + ' รายการ'));
+  else e3Metric('e3mc-attend', '—', 'ยังไม่มีข้อมูลลงเวลา');
+  // ประกาศ (บริษัท — ไม่มี ack รายคนใน event)
+  if (ann.length) e3Metric('e3mc-announce', String(ann.length), 'ประกาศทั้งหมด · บริษัท');
+  else e3Metric('e3mc-announce', '—', 'ยังไม่มีประกาศ');
+  // วันลา (นับจาก event ลา + รวมจำนวนวันถ้ามี)
+  if (leave.length) {
+    var days = leave.reduce(function (s, p) { return s + e3Num(e3Pick(p, ['days', 'day_count', 'จำนวนวัน', 'วัน'])); }, 0);
+    e3Metric('e3mc-leave', String(days || leave.length), days ? ('วัน · ' + leave.length + ' ครั้ง') : 'ครั้งที่ลา');
+  } else e3Metric('e3mc-leave', '—', 'ยังไม่มีรายการลา');
+}
+
+// label ภาษาไทยต่อ event type สำหรับ timeline
+var E3_EV_LABEL = { kpi: 'ประเมิน KPI', leave: 'ลา', ot: 'OT', att: 'ลงเวลา' };
+function e3FillTimeline(kpi, leave, ot, att) {
+  var rows = [];
+  function push(arr, kind) {
+    e3ToArr(arr).forEach(function (p) {
+      var detail = e3Pick(p, ['leave_type', 'type', 'ประเภท', 'ประเภทการลา', 'status', 'สถานะ', 'score', 'คะแนน', 'reason', 'หมายเหตุ', 'period', 'รอบ']);
+      rows.push({ d: e3EvDate(p), kind: kind, detail: String(detail || '') });
+    });
+  }
+  push(kpi, 'kpi'); push(leave, 'leave'); push(ot, 'ot'); push(att, 'att');
+  rows = rows.filter(function (x) { return x.d; }).sort(function (a, b) { return b.d.localeCompare(a.d); }).slice(0, 12);
+  if (!rows.length) { e3Set('e3-timeline-body', '<div class="empty">ยังไม่มีกิจกรรมที่บันทึกไว้</div>'); return; }
+  var html = rows.map(function (x) {
+    return '<div class="timeline-item"><span><b>' + (E3_EV_LABEL[x.kind] || x.kind) + '</b>' + (x.detail ? ' · ' + window.esc(x.detail) : '') + '</span><span style="color:var(--text-3);font-size:12px;">' + window.esc(x.d) + '</span></div>';
+  }).join('');
+  e3Set('e3-timeline-body', html);
+}
+
+function e3FillLeaveBal(leave) {
+  if (!leave.length) { e3Set('e3-leavebal-body', '<div class="empty">ยังไม่มีรายการลา</div>'); return; }
+  var byType = {};
+  leave.forEach(function (p) {
+    var t = String(e3Pick(p, ['leave_type', 'type', 'ประเภทการลา', 'ประเภท']) || 'ลา');
+    var d = e3Num(e3Pick(p, ['days', 'day_count', 'จำนวนวัน', 'วัน'])) || 1;
+    byType[t] = (byType[t] || 0) + d;
+  });
+  var html = Object.keys(byType).map(function (t) {
+    return '<div class="leave-row"><span class="lv-label">' + window.esc(t) + '</span><span class="lv-nums"><span class="lv-rem">' + byType[t] + '</span><span class="lv-unit">วัน</span></span></div>';
+  }).join('');
+  e3Set('e3-leavebal-body', '<div class="leave-list">' + html + '</div>');
+}
+
+function e3FillKpiPane(kpi) {
+  if (!kpi.length) { e3Set('e3-kpi-body', '<div class="empty">ยังไม่มีคะแนน KPI</div>'); return; }
+  var html = kpi.slice(0, 12).map(function (p) {
+    var score = e3Pick(p, ['score', 'total_score', 'kpi_score', 'total', 'grade', 'เกรด', 'คะแนน', 'คะแนนรวม']);
+    var period = e3Pick(p, ['period', 'period_id', 'month', 'รอบ', 'เดือน', 'งวด']);
+    return '<div class="timeline-item"><span><b>' + window.esc(String(score || '-')) + '</b>' + (period ? ' · รอบ ' + window.esc(String(period)) : '') + '</span><span style="color:var(--text-3);font-size:12px;">' + window.esc(e3EvDate(p)) + '</span></div>';
+  }).join('');
+  e3Set('e3-kpi-body', html);
+}
+
+function e3FillTimePane(att, ot) {
+  if (!att.length && !ot.length) { e3Set('e3-time-body', '<div class="empty">ยังไม่มีข้อมูลลงเวลา / OT</div>'); return; }
+  var otHours = ot.reduce(function (s, p) { return s + e3Num(e3Pick(p, ['hours', 'ot_hours', 'จำนวนชั่วโมง', 'ชั่วโมง'])); }, 0);
+  var head = '<div class="kpi-hero"><div><div class="kpi-period">ลงเวลา (รายการ)</div><div class="kpi-score">' + att.length + '</div></div><div><div class="kpi-period">OT รวม (ชม.)</div><div class="kpi-score">' + (otHours || ot.length) + '</div></div></div>';
+  var list = att.concat(ot).filter(function (p) { return e3EvDate(p); }).sort(function (a, b) { return e3EvDate(b).localeCompare(e3EvDate(a)); }).slice(0, 10).map(function (p) {
+    var s = e3Pick(p, ['status', 'สถานะ', 'check_in', 'เข้า', 'hours', 'ชั่วโมง']);
+    return '<div class="timeline-item"><span>' + window.esc(String(s || '-')) + '</span><span style="color:var(--text-3);font-size:12px;">' + window.esc(e3EvDate(p)) + '</span></div>';
+  }).join('');
+  e3Set('e3-time-body', head + list);
+}
+
+function e3FillEngagePane(ann) {
+  if (!ann.length) { e3Set('e3-engage-body', '<div class="empty">ยังไม่มีประกาศ</div>'); return; }
+  var html = ann.slice(0, 15).map(function (p) {
+    var title = e3Pick(p, ['title', 'subject', 'หัวข้อ', 'เรื่อง', 'announcement_title', 'ชื่อประกาศ']);
+    return '<div class="timeline-item"><span>' + window.esc(String(title || '(ไม่มีหัวข้อ)')) + '</span><span style="color:var(--text-3);font-size:12px;">' + window.esc(e3EvDate(p)) + '</span></div>';
+  }).join('');
+  e3Set('e3-engage-body', html);
+}
+
 var E3_BACKEND = {
   // role gate — dashboard user = admin/owner เต็มสิทธิ์ (ดูได้ · เขียนยังไม่พร้อม)
   emp360WhoAmI: function () {
@@ -652,12 +787,12 @@ function E3_RENDER_PROFILE(data) {
     '    <span class="badge esb-status ' + statusBadgeCls + '">' + esc(statusLabel) + '</span>',
     '  </div>',
 
-    // METRIC STRIP (ไม่มี KPI/attendance/leave backend → empty state)
+    // METRIC STRIP (เติมข้อมูลจริงผ่าน e3EnrichProfile หลัง render · ค่าเริ่มต้น = กำลังโหลด)
     '  <div class="e360-strip">',
-    '    <div class="e360-metric"><div class="ml">KPI ล่าสุด</div><div class="mv">—</div><div class="mt">ยังไม่มี KPI บน dashboard</div></div>',
-    '    <div class="e360-metric"><div class="ml">มาทำงาน · เดือนนี้</div><div class="mv">—</div><div class="mt">ยังไม่มีข้อมูลลงเวลา</div></div>',
-    '    <div class="e360-metric"><div class="ml">อ่านประกาศ</div><div class="mv">—</div><div class="mt">ยังไม่มีข้อมูลประกาศ</div></div>',
-    '    <div class="e360-metric"><div class="ml">วันลา (ใช้ · เหลือ)</div><div class="mv">—</div><div class="mt">ยังไม่มีโควต้าลา</div></div>',
+    '    <div class="e360-metric" id="e3mc-kpi"><div class="ml">KPI ล่าสุด</div><div class="mv">—</div><div class="mt">กำลังโหลด…</div></div>',
+    '    <div class="e360-metric" id="e3mc-attend"><div class="ml">มาทำงาน · เดือนนี้</div><div class="mv">—</div><div class="mt">กำลังโหลด…</div></div>',
+    '    <div class="e360-metric" id="e3mc-announce"><div class="ml">ประกาศ</div><div class="mv">—</div><div class="mt">กำลังโหลด…</div></div>',
+    '    <div class="e360-metric" id="e3mc-leave"><div class="ml">วันลา</div><div class="mv">—</div><div class="mt">กำลังโหลด…</div></div>',
     '  </div>',
 
     // TABS
@@ -678,12 +813,12 @@ function E3_RENDER_PROFILE(data) {
     '    <div class="grid-2">',
     '      <div>',
     '        <div class="card"><div class="card-header"><div class="card-title">Activity Timeline</div><span class="card-meta">รวมทุกระบบ · ล่าสุด</span></div>',
-    '          ' + emptyV2('ยังไม่มีกิจกรรมที่บันทึกไว้', 'เมื่อพนักงานเริ่มลา / ขอ OT / อ่านประกาศ / ยืมอุปกรณ์ / มี 1:1 รายการจะมาแสดงที่นี่ตามลำดับเวลา (ยังไม่พร้อมบน dashboard)', ICON_CLOCK),
+    '          <div id="e3-timeline-body">' + emptyV2('กำลังโหลดกิจกรรม…', 'ดึงลา / OT / KPI / ลงเวลา ล่าสุดจากระบบ', ICON_CLOCK) + '</div>',
     '        </div>',
     '      </div>',
     '      <div>',
     '        <div class="card"><div class="card-header"><div class="card-title">Leave Balance</div></div>',
-    '          <div class="empty">ยังไม่มีโควต้าลาบน dashboard</div>',
+    '          <div id="e3-leavebal-body"><div class="empty">กำลังโหลดข้อมูลลา…</div></div>',
     '        </div>',
     '        <div class="card"><div class="card-header"><div class="card-title">Org Context</div></div>',
     (supervisor ? '          <div class="org-card"><span style="width:32px;height:32px;border-radius:50%;background:var(--teal);color:white;display:inline-flex;align-items:center;justify-content:center;font-weight:600;">' + esc((supervisor.nickname || '?').charAt(0)) + '</span><div style="flex:1;min-width:0;"><div class="label">หัวหน้า</div><div class="value">' + esc(supervisor.nickname) + ' · ' + esc(supervisor.position_id || '') + '</div></div></div>' : ''),
@@ -696,13 +831,13 @@ function E3_RENDER_PROFILE(data) {
     '  </section>',
 
     // KPI
-    '  <section class="e360-pane" data-pane="kpi"><div class="card"><div class="card-header"><div class="card-title">KPI Performance</div></div>' + emptyV2('ยังไม่มีคะแนน KPI บน dashboard', 'KPI คำนวณจากระบบหลังบ้าน · ดูได้ที่ KPI Manager', ICON_CHART) + '</div></section>',
+    '  <section class="e360-pane" data-pane="kpi"><div class="card"><div class="card-header"><div class="card-title">KPI Performance</div></div><div id="e3-kpi-body">' + emptyV2('กำลังโหลดคะแนน KPI…', 'ดึงจาก event kpi.scored', ICON_CHART) + '</div></div></section>',
 
     // TIME + LEAVE
-    '  <section class="e360-pane" data-pane="time"><div class="card"><div class="card-header"><div class="card-title">Attendance &amp; OT</div></div>' + emptyV2('ยังไม่มีข้อมูลลงเวลา', 'ข้อมูล clock in/out + OT ดึงจากระบบหลังบ้าน ยังไม่พร้อมบน dashboard', ICON_CAL) + '</div></section>',
+    '  <section class="e360-pane" data-pane="time"><div class="card"><div class="card-header"><div class="card-title">Attendance &amp; OT</div></div><div id="e3-time-body">' + emptyV2('กำลังโหลดข้อมูลลงเวลา…', 'ดึงจาก event attendance / ot', ICON_CAL) + '</div></div></section>',
 
     // ENGAGEMENT
-    '  <section class="e360-pane" data-pane="engage"><div class="card"><div class="card-header"><div class="card-title">ประกาศ &amp; การมีส่วนร่วม</div></div>' + emptyV2('ยังไม่มีข้อมูลการมีส่วนร่วม', 'อัตราอ่านประกาศ / ack / quiz ดึงจากระบบหลังบ้าน ยังไม่พร้อมบน dashboard', ICON_BOOK) + '</div></section>',
+    '  <section class="e360-pane" data-pane="engage"><div class="card"><div class="card-header"><div class="card-title">ประกาศ &amp; การมีส่วนร่วม</div></div><div id="e3-engage-body">' + emptyV2('กำลังโหลดประกาศ…', 'ดึงจาก event announcement.posted', ICON_BOOK) + '</div></div></section>',
 
     // COMP (PII sensitive — port หน้าจอ · ไม่มี backend)
     '  <section class="e360-pane" data-pane="comp">',
@@ -760,6 +895,7 @@ function E3_RENDER_PROFILE(data) {
   ].join('\n');
 
   E3_RUN_PAGE_JS(emp);
+  e3EnrichProfile(emp.employee_id);   // ★ เติม KPI/ลา/OT/ลงเวลา/ประกาศ จาก events จริง (async · ไม่บล็อก render)
 }
 
 /* ============================================================
