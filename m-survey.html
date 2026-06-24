@@ -1,0 +1,134 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>แบบสอบถาม · Yiaoya</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 96px;max-width:480px;margin:0 auto}
+.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
+.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
+.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
+.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
+.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
+.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+input,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;background:#fff}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.flbl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.chip{padding:8px 13px;border:1px solid var(--border);border-radius:99px;font-size:13px;cursor:pointer;background:#fff}
+.chip.on{background:var(--teal);color:#04342C;border-color:var(--teal);font-weight:700}
+.cta{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 14px;background:rgba(241,245,249,.96);border-top:1px solid var(--border);backdrop-filter:blur(6px)}
+.cta button{width:100%;padding:14px;background:var(--teal);color:#04342C;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}
+.cta button:disabled{opacity:.45}
+.msg{text-align:center;font-size:13px;margin-top:7px;min-height:18px;line-height:1.5}
+.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
+a.lk{color:var(--teal);font-weight:700;text-decoration:none}
+.rate{display:flex;gap:6px}
+.rate .p{flex:1;padding:13px 0;border:1px solid var(--border);border-radius:10px;text-align:center;font-size:15px;font-weight:700;background:#fff;color:var(--muted);cursor:pointer}
+.rate .p.on{background:var(--teal);color:#04342C;border-color:var(--teal)}
+.rscale{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:6px}
+.qttl{font-size:13.5px;font-weight:600;color:var(--navy);margin-bottom:8px}
+.qttl span{color:#b91c1c}
+</style></head>
+<body>
+<div class="head"><div class="eb">YIAOYA · HR</div><h1>แบบสอบถาม</h1><div class="who" id="who">—</div></div>
+<div id="app" style="display:none">
+  <div class="note" id="note">ความเห็นของคุณช่วยให้เราพัฒนาทีมและการทำงานให้ดีขึ้น · ใช้เวลาไม่นาน</div>
+  <div id="qs"></div>
+</div>
+<div class="cta" id="cta" style="display:none"><button id="send" disabled>ส่งแบบสอบถาม</button><div class="msg" id="msg"></div></div>
+<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL,ANON);
+const $=(id)=>document.getElementById(id);
+let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
+const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
+async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
+async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
+
+// ---- URL params ----
+const P=new URLSearchParams(location.search);
+const SID=(P.get('sid')||'').trim();
+const RAW_TYPE=(P.get('type')||'pulse').trim().toLowerCase();
+// survey_type ที่ edge fn รับ (อื่น ๆ จะ fallback เป็น 'pulse' ฝั่ง backend อยู่แล้ว)
+const KNOWN=['pulse','exit_hr','exit_manager','one_on_one','learning_log','idp_review','probation_review','quarterly_review','buddy_feedback','review_360'];
+const TYPE=KNOWN.includes(RAW_TYPE)?RAW_TYPE:'pulse';
+
+// ---- Generic question model (configurable; per-survey defs ยังไม่ถูก expose จาก edge fn) ----
+// rating questions = key 1-5 · คะแนนรวมหลักส่งเป็น field `rating`, ที่เหลือเก็บใน `answers`
+const TITLES={
+  pulse:'แบบสอบถามความรู้สึก (Pulse)', one_on_one:'feedback หลัง 1:1', buddy_feedback:'feedback บัดดี้/พี่เลี้ยง',
+  learning_log:'บันทึกการเรียนรู้', idp_review:'ทบทวนแผนพัฒนา (IDP)', probation_review:'ประเมินทดลองงาน',
+  quarterly_review:'ประเมินรายไตรมาส', review_360:'ฟีดแบ็ก 360°', exit_hr:'สัมภาษณ์ลาออก (HR)', exit_manager:'สัมภาษณ์ลาออก (หัวหน้า)'
+};
+const SETS={
+  pulse:[
+    {key:'mood',label:'สัปดาห์นี้คุณรู้สึกกับงานยังไง',primary:true,lo:'แย่',hi:'ดีมาก'},
+    {key:'workload',label:'ปริมาณงานเหมาะสมแค่ไหน',lo:'หนักไป',hi:'พอดี'},
+    {key:'support',label:'ได้รับการสนับสนุนจากทีม/หัวหน้าเพียงพอ',lo:'น้อย',hi:'มาก'}
+  ],
+  one_on_one:[
+    {key:'rating',label:'วันนี้รู้สึกยังไงกับ session',primary:true,lo:'ไม่ดี',hi:'ดีมาก'},
+    {key:'usefulness',label:'การพูดคุยมีประโยชน์แค่ไหน',lo:'น้อย',hi:'มาก'}
+  ]
+};
+function defaultSet(){return [{key:'rating',label:'ให้คะแนนโดยรวม',primary:true,lo:'น้อย',hi:'มาก'}];}
+const QS=SETS[TYPE]||defaultSet();
+// chips (เหตุผล/หัวข้อ — generic ตามชนิด)
+const TOPICS=(TYPE==='one_on_one')?['งานที่ทำอยู่','ปัญหา/อุปสรรค','การพัฒนาตัวเอง','สวัสดิการ/อื่นๆ']
+  :['บรรยากาศงาน','ภาระงาน','หัวหน้า/ทีม','โอกาสเติบโต'];
+
+const answers={}; let topics=[]; let primaryKey=(QS.find(q=>q.primary)||QS[0]).key;
+
+function validate(){const ok=answers[primaryKey]>0;$('send').disabled=!ok;}
+function render(){
+  let h='';
+  QS.forEach((q,i)=>{
+    h+=`<div class="card"><div class="sec"><span class="num">${i+1}</span>${q.label}${q.primary?' <span style="color:#b91c1c">*</span>':''}</div>
+      <div class="rate" data-k="${q.key}">${[1,2,3,4,5].map(n=>`<div class="p${answers[q.key]===n?' on':''}" data-n="${n}">${n}</div>`).join('')}</div>
+      <div class="rscale"><span>1 = ${q.lo}</span><span>5 = ${q.hi}</span></div></div>`;
+  });
+  h+=`<div class="card"><div class="sec"><span class="num">${QS.length+1}</span>หัวข้อที่เกี่ยวข้อง</div>
+    <div class="chips" id="chips">${TOPICS.map(t=>`<span class="chip${topics.includes(t)?' on':''}" data-t="${t}">${t}</span>`).join('')}</div>
+    <textarea id="fComment" rows="3" maxlength="500" placeholder="ความคิดเห็นเพิ่มเติม (ถ้ามี)">${(answers._comment||'')}</textarea></div>`;
+  $('qs').innerHTML=h;
+  $('qs').querySelectorAll('.rate').forEach(r=>r.onclick=(e)=>{const p=e.target.closest('.p');if(!p)return;answers[r.dataset.k]=Number(p.dataset.n);render();validate();});
+  $('chips').onclick=(e)=>{const c=e.target.closest('.chip');if(!c)return;const t=c.dataset.t;topics.includes(t)?topics=topics.filter(x=>x!==t):topics.push(t);c.classList.toggle('on');};
+  $('fComment').oninput=(e)=>{answers._comment=e.target.value;};
+}
+async function init(){
+  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
+  $('who').textContent=(ID.employee_name||ID.display_name)+' · '+ID.employee_id;
+  document.querySelector('.head h1').textContent=TITLES[TYPE]||'แบบสอบถาม';
+  let {data:s}=await sb.auth.getSession();
+  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
+  $('app').style.display='block';$('cta').style.display='block';
+  render();validate();
+  $('send').onclick=submit;
+}
+async function submit(){
+  const rating=answers[primaryKey]||0;
+  const comment=(answers._comment||'').trim();
+  // ratings ย่อยทั้งหมด (รวม primary) เก็บใน answers · topics เก็บแยก
+  const ans={};QS.forEach(q=>{if(answers[q.key]>0)ans[q.key]=answers[q.key];});
+  if(topics.length)ans.topics=topics;
+  $('send').disabled=true;$('msg').style.color='var(--muted)';$('msg').textContent='กำลังส่ง…';
+  const r=await api('hr_survey_response',{
+    survey_type:TYPE, survey_id:SID,
+    employee_id:ID.employee_id, branch_id:ID.branch_id||'', position_id:ID.position_id||'',
+    rating, comment, answers:ans
+  });
+  if(r.error){$('send').disabled=false;$('msg').style.color='#b91c1c';$('msg').textContent='ผิดพลาด: '+r.error;return;}
+  document.body.innerHTML=`<div style="padding:48px 22px;text-align:center;max-width:480px;margin:40px auto">
+    <div style="width:78px;height:78px;border-radius:50%;background:var(--teal);color:#04342C;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;margin:0 auto 18px">&#10003;</div>
+    <h2 style="color:var(--navy);font-weight:700;margin:0 0 6px">ขอบคุณที่ตอบแบบสอบถาม</h2>
+    <p style="color:var(--muted);font-size:14px;margin:0">บันทึกแล้ว (${r.id||''}) · คะแนน ${rating}/5</p>
+    <p style="color:#0F766E;font-size:12.5px;margin-top:14px">ความเห็นของคุณช่วยให้ทีมพัฒนาต่อไป</p></div>`;
+}
+init();
+</script></body></html>

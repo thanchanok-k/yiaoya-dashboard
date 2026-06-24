@@ -90,9 +90,9 @@ function dl(rows){
 function delta(a,b){const d=Math.round((a-b)*10)/10;return (d>0?'+':'')+d;}
 
 function render(data){
-  // หา record ของฉันจาก by_employee (summary รวมทุกคน → กรองเฉพาะของฉัน client-side)
-  const list=(data&&data.by_employee)||[];
-  const me=list.find(e=>e.employee_id===ID.employee_id);
+  // scoped response (PDPA): { scope, employee_id, overall_avg, employee }
+  // employee = แถวของฉันคนเดียว (หรือ null ถ้ายังไม่มีคะแนน) · ไม่มี by_employee/by_branch ของคนอื่น
+  const me=(data&&data.employee)||null;
   if(!me){
     $('score').textContent='—';$('avg').textContent='—';
     $('period').textContent='ยังไม่มีคะแนน';$('periods').textContent='0 รอบ';
@@ -104,13 +104,11 @@ function render(data){
   $('period').textContent='รอบ '+fmtPeriod(me.latest_period);
   $('periods').textContent=(me.periods||0)+' รอบ';
 
-  // เปรียบเทียบกับค่าเฉลี่ยรวม + ค่าเฉลี่ยสาขาของฉัน
+  // เปรียบเทียบกับค่าเฉลี่ยรวมขององค์กร (benchmark เดียว · ไม่เปิดเผยคะแนนคนอื่น)
   const overall=data.overall_avg;
-  const myBr=(data.by_branch||[]).find(b=>b.branch_id===me.branch_id);
   const cmpRows=[];
   if(overall!=null)cmpRows.push(['คะแนนล่าสุดของฉัน', me.latest_score+' / 100']);
   if(overall!=null)cmpRows.push(['ค่าเฉลี่ยทั้งองค์กร', overall+' / 100']);
-  if(myBr)cmpRows.push(['ค่าเฉลี่ยสาขา ('+esc(me.branch_id||'—')+')', myBr.avg_score+' / 100 · '+(myBr.employees||0)+' คน']);
   $('cmp').innerHTML=dl(cmpRows);
 
   if(overall!=null){
@@ -127,7 +125,7 @@ async function init(){
   if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
   $('app').style.display='block';
   try{
-    const data=await api('hr_kpi_summary');
+    const data=await api('hr_kpi_summary?employee_id='+encodeURIComponent(ID.employee_id));
     if(data&&data.error){$('cmp').innerHTML='<div class="hint">โหลดข้อมูลไม่สำเร็จ: '+esc(data.error)+'</div>';return;}
     render(data);
   }catch(e){$('cmp').innerHTML='<div class="hint">โหลดข้อมูลไม่สำเร็จ · ลองใหม่อีกครั้ง</div>';}
