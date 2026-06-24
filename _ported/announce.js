@@ -77,6 +77,12 @@ var AN2_POSITION_NAME = {
   'POS-DOCTOR': 'หมอ', 'POS-PT-PT': 'นักกายภาพ Part-Time', 'POS-EXT': 'บุคคลภายนอก',
   'POS-COORD': 'ประสานงาน', 'POS-PT-NURSE': 'พยาบาล Part-Time',
 };
+// แผนก = prefix ของรหัสพนักงาน (ชื่อ derive จากตำแหน่งจริงของคนในกลุ่ม · A=ทุกคน) — เซินยืนยัน/แก้ได้
+var AN2_DEPT_NAME = {
+  'A': 'ทุกคน', 'B': 'ทีมสำนักงาน', 'BACC': 'บัญชี-จัดซื้อ', 'BCT': 'คอนเทนต์',
+  'BHR': 'บุคคล (HR)', 'BM': 'การตลาด', 'BMK': 'การตลาด', 'BEX': 'ประสานงาน', 'E': 'ภายนอก',
+  'F': 'หน้าร้าน/สาขา', 'FR': 'เคาน์เตอร์/รีเซพชั่น', 'FP': 'กายภาพ', 'FMT': 'นวด', 'FM': 'ผู้จัดการสาขา', 'FS': 'หน้าร้าน',
+};
 function an2BuildLookups(items) {
   items = items || [];
   function distinct(key, nameMap) {
@@ -94,7 +100,7 @@ function an2BuildLookups(items) {
   return {
     branches: distinct('target_branches', AN2_BRANCH_NAME),
     positions: distinct('target_positions', AN2_POSITION_NAME),
-    departments: distinct('target_departments'),
+    departments: distinct('target_departments', AN2_DEPT_NAME),
     tags: distinct('target_tags'),
     employees: [],
   };
