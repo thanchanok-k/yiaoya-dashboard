@@ -27,6 +27,14 @@ body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,syste
 .sb-label .chev{font-size:13px;opacity:.55;transition:transform .15s}
 .sb-label.col .chev{transform:rotate(-90deg)}
 .sb-label .gcount{margin-left:auto;font-size:9px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.6);border-radius:8px;padding:1px 6px;font-weight:600;letter-spacing:0}
+.sb-sub{padding:7px 14px 6px 26px;font-size:11.5px;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-weight:500;position:relative}
+.sb-sub::before{content:"";position:absolute;left:16px;top:0;bottom:0;width:1px;background:rgba(255,255,255,.10)}
+.sb-sub:hover{color:rgba(255,255,255,.85)}
+.sb-sub .chev{font-size:12px;opacity:.55;transition:transform .15s}
+.sb-sub.col .chev{transform:rotate(-90deg)}
+.sb-sub .gcount{margin-left:auto;font-size:9px;background:rgba(255,255,255,.10);color:rgba(255,255,255,.55);border-radius:8px;padding:1px 6px;font-weight:600}
+.sb-item.lvl2{padding-left:32px;font-size:12.5px;color:rgba(255,255,255,.68)}
+.sb-item.lvl2.active{color:#fff}
 .sb-search{margin:10px 12px 6px;position:relative}
 .sb-search input{width:100%;padding:7px 10px 7px 30px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:12px;outline:none}
 .sb-search input::placeholder{color:rgba(255,255,255,.45)}
@@ -301,6 +309,9 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="insurance"><i class="ti ti-shield-heart"></i>ประกัน/สวัสดิการ<span class="ct" id="ct-insurance"></span></div>
       <div class="sb-item" data-view="document"><i class="ti ti-files"></i>ติดตามเอกสาร<span class="ct" id="ct-document"></span></div>
       <div class="sb-item" data-view="accreq"><i class="ti ti-user-check"></i>อนุมัติสิทธิ์เข้าระบบ<span class="ct" id="ct-accreq"></span></div>
+      <!-- AI Operator (2 เมนู) — จัดกลุ่มในโดเมน "AI Operator" ผ่าน NAV_TREE -->
+      <div class="sb-item" data-view="aisettings"><i class="ti ti-adjustments-cog"></i>AI Settings</div>
+      <div class="sb-item" data-view="aiapprovals"><i class="ti ti-checkup-list"></i>AI Approvals<span class="ct" id="ct-aiapprovals"></span></div>
       <div class="sb-item" data-view="timeattend"><i class="ti ti-clock-hour-8"></i>ลงเวลาเข้า-ออก<span class="ct" id="ct-timeattend"></span></div>
       <div class="sb-item" data-view="raise"><i class="ti ti-trending-up"></i>ปรับเงินเดือน<span class="ct" id="ct-raise"></span></div>
       <div class="sb-item" data-view="reward"><i class="ti ti-award"></i>รางวัล/ชมเชย<span class="ct" id="ct-reward"></span></div>
@@ -754,6 +765,10 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
     <section class="view" data-view="tasks"><div class="sec"><span class="sec-bar"></span>มอบหมายงาน<span class="sec-c">Native</span></div><div id="wrap-tasks"></div></section>
     <section class="view" data-view="tag"><div class="sec"><span class="sec-bar"></span>ป้ายกำกับ (Tag)<span class="sec-c">Native</span></div><div id="wrap-tag"></div></section>
     <section class="view" data-view="accreq"><div class="sec"><span class="sec-bar"></span>อนุมัติสิทธิ์เข้าระบบ<span class="sec-c">LINE</span></div><div id="wrap-accreq"></div></section>
+    <!-- AI Operator: ตั้งค่า toggle/automation feature_settings (owner/controller แก้ได้) -->
+    <section class="view" data-view="aisettings"><div class="sec"><span class="sec-bar"></span>AI Settings · ตั้งค่าออโต้<span class="sec-c">AI Operator</span></div><div id="wrap-aisettings"></div></section>
+    <!-- AI Operator: คิวงาน AI ที่รออนุมัติ (Realtime · ตาม approver_role) -->
+    <section class="view" data-view="aiapprovals"><div class="sec"><span class="sec-bar"></span>AI Approvals · คิวอนุมัติ<span class="sec-c"><span class="dot"></span>Realtime</span></div><div id="wrap-aiapprovals"></div></section>
     <section class="view" data-view="training"><div class="sec"><span class="sec-bar"></span>อบรม<span class="sec-c">Native</span></div><div id="wrap-training"></div></section>
     <section class="view" data-view="disciplinary"><div class="sec"><span class="sec-bar"></span>วินัย<span class="sec-c">Native</span></div><div id="wrap-disciplinary"></div></section>
     <section class="view" data-view="license"><div class="sec"><span class="sec-bar"></span>ใบอนุญาต<span class="sec-c">Native</span></div><div id="wrap-license"></div></section>
@@ -781,7 +796,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',dept:'รายได้ตามแผนก'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',dept:'รายได้ตามแผนก',aisettings:'AI Settings · ตั้งค่าออโต้',aiapprovals:'AI Approvals · คิวอนุมัติ'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -804,7 +819,8 @@ const VIEWS_BY_ROLE={
      'leavereq','otreq','pinfo','expense','accreq',
      'announce','incident','oneonone','probreview','survey',
      'employeemgr','onboard','offboard','recruit','training','disciplinary','license','insurance','document','doctorshift','calendar',
-     'payrollmgr','kpimgr','raise','timeattend','reward','openpos','offerletter','interviewbank','internship','internaljob','recruittpl','pip','probcriteria','position','milestone','emp360','holiday','birthday','pulse','surveyexit','sop','tasks','tag','events'],
+     'payrollmgr','kpimgr','raise','timeattend','reward','openpos','offerletter','interviewbank','internship','internaljob','recruittpl','pip','probcriteria','position','milestone','emp360','holiday','birthday','pulse','surveyexit','sop','tasks','tag','events',
+     'aisettings','aiapprovals'], /* AI Operator: เห็นเมนูได้ แต่สิทธิ์จริงตัดสินที่ RLS (app_role) */
  staff:['overview'],
  purchasing:['overview','purdash','purpr','purpo','purgr','purvendor','puritem','purrfq','purstock','purscan','purlookup','puractivity','events'],
 };
@@ -844,6 +860,8 @@ const NAV_TREE=[
  {label:'จัดซื้อ · Purchase', views:['purdash','purpr','purpo','purgr','purvendor','puritem','purrfq','purstock','purscan','purlookup','puractivity']},
  {label:'การตลาด · โฆษณา', views:['mkt','adops','adcreative']},
  {label:'ผู้บริหาร · HQ', views:['aihq','hub360','dept','expansion']},
+ /* AI Operator — ตั้งค่า toggle/automation + คิวอนุมัติงาน AI (control plane 30_ai_operator.sql) */
+ {label:'AI Operator', views:['aisettings','aiapprovals']},
  {label:'ระบบ', views:['events','ecosystem']},
 ];
 function navAllViews(){ const a=[]; NAV_TREE.forEach(d=>{ if(d.subs)d.subs.forEach(s=>a.push(...s.views)); else a.push(...(d.views||[])); }); return a; }
@@ -913,27 +931,37 @@ function initAccordion(){
 function updateNav(){
  initAccordion(); const nav=$('sbnav'); if(!nav) return;
  const allowed=VIEWS_BY_ROLE[currentRole]||ALL_VIEWS;
- const searching=_navQ.length>0; const stat={};
+ const searching=_navQ.length>0; const dStat={}, sStat={};
  nav.querySelectorAll('.sb-item').forEach(it=>{
-  const g=it.dataset.grp;
+  const dom=it.dataset.dom, sub=it.dataset.sub||'';
   const roleOK=allowed.includes(it.dataset.view);
   const matchOK=!searching || it.textContent.toLowerCase().includes(_navQ);
-  const colHidden=!searching && _collapsed.has(g);
+  const colHidden=!searching && (_colDom.has(dom) || (sub&&_colSub.has(sub)));
   it.style.display=(roleOK&&matchOK&&!colHidden)?'':'none';
-  stat[g]=stat[g]||{r:0,m:0}; if(roleOK)stat[g].r++; if(roleOK&&matchOK)stat[g].m++;
+  dStat[dom]=dStat[dom]||{r:0,m:0}; if(roleOK)dStat[dom].r++; if(roleOK&&matchOK)dStat[dom].m++;
+  if(sub){ sStat[sub]=sStat[sub]||{r:0,m:0}; if(roleOK)sStat[sub].r++; if(roleOK&&matchOK)sStat[sub].m++; }
+ });
+ nav.querySelectorAll('.sb-sub').forEach(sb=>{
+  const gi=sStat[sb.dataset.sub]||{r:0,m:0};
+  const domCol=!searching && _colDom.has(sb.dataset.dom);
+  sb.style.display=(gi.r>0 && !domCol && (!searching||gi.m>0))?'':'none';
+  const gc=sb.querySelector('.gcount'); if(gc) gc.textContent=gi.r||'';
+  sb.classList.toggle('col', !searching && _colSub.has(sb.dataset.sub));
  });
  nav.querySelectorAll('.sb-label').forEach(lb=>{
-  const g=lb.dataset.grp, gi=stat[g]||{r:0,m:0};
+  const gi=dStat[lb.dataset.dom]||{r:0,m:0};
   lb.style.display=(gi.r>0 && (!searching||gi.m>0))?'':'none';
   const gc=lb.querySelector('.gcount'); if(gc) gc.textContent=gi.r||'';
-  lb.classList.toggle('col', !searching && _collapsed.has(g));
+  lb.classList.toggle('col', !searching && _colDom.has(lb.dataset.dom));
  });
 }
 function collapseToActive(){
- initAccordion();
+ initAccordion(); const nav=$('sbnav'); if(!nav) return;
  const active=document.querySelector('.sb-item.active');
- const ag=active?active.dataset.grp:null;
- _collapsed=new Set(_navGroups.filter(g=>g!==ag));
+ const ad=active?active.dataset.dom:null, as=active?(active.dataset.sub||''):null;
+ _colDom=new Set(); _colSub=new Set();
+ nav.querySelectorAll('.sb-label').forEach(lb=>{ if(lb.dataset.dom!==ad) _colDom.add(lb.dataset.dom); });
+ nav.querySelectorAll('.sb-sub').forEach(sb=>{ if(sb.dataset.sub!==as) _colSub.add(sb.dataset.sub); });
 }
 function applyRole(role){
  if(!VIEWS_BY_ROLE[role]) role='director';
@@ -1450,19 +1478,32 @@ function plFields(){
  return f;
 }
 function plBreakCard(b,note,name){
- const row=(l,v,sign)=>'<div class="pc-row"><span class="l">'+esc(l)+'</span><span class="r">'+(sign||'')+_baht(v)+'</span></div>';
+ const row=(l,v,sign,bold)=>'<div class="pc-row"'+(bold?' style="font-weight:700;border-top:1px solid var(--border);margin-top:3px;padding-top:5px"':'')+'><span class="l">'+esc(l)+'</span><span class="r">'+(sign||'')+_baht(v)+'</span></div>';
+ const hd=t=>'<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:11px 0 4px">'+t+'</div>';
+ const ic=b.income_components||{}; const fc=b.formula_constants||{};
  let h='<div class="card" style="padding:16px;border-left:3px solid var(--teal)">';
- h+='<div style="font-weight:600;color:var(--navy);margin-bottom:10px">'+esc(name||'')+(note?' <span style="font-size:11px;font-weight:400;color:var(--teal-ink)">· '+esc(note)+'</span>':'')+'</div>';
- h+='<div class="pc-mt" style="border-top:none;margin-top:0;padding-top:0">'
-  +row('Gross',b.gross)
-  +(b.ot_pay?row('+ OT',b.ot_pay,'+'):'')
-  +(b.sso?row('− ปกส (SSO)',b.sso,'−'):'')
-  +(b.wht?row('− หัก ณ ที่จ่าย (WHT)',b.wht,'−'):'')
-  +(b.pit?row('− ภาษีเงินได้ (PIT)',b.pit,'−'):'')
-  +(b.late_deduction?row('− หักสาย',b.late_deduction,'−'):'')
-  +(b.deductions?row('− หักอื่นๆ',b.deductions,'−'):'')
-  +'</div>';
- h+='<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Net</span><span style="font-size:28px;font-weight:700;color:var(--teal-ink)">'+_baht(b.net)+'</span></div>';
+ h+='<div style="font-weight:600;color:var(--navy);margin-bottom:4px">'+esc(name||'')+(note?' <span style="font-size:11px;font-weight:400;color:var(--teal-ink)">· '+esc(note)+'</span>':'')+'</div>';
+ h+=hd('รายรับ (Income)');
+ h+=row('ฐานเงินเดือน',ic.base_salary);
+ if(ic.diligence)h+=row('+ เบี้ยขยัน',ic.diligence,'+');
+ if(ic.meal)h+=row('+ ค่าอาหาร',ic.meal,'+');
+ if(ic.ot_pay)h+=row('+ OT (×'+(fc.ot_multiplier||1.5)+')',ic.ot_pay,'+');
+ if(ic.commission)h+=row('+ คอมมิชชั่น',ic.commission,'+');
+ if(ic.other_income)h+=row('+ รายได้อื่น',ic.other_income,'+');
+ if(ic.handfee)h+=row('+ ค่ามือ (DF/หัตถการ)',ic.handfee,'+');
+ if(ic.late_deduction)h+=row('− หักมาสาย',ic.late_deduction,'−');
+ if(ic.absent_deduction)h+=row('− หักวันขาด (ไม่รับค่าจ้าง)',ic.absent_deduction,'−');
+ h+=row('รวมรายรับ',b.income,'',true);
+ h+=hd('รายการหัก / บวกกลับ');
+ if(b.deduction_type==='SSO')h+=row('− ประกันสังคม ('+Math.round((fc.sso_rate||0.05)*100)+'% ของฐาน · เพดาน '+_baht(fc.sso_cap)+')',b.sso,'−');
+ else h+=row('− ภาษีหัก ณ ที่จ่าย ('+Math.round((fc.wht_rate||0.03)*100)+'% ของรายรับหลังหักคงที่)',b.wht,'−');
+ if(b.ins_deduct)h+=row('− เงินประกัน',b.ins_deduct,'−');
+ if(b.uniform_deduct)h+=row('− ชุดยูนิฟอร์ม',b.uniform_deduct,'−');
+ if(b.other_deduct)h+=row('− หักอื่นๆ',b.other_deduct,'−');
+ if(b.reserve_addback)h+=row('+ คืนเงินสำรอง',b.reserve_addback,'+');
+ if(b.fuel_addback)h+=row('+ คืนค่าน้ำมัน',b.fuel_addback,'+');
+ h+='<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">เงินเดือนสุทธิ (Net)</span><span style="font-size:28px;font-weight:700;color:var(--teal-ink)">'+_baht(b.net)+'</span></div>';
+ h+='<div style="margin-top:10px;font-size:10.5px;color:var(--text-muted);line-height:1.65;background:#F8FAFC;border-radius:8px;padding:9px 11px"><b>สูตร '+esc(b.formula_version||'')+':</b> Net = รายรับ − ('+(b.deduction_type==='SSO'?'ประกันสังคม':'ภาษีหัก ณ ที่จ่าย')+') − หักคงที่ + บวกกลับ<br>• รายรับ = ฐาน + เบี้ยขยัน + ค่าข้าว + OT + คอม + อื่นๆ − สาย − ขาด<br>• หักได้<b>อย่างใดอย่างหนึ่ง</b>: ปกส. '+Math.round((fc.sso_rate||0.05)*100)+'% ของฐาน (เพดาน '+_baht(fc.sso_cap)+') <b>หรือ</b> ภาษี '+Math.round((fc.wht_rate||0.03)*100)+'% (กรณีไม่เข้า ปกส.)</div>';
  return h+'</div>';
 }
 async function plCalc(){
@@ -1787,9 +1828,9 @@ async function xpSubmit(){ const emp=$('xp-emp').value.trim(); const amt=parseFl
 /* ===== ported pages: lazy-load จาก _ported/*.js ===== */
 window.sb=sb; window.esc=esc; window.$=$; try{window.tbl=tbl;}catch(e){} try{window.NUM=NUM;}catch(e){}
 try{ window.mountExpense=mountExpense; }catch(e){}
-const PORTED_FN={leavereq:'mountLeavereq',otreq:'mountOtreq',pinfo:'mountPinfo',incident:'mountIncident',oneonone:'mountOneonone',probreview:'mountProbreview',survey:'mountSurvey',announce:'mountAnnounceP',expense:'mountExpense',employeemgr:'mountEmployeemgr',kpimgr:'mountKpimgr',onboard:'mountOnboard',offboard:'mountOffboard',payrollmgr:'mountPayrollmgr',calendar:'mountCalendar',doctorshift:'mountDoctorshift',recruit:'mountRecruit',training:'mountTraining',disciplinary:'mountDisciplinary',license:'mountLicense',insurance:'mountInsurance',document:'mountDocument',accreq:'mountAccessReq',timeattend:'mountTimeattend',raise:'mountRaise',reward:'mountReward',openpos:'mountOpenpos',offerletter:'mountOfferletter',interviewbank:'mountInterviewbank',internship:'mountInternship',internaljob:'mountInternaljob',recruittpl:'mountRecruittpl',pip:'mountPip',probcriteria:'mountProbcriteria',position:'mountPosition',milestone:'mountMilestone',emp360:'mountEmp360',holiday:'mountHoliday',birthday:'mountBirthday',pulse:'mountPulse',surveyexit:'mountSurveyexit',sop:'mountSop',tasks:'mountTasks',tag:'mountTag'};
-const PORTED_SCRIPT={leavereq:'_ported/leavereq.js',otreq:'_ported/otreq.js',pinfo:'_ported/pinfo.js',incident:'_ported/incident.js',oneonone:'_ported/oneonone.js',probreview:'_ported/probreview.js',survey:'_ported/survey.js',announce:'_ported/announce.js',employeemgr:'_ported/employeemgr.js',kpimgr:'_ported/kpimgr.js',onboard:'_ported/onboard.js',offboard:'_ported/offboard.js',payrollmgr:'_ported/payrollmgr.js',calendar:'_ported/calendar.js',doctorshift:'_ported/doctorshift.js',recruit:'_ported/recruit.js',training:'_ported/training.js',disciplinary:'_ported/disciplinary.js',license:'_ported/license.js',insurance:'_ported/insurance.js',document:'_ported/document.js',accreq:'_ported/accessreq.js',timeattend:'_ported/timeattend.js',raise:'_ported/raise.js',reward:'_ported/reward.js',openpos:'_ported/openpos.js',offerletter:'_ported/offerletter.js',interviewbank:'_ported/interviewbank.js',internship:'_ported/internship.js',internaljob:'_ported/internaljob.js',recruittpl:'_ported/recruittpl.js',pip:'_ported/pip.js',probcriteria:'_ported/probcriteria.js',position:'_ported/position.js',milestone:'_ported/milestone.js',emp360:'_ported/emp360.js',holiday:'_ported/holiday.js',birthday:'_ported/birthday.js',pulse:'_ported/pulse.js',surveyexit:'_ported/surveyexit.js',sop:'_ported/sop.js',tasks:'_ported/tasks.js',tag:'_ported/tag.js'};
-const PORTED_WRAP={leavereq:'wrap-leavereq',otreq:'wrap-otreq',pinfo:'wrap-pinfo',incident:'wrap-incident',oneonone:'wrap-oneonone',probreview:'wrap-probreview',survey:'wrap-survey',announce:'wrap-announce_p',expense:'wrap-expense',employeemgr:'wrap-employeemgr',kpimgr:'wrap-kpimgr',onboard:'wrap-onboard',offboard:'wrap-offboard',payrollmgr:'wrap-payrollmgr',calendar:'wrap-calendar',doctorshift:'wrap-doctorshift',recruit:'wrap-recruit',training:'wrap-training',disciplinary:'wrap-disciplinary',license:'wrap-license',insurance:'wrap-insurance',document:'wrap-document',accreq:'wrap-accreq',timeattend:'wrap-timeattend',raise:'wrap-raise',reward:'wrap-reward',openpos:'wrap-openpos',offerletter:'wrap-offerletter',interviewbank:'wrap-interviewbank',internship:'wrap-internship',internaljob:'wrap-internaljob',recruittpl:'wrap-recruittpl',pip:'wrap-pip',probcriteria:'wrap-probcriteria',position:'wrap-position',milestone:'wrap-milestone',emp360:'wrap-emp360',holiday:'wrap-holiday',birthday:'wrap-birthday',pulse:'wrap-pulse',surveyexit:'wrap-surveyexit',sop:'wrap-sop',tasks:'wrap-tasks',tag:'wrap-tag'};
+const PORTED_FN={leavereq:'mountLeavereq',otreq:'mountOtreq',pinfo:'mountPinfo',incident:'mountIncident',oneonone:'mountOneonone',probreview:'mountProbreview',survey:'mountSurvey',announce:'mountAnnounceP',expense:'mountExpense',employeemgr:'mountEmployeemgr',kpimgr:'mountKpimgr',onboard:'mountOnboard',offboard:'mountOffboard',payrollmgr:'mountPayrollmgr',calendar:'mountCalendar',doctorshift:'mountDoctorshift',recruit:'mountRecruit',training:'mountTraining',disciplinary:'mountDisciplinary',license:'mountLicense',insurance:'mountInsurance',document:'mountDocument',accreq:'mountAccessReq',timeattend:'mountTimeattend',raise:'mountRaise',reward:'mountReward',openpos:'mountOpenpos',offerletter:'mountOfferletter',interviewbank:'mountInterviewbank',internship:'mountInternship',internaljob:'mountInternaljob',recruittpl:'mountRecruittpl',pip:'mountPip',probcriteria:'mountProbcriteria',position:'mountPosition',milestone:'mountMilestone',emp360:'mountEmp360',holiday:'mountHoliday',birthday:'mountBirthday',pulse:'mountPulse',surveyexit:'mountSurveyexit',sop:'mountSop',tasks:'mountTasks',tag:'mountTag',aisettings:'mountAiSettings',aiapprovals:'mountAiApprovals'};
+const PORTED_SCRIPT={leavereq:'_ported/leavereq.js',otreq:'_ported/otreq.js',pinfo:'_ported/pinfo.js',incident:'_ported/incident.js',oneonone:'_ported/oneonone.js',probreview:'_ported/probreview.js',survey:'_ported/survey.js',announce:'_ported/announce.js',employeemgr:'_ported/employeemgr.js',kpimgr:'_ported/kpimgr.js',onboard:'_ported/onboard.js',offboard:'_ported/offboard.js',payrollmgr:'_ported/payrollmgr.js',calendar:'_ported/calendar.js',doctorshift:'_ported/doctorshift.js',recruit:'_ported/recruit.js',training:'_ported/training.js',disciplinary:'_ported/disciplinary.js',license:'_ported/license.js',insurance:'_ported/insurance.js',document:'_ported/document.js',accreq:'_ported/accessreq.js',timeattend:'_ported/timeattend.js',raise:'_ported/raise.js',reward:'_ported/reward.js',openpos:'_ported/openpos.js',offerletter:'_ported/offerletter.js',interviewbank:'_ported/interviewbank.js',internship:'_ported/internship.js',internaljob:'_ported/internaljob.js',recruittpl:'_ported/recruittpl.js',pip:'_ported/pip.js',probcriteria:'_ported/probcriteria.js',position:'_ported/position.js',milestone:'_ported/milestone.js',emp360:'_ported/emp360.js',holiday:'_ported/holiday.js',birthday:'_ported/birthday.js',pulse:'_ported/pulse.js',surveyexit:'_ported/surveyexit.js',sop:'_ported/sop.js',tasks:'_ported/tasks.js',tag:'_ported/tag.js',aisettings:'_ported/aisettings.js',aiapprovals:'_ported/aiapprovals.js'};
+const PORTED_WRAP={leavereq:'wrap-leavereq',otreq:'wrap-otreq',pinfo:'wrap-pinfo',incident:'wrap-incident',oneonone:'wrap-oneonone',probreview:'wrap-probreview',survey:'wrap-survey',announce:'wrap-announce_p',expense:'wrap-expense',employeemgr:'wrap-employeemgr',kpimgr:'wrap-kpimgr',onboard:'wrap-onboard',offboard:'wrap-offboard',payrollmgr:'wrap-payrollmgr',calendar:'wrap-calendar',doctorshift:'wrap-doctorshift',recruit:'wrap-recruit',training:'wrap-training',disciplinary:'wrap-disciplinary',license:'wrap-license',insurance:'wrap-insurance',document:'wrap-document',accreq:'wrap-accreq',timeattend:'wrap-timeattend',raise:'wrap-raise',reward:'wrap-reward',openpos:'wrap-openpos',offerletter:'wrap-offerletter',interviewbank:'wrap-interviewbank',internship:'wrap-internship',internaljob:'wrap-internaljob',recruittpl:'wrap-recruittpl',pip:'wrap-pip',probcriteria:'wrap-probcriteria',position:'wrap-position',milestone:'wrap-milestone',emp360:'wrap-emp360',holiday:'wrap-holiday',birthday:'wrap-birthday',pulse:'wrap-pulse',surveyexit:'wrap-surveyexit',sop:'wrap-sop',tasks:'wrap-tasks',tag:'wrap-tag',aisettings:'wrap-aisettings',aiapprovals:'wrap-aiapprovals'};
 const _portedLoaded={};
 function _loadPorted(src){return new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=src+'?v='+Date.now();sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});}
 async function mountPortedView(v){
