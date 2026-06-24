@@ -785,34 +785,48 @@ let currentRole='director';
    ║  + ใน section ใส่ <div id="wrap-X"></div> และไฟล์ _ported/X.js มี window.mountX ║
    ╚══════════════════════════════════════════════════════════════════════════╝
    buildNav() จัดเรียงตาม NAV_GROUPS ตอน runtime (reuse element เดิม คงไอคอน/onclick/count) */
-const NAV_GROUPS=[
+/* โครง 3 ชั้น: โดเมน → (sub-category) → เมนู · โดเมนที่ไม่มี subs = เมนูตรง 1 ชั้น */
+const NAV_TREE=[
  {label:'ภาพรวม', views:['overview']},
  {label:'ข้อมูล · Entities', views:['employees','branches','prices','payments','appointments','leaves','ot','kpi']},
- {label:'HR · แดชบอร์ด', views:['digest','balance','kpisum','leaveana','otsum','contract','anniv']},
- {label:'HR · คำขอ/อนุมัติ', views:['leavereq','otreq','pinfo','expense','accreq']},
- {label:'HR · บันทึก/ประเมิน', views:['announce','incident','oneonone','probreview','survey']},
- {label:'HR · ทะเบียนพนักงาน', views:['employeemgr','onboard','offboard','recruit','training','disciplinary','license','insurance','document','doctorshift','calendar']},
- {label:'HR · เงินเดือน/KPI', views:['payrollmgr','kpimgr']},
+ {label:'HR · บุคคล', subs:[
+   {label:'แดชบอร์ด', views:['digest','balance','kpisum','leaveana','otsum','contract','anniv']},
+   {label:'คำขอ/อนุมัติ', views:['leavereq','otreq','pinfo','expense','accreq']},
+   {label:'บันทึก/ประเมิน', views:['announce','incident','oneonone','probreview','survey']},
+   {label:'ทะเบียนพนักงาน', views:['employeemgr','onboard','offboard','recruit','training','disciplinary','license','insurance','document','doctorshift','calendar']},
+   {label:'เงินเดือน/KPI', views:['payrollmgr','kpimgr']},
+ ]},
  {label:'บัญชี · Accountant', views:['accdigest','accexp','accpr','accpetty','accsales','accpayroll','accdf','acctax','accbank','accpayset','accroster']},
  {label:'จัดซื้อ · Purchase', views:['purdash','purpr','purpo','purgr','purvendor','puritem','purrfq','purstock','purscan','purlookup','puractivity']},
  {label:'การตลาด · โฆษณา', views:['mkt','adops','adcreative']},
  {label:'ผู้บริหาร · HQ', views:['aihq','hub360','dept','expansion']},
  {label:'ระบบ', views:['events','ecosystem']},
 ];
+function navAllViews(){ const a=[]; NAV_TREE.forEach(d=>{ if(d.subs)d.subs.forEach(s=>a.push(...s.views)); else a.push(...(d.views||[])); }); return a; }
 function buildNav(){
  const nav=$('sbnav'); if(!nav||nav._built) return;
  const items={}; nav.querySelectorAll('.sb-item').forEach(it=>{ items[it.dataset.view]=it; });
  const search=nav.querySelector('.sb-search');
- nav.querySelectorAll('.sb-label').forEach(l=>l.remove());
+ nav.querySelectorAll('.sb-label,.sb-sub').forEach(l=>l.remove());
  const frag=document.createDocumentFragment(); const used=new Set();
- NAV_GROUPS.forEach(g=>{
-  const present=g.views.filter(v=>items[v]); if(!present.length) return;
-  const lab=document.createElement('div'); lab.className='sb-label'; lab.textContent=g.label; frag.appendChild(lab);
-  present.forEach(v=>{ frag.appendChild(items[v]); used.add(v); });
+ const mk=(views,dk,sk)=>views.filter(v=>items[v]).map(v=>{ const it=items[v]; it.dataset.dom=dk; it.dataset.sub=sk||''; it.classList.toggle('lvl2',!!sk); return it; });
+ NAV_TREE.forEach((dom,di)=>{
+  const dk='d'+di;
+  if(dom.subs){
+   const parts=[];
+   dom.subs.forEach((sub,si)=>{ const sk=dk+'s'+si; const its=mk(sub.views,dk,sk); if(!its.length) return;
+     const sl=document.createElement('div'); sl.className='sb-sub'; sl.dataset.dom=dk; sl.dataset.sub=sk; sl.textContent=sub.label;
+     parts.push(sl,...its); its.forEach(it=>used.add(it.dataset.view)); });
+   if(!parts.length) return;
+   const dl=document.createElement('div'); dl.className='sb-label'; dl.dataset.dom=dk; dl.textContent=dom.label; frag.appendChild(dl); parts.forEach(e=>frag.appendChild(e));
+  } else {
+   const its=mk(dom.views||[],dk,''); if(!its.length) return;
+   const dl=document.createElement('div'); dl.className='sb-label'; dl.dataset.dom=dk; dl.textContent=dom.label; frag.appendChild(dl); its.forEach(it=>{frag.appendChild(it);used.add(it.dataset.view);});
+  }
  });
  const left=Object.keys(items).filter(v=>!used.has(v));
- if(left.length){ const lab=document.createElement('div'); lab.className='sb-label'; lab.textContent='อื่น ๆ'; frag.appendChild(lab); left.forEach(v=>frag.appendChild(items[v]));
-   console.warn('[buildNav] เมนูยังไม่ถูกจัดกลุ่ม (ตกกอง "อื่น ๆ") → เพิ่มใน NAV_GROUPS:', left); }
+ if(left.length){ const dl=document.createElement('div'); dl.className='sb-label'; dl.dataset.dom='dx'; dl.textContent='อื่น ๆ'; frag.appendChild(dl); left.forEach(v=>{const it=items[v];it.dataset.dom='dx';it.dataset.sub='';it.classList.remove('lvl2');frag.appendChild(it);});
+   console.warn('[buildNav] เมนูยังไม่ถูกจัดกลุ่ม (ตกกอง "อื่น ๆ") → เพิ่มใน NAV_TREE:', left); }
  nav.innerHTML=''; if(search) nav.appendChild(search); nav.appendChild(frag);
  nav._built=true;
 }
@@ -824,7 +838,7 @@ function navAudit(){
   const nav=$('sbnav'); if(!nav) return [];
   const items=[...nav.querySelectorAll('.sb-item')].map(i=>i.dataset.view);
   const secs=[...document.querySelectorAll('.view')].map(s=>s.dataset.view).filter(Boolean);
-  const inG=new Set(); NAV_GROUPS.forEach(g=>g.views.forEach(v=>inG.add(v)));
+  const inG=new Set(navAllViews());
   const inR=new Set(); Object.values(VIEWS_BY_ROLE).forEach(a=>a.forEach(v=>inR.add(v)));
   const W=[];
   secs.filter(v=>!items.includes(v)).forEach(v=>W.push('• "'+v+'": มี <section> แต่ไม่มีเมนู (เข้าไม่ถึง) → เพิ่ม sb-item (จุด 1)'));
@@ -839,20 +853,16 @@ function navAudit(){
  }catch(e){ console.error('navAudit error',e); return []; }
 }
 
-/* ===== Sidebar accordion + search (ทำงานร่วม role filter ใน updateNav เดียว) ===== */
-let _navInit=false, _navGroups=[], _collapsed=new Set(), _navQ='';
+/* ===== Sidebar accordion (2 ชั้น: โดเมน+sub) + search · รวม role filter ใน updateNav ===== */
+let _navInit=false, _colDom=new Set(), _colSub=new Set(), _navQ='';
 function initAccordion(){
  if(_navInit) return; const nav=$('sbnav'); if(!nav) return;
- _navGroups=[]; let gi=-1;
- Array.from(nav.children).forEach(node=>{
-  if(!node.classList) return;
-  if(node.classList.contains('sb-label')){
-   gi++; node.dataset.grp=String(gi); _navGroups.push(String(gi));
-   if(!node.querySelector('.chev')) node.insertAdjacentHTML('afterbegin','<i class="ti ti-chevron-down chev"></i>');
-   if(!node.querySelector('.gcount')) node.insertAdjacentHTML('beforeend','<span class="gcount"></span>');
-   node.onclick=()=>{ const g=node.dataset.grp; _collapsed.has(g)?_collapsed.delete(g):_collapsed.add(g); updateNav(); };
-  } else if(node.classList.contains('sb-item')){ node.dataset.grp=String(gi); }
- });
+ const deco=(node)=>{ if(!node.querySelector('.chev')) node.insertAdjacentHTML('afterbegin','<i class="ti ti-chevron-down chev"></i>');
+   if(!node.querySelector('.gcount')) node.insertAdjacentHTML('beforeend','<span class="gcount"></span>'); };
+ nav.querySelectorAll('.sb-label').forEach(node=>{ deco(node);
+   node.onclick=()=>{ const d=node.dataset.dom; _colDom.has(d)?_colDom.delete(d):_colDom.add(d); updateNav(); }; });
+ nav.querySelectorAll('.sb-sub').forEach(node=>{ deco(node);
+   node.onclick=()=>{ const s=node.dataset.sub; _colSub.has(s)?_colSub.delete(s):_colSub.add(s); updateNav(); }; });
  const s=$('sbSearch'); if(s) s.oninput=()=>{ _navQ=s.value.trim().toLowerCase(); updateNav(); };
  _navInit=true;
 }
@@ -2706,6 +2716,14 @@ function mountHub360(){
    +kpi('ROAS รวม',(tAd?(tRev/tAd).toFixed(1):'—')+'x','รายได้÷แอด','#0D2F4F')
    +kpi('คนไข้ใหม่ (JERA)',N(tNewJ),'หน้าบ้าน','#0F766E')
    +kpi('ต้นทุน/คนไข้ใหม่',B(tAd/(tNewJ||1)),'แอด÷คนใหม่','#C2410C')+'</div>';
+  const icSeries=[{k:'rev',l:'รายได้',c:'#0F766E',v:rev,fmt:B},{k:'ad',l:'ค่าแอด',c:'#DC2626',v:adS,fmt:B},{k:'msg',l:'ทักแชท',c:'#185FA5',v:msg,fmt:N},{k:'newp',l:'คนไข้ใหม่',c:'#3DC5B7',v:newJ,fmt:N},{k:'pay',l:'คนไข้ใหม่จ่าย',c:'#C2410C',v:newDeptTot,fmt:N}];
+  const icDef={rev:1,ad:1,newp:1};const ICW=900,ICH=300,icPad=46;
+  const icX=i=>icPad+(months.length<=1?(ICW-icPad*2)/2:i*(ICW-icPad-16)/(months.length-1));
+  const icY=(val,mx)=>ICH-30-(mx?val/mx*(ICH-58):0);
+  const icIns=i=>{const r=rev[i],a=adS[i];const roas=a?(r/a).toFixed(1):null,conv=msg[i]?Math.round(newJ[i]/msg[i]*100):null,mom=i>0&&rev[i-1]?Math.round((r-rev[i-1])/rev[i-1]*100):null;const p=[];if(roas)p.push('ROAS '+roas+'x');if(conv!=null)p.push('ทัก→คนไข้ '+conv+'%');if(mom!=null)p.push('รายได้ '+(mom>=0?'+':'')+mom+'% MoM');return p.join(' · ')||'ดูข้อมูล';};
+  let icL='';icSeries.forEach(sr=>{const mx=Math.max(1,...sr.v);const pts=sr.v.map((val,i)=>icX(i)+','+icY(val,mx)).join(' ');icL+='<polyline class="icLine" data-k="'+sr.k+'" points="'+pts+'" fill="none" stroke="'+sr.c+'" stroke-width="2.6" style="display:'+(icDef[sr.k]?'':'none')+'"/>';});
+  let icG='';months.forEach((m,i)=>{if(months.length>12&&i%2)return;icG+='<text x="'+icX(i)+'" y="'+(ICH-9)+'" font-size="8" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
+  h+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:2px">กราฟรวมหลายมิติ — เลือกข้อมูลที่จะกระทบ</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:10px">ติ๊กเลือกเส้น · เลื่อนเมาส์/แตะบนกราฟ เพื่อดู insight จริงแต่ละเดือน (ปรับสเกลให้เทียบรูปทรงกันได้)</div><div style="display:flex;flex-wrap:wrap;gap:9px;margin-bottom:10px">'+icSeries.map(sr=>'<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;background:#F8FAFC;border:1px solid var(--border,#E2E8F0);border-radius:7px;padding:5px 10px"><input type="checkbox" id="ic_'+sr.k+'" '+(icDef[sr.k]?'checked':'')+'><span style="color:'+sr.c+';font-size:13px">●</span>'+sr.l+'</label>').join('')+'</div><div id="icChart" style="position:relative"><svg id="icSvg" viewBox="0 0 '+ICW+' '+ICH+'" style="width:100%;height:auto;display:block">'+icG+'<line id="icGuide" x1="0" y1="18" x2="0" y2="'+(ICH-26)+'" stroke="#3DC5B7" stroke-width="1.2" stroke-dasharray="3 3" style="opacity:0"></line>'+icL+'</svg><div id="icTip" style="position:absolute;pointer-events:none;background:#0D2F4F;color:#fff;padding:8px 11px;border-radius:8px;font-size:12px;opacity:0;transition:opacity .08s;z-index:6;min-width:150px;box-shadow:0 6px 18px rgba(0,0,0,.25)"></div></div></div>';
   h+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">เงินเข้า (รายได้) vs เงินออก (ค่าแอด) รายเดือน</div>'
    +dualLine(months,[{name:'รายได้',color:'#0F766E',vals:rev},{name:'ค่าแอด',color:'#DC2626',vals:adS}])
    +'<div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--text-muted,#64748B)"><span><span style="display:inline-block;width:12px;height:3px;background:#0F766E;vertical-align:middle;margin-right:4px"></span>รายได้</span><span><span style="display:inline-block;width:12px;height:3px;background:#DC2626;vertical-align:middle;margin-right:4px"></span>ค่าแอด</span> · ช่องว่าง = กำไรขั้นต้นก่อนต้นทุนอื่น</div></div>';
@@ -2719,6 +2737,15 @@ function mountHub360(){
    +months.slice().reverse().map(m=>{const i=months.indexOf(m);const ro=adS[i]?(rev[i]/adS[i]).toFixed(1)+'x':'—';return '<tr style="text-align:right"><td style="padding:7px 10px;font-size:12px;text-align:left;font-weight:600;color:var(--navy,#0D2F4F)">'+mSh(m)+'</td><td style="padding:7px 10px;font-size:12px">'+B(adS[i])+'</td><td style="padding:7px 10px;font-size:12px;font-weight:700;color:#0F766E">'+B(rev[i])+'</td><td style="padding:7px 10px;font-size:12px;font-weight:700">'+ro+'</td><td style="padding:7px 10px;font-size:12px">'+N(msg[i])+'</td><td style="padding:7px 10px;font-size:12px">'+N(newJ[i])+'</td><td style="padding:7px 10px;font-size:12px;font-weight:600;color:#C2410C">'+N(newDeptTot[i])+'</td></tr>';}).join('')
    +'</tbody></table></div>';
   $('hubWrap').innerHTML=h;
+  (function(){const svgEl=$('icSvg');if(!svgEl)return;const guide=$('icGuide'),tip=$('icTip'),chart=$('icChart');
+   const onMove=ev=>{const rect=svgEl.getBoundingClientRect();let fx=(ev.clientX-rect.left)/rect.width;let idx=Math.round(fx*(months.length-1));idx=Math.max(0,Math.min(months.length-1,idx));
+    guide.setAttribute('x1',icX(idx));guide.setAttribute('x2',icX(idx));guide.style.opacity=1;
+    const active=icSeries.filter(sr=>{const c=$('ic_'+sr.k);return c&&c.checked;});
+    tip.innerHTML='<div style="font-weight:700;margin-bottom:3px">'+mLab(months[idx])+'</div>'+active.map(sr=>'<div style="font-size:11px"><span style="color:'+sr.c+'">●</span> '+sr.l+': <b>'+sr.fmt(sr.v[idx])+'</b></div>').join('')+'<div style="font-size:11px;color:#9FE6DD;margin-top:4px;border-top:1px solid rgba(255,255,255,.2);padding-top:4px">'+icIns(idx)+'</div>';
+    tip.style.opacity=1;const cr=chart.getBoundingClientRect();let lx=ev.clientX-cr.left+14;if(lx>cr.width-175)lx=cr.width-180;if(lx<0)lx=4;tip.style.left=lx+'px';tip.style.top=(ev.clientY-cr.top+8)+'px';};
+   svgEl.addEventListener('mousemove',onMove);svgEl.addEventListener('mouseleave',()=>{guide.style.opacity=0;tip.style.opacity=0;});
+   svgEl.addEventListener('touchmove',e=>{if(e.touches[0]){onMove(e.touches[0]);e.preventDefault();}},{passive:false});
+   icSeries.forEach(sr=>{const c=$('ic_'+sr.k);if(c)c.onchange=()=>{const pl=document.querySelector('.icLine[data-k="'+sr.k+'"]');if(pl)pl.style.display=c.checked?'':'none';};});})();
   const aiB=$('aiBtn');if(aiB)aiB.onclick=()=>{const o=$('aiOut');o.innerHTML='<div style="color:#0F766E;font-size:13px"><i class="ti ti-loader"></i> AI กำลังอ่านข้อมูลทั้งหมด…</div>';aiB.disabled=true;sb.functions.invoke('ai_consult').then(({data})=>{aiB.disabled=false;if(!data||!data.ok){o.innerHTML='<div style="color:#B45309;font-size:12.5px">'+((data&&data.need_key)?'⚠️ ยังไม่ได้เชื่อม AI key — ขอ GEMINI_API_KEY มาตั้งก่อนค่ะ':'วิเคราะห์ไม่ได้: '+esc((data&&data.error)||''))+'</div>';return;}const html=esc(data.analysis).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');o.innerHTML='<div style="font-size:13px;line-height:1.7;color:var(--navy,#0D2F4F)">'+html+'</div><div style="font-size:10px;color:var(--text-muted,#64748B);margin-top:8px">โดย '+esc(data.model||'AI')+' · อ่าน '+data.months+' เดือน</div>';}).catch(e=>{aiB.disabled=false;o.innerHTML='<div style="color:#DC2626;font-size:12px">error: '+esc(e&&e.message||e)+'</div>';});};
   const ct=$('ct-hub360');if(ct)ct.textContent='360°';
  }).catch(e=>{console.error('hub360',e);$('hubWrap').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
