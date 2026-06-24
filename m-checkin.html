@@ -1,0 +1,167 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>เช็คอิน / เช็คเอาท์ · Yiaoya</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 96px;max-width:480px;margin:0 auto}
+.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
+.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
+.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
+.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
+.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
+.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+input,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;background:#fff}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.flbl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.chip{padding:8px 13px;border:1px solid var(--border);border-radius:99px;font-size:13px;cursor:pointer;background:#fff}
+.chip.on{background:var(--teal);color:#04342C;border-color:var(--teal);font-weight:700}
+.cta{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 14px;background:rgba(241,245,249,.96);border-top:1px solid var(--border);backdrop-filter:blur(6px)}
+.cta button{width:100%;padding:14px;background:var(--teal);color:#04342C;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}
+.cta button:disabled{opacity:.45}
+.msg{text-align:center;font-size:13px;margin-top:7px;min-height:18px;line-height:1.5}
+.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
+a.lk{color:var(--teal);font-weight:700;text-decoration:none}
+/* m-checkin additions (ใช้ token เดิมทั้งหมด · ไม่เพิ่มสีนอก palette) */
+.bigrow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:14px}
+.bigrow .l{color:var(--muted)}.bigrow .v{font-weight:700}
+.pill{display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:700}
+.pill.in{background:#E6F7F5;color:#0F766E}.pill.done{background:#EEF2F7;color:var(--navy)}.pill.none{background:#FEF3C7;color:#92400e}
+.bigbtn{width:100%;padding:18px;border:none;border-radius:12px;font-size:17px;font-weight:800;cursor:pointer}
+.bigbtn.in{background:var(--teal);color:#04342C}
+.bigbtn.out{background:var(--navy);color:#fff}
+.bigbtn:disabled{opacity:.45}
+.modes{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+</style></head>
+<body>
+<div class="head"><div class="eb">YIAOYA · HR</div><h1>เช็คอิน / เช็คเอาท์</h1><div class="who" id="who">—</div></div>
+<div id="app" style="display:none">
+  <div class="note" id="gpsnote">ระบบบันทึกตำแหน่ง GPS ตอนเช็คอิน/เช็คเอาท์ · กรุณาอนุญาตให้เข้าถึงตำแหน่ง</div>
+
+  <div class="card">
+    <div class="sec"><span class="num">1</span>สถานะวันนี้</div>
+    <div class="bigrow"><span class="l">วันที่</span><span class="v" id="vDate">—</span></div>
+    <div class="bigrow"><span class="l">สาขา</span><span class="v" id="vBranch">—</span></div>
+    <div class="bigrow"><span class="l">สถานะ</span><span class="v" id="vStatus">—</span></div>
+    <div class="bigrow" id="rowIn" style="display:none"><span class="l">เช็คอิน</span><span class="v" id="vIn">—</span></div>
+    <div class="bigrow" id="rowOut" style="display:none"><span class="l">เช็คเอาท์</span><span class="v" id="vOut">—</span></div>
+    <div class="bigrow" id="rowHrs" style="display:none"><span class="l">รวมเวลาทำงาน</span><span class="v" id="vHrs">—</span></div>
+  </div>
+
+  <!-- เลือกรูปแบบการทำงาน — เฉพาะตอนยังไม่เช็คอิน -->
+  <div class="card" id="modeCard" style="display:none">
+    <div class="sec"><span class="num">2</span>รูปแบบการทำงานวันนี้</div>
+    <div class="modes" id="modes"></div>
+  </div>
+</div>
+
+<div class="cta" id="cta" style="display:none">
+  <button class="bigbtn in" id="act" disabled>เช็คอิน</button>
+  <div class="msg" id="msg"></div>
+</div>
+<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL,ANON);
+const $=(id)=>document.getElementById(id);
+let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
+const MODES=[['onsite','ที่สาขา'],['wfh','WFH'],['off_site_visit','นอกสถานที่'],['hybrid','ผสม']];
+let mode='onsite', rec=null, gpsDenied=false;
+const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
+async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
+async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
+function fmtTime(iso){if(!iso)return '—';try{return new Date(iso).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});}catch(e){return '—';}}
+function todayThai(){return new Date().toLocaleDateString('th-TH',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
+
+// ขอตำแหน่ง — resolve เป็น {lat,lng,accuracy} หรือ null ถ้าปฏิเสธ/ไม่รองรับ (ไม่ block การเช็คอิน)
+function getGps(){
+  return new Promise((resolve)=>{
+    if(!navigator.geolocation){gpsDenied=true;resolve(null);return;}
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude,accuracy:Math.round(p.coords.accuracy)}),
+      _=>{gpsDenied=true;resolve(null);},
+      {enableHighAccuracy:false,timeout:10000,maximumAge:60000}
+    );
+  });
+}
+
+function render(){
+  $('vDate').textContent=todayThai();
+  $('vBranch').textContent=(ID.branch_id||ID.branch_name||'—');
+  const hasIn=rec&&rec.checkin_time, hasOut=rec&&rec.checkout_time;
+  if(hasIn){$('rowIn').style.display='flex';$('vIn').textContent=fmtTime(rec.checkin_time);}
+  if(hasOut){$('rowOut').style.display='flex';$('vOut').textContent=fmtTime(rec.checkout_time);}
+  if(hasOut&&rec.regular_hours!=null){$('rowHrs').style.display='flex';$('vHrs').textContent=rec.regular_hours+' ชม.';}
+  const btn=$('act');
+  if(!hasIn){
+    // ยังไม่เช็คอิน → ปุ่มเช็คอินใหญ่ + ให้เลือกโหมด
+    $('vStatus').innerHTML='<span class="pill none">ยังไม่เช็คอิน</span>';
+    $('modeCard').style.display='block';
+    renderModes();
+    btn.textContent='เช็คอิน';btn.className='bigbtn in';btn.disabled=false;btn.onclick=doCheckin;
+  } else if(hasIn&&!hasOut){
+    // เช็คอินแล้ว → ปุ่มเช็คเอาท์
+    $('vStatus').innerHTML='<span class="pill in">เช็คอินแล้ว · '+ (MODES.find(m=>m[0]===(rec.work_mode||'onsite'))||['','—'])[1] +'</span>';
+    $('modeCard').style.display='none';
+    btn.textContent='เช็คเอาท์';btn.className='bigbtn out';btn.disabled=false;btn.onclick=doCheckout;
+  } else {
+    // เช็คเอาท์แล้ว → สรุป · ไม่มีปุ่ม
+    $('vStatus').innerHTML='<span class="pill done">เสร็จงานวันนี้แล้ว</span>';
+    $('modeCard').style.display='none';
+    $('cta').style.display='none';
+    $('msg').textContent='';
+  }
+}
+function renderModes(){
+  $('modes').innerHTML=MODES.map(m=>`<span class="chip${m[0]===mode?' on':''}" data-m="${m[0]}">${m[1]}</span>`).join('');
+  $('modes').onclick=(e)=>{const c=e.target.closest('.chip');if(!c)return;mode=c.dataset.m;renderModes();};
+}
+
+async function doCheckin(){
+  const btn=$('act');btn.disabled=true;$('msg').style.color='var(--muted)';$('msg').textContent='กำลังหาตำแหน่ง…';
+  const g=await getGps();
+  $('msg').textContent='กำลังเช็คอิน…';
+  const body={action:'checkin',employee_id:ID.employee_id,branch_id:ID.branch_id||'',work_mode:mode};
+  if(g){body.lat=g.lat;body.lng=g.lng;body.accuracy=g.accuracy;}
+  const r=await api('hr_attendance',body);
+  if(r.error){btn.disabled=false;$('msg').style.color='#b91c1c';$('msg').textContent='ผิดพลาด: '+r.error;return;}
+  rec=r.today||{checkin_time:new Date().toISOString(),work_mode:mode};
+  $('msg').style.color='#0f766e';$('msg').textContent='เช็คอินแล้ว'+(g?'':' · ไม่มีตำแหน่ง GPS (HR จะตรวจสอบ)');
+  render();
+}
+async function doCheckout(){
+  const btn=$('act');btn.disabled=true;$('msg').style.color='var(--muted)';$('msg').textContent='กำลังหาตำแหน่ง…';
+  const g=await getGps();
+  $('msg').textContent='กำลังเช็คเอาท์…';
+  const body={action:'checkout',employee_id:ID.employee_id};
+  if(g){body.lat=g.lat;body.lng=g.lng;}
+  const r=await api('hr_attendance',body);
+  if(r.error){btn.disabled=false;$('msg').style.color='#b91c1c';$('msg').textContent='ผิดพลาด: '+r.error;return;}
+  // reload สถานะจริงจาก server (ได้ checkout_time + regular_hours)
+  const g2=await api('hr_attendance?employee_id='+encodeURIComponent(ID.employee_id));
+  rec=g2.today||rec;
+  $('msg').style.color='#0f766e';$('msg').textContent='เช็คเอาท์แล้ว · รวม '+(r.regular_hours!=null?r.regular_hours:'—')+' ชม.';
+  render();
+}
+
+async function init(){
+  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
+  $('who').textContent=(ID.employee_name||ID.display_name)+' · '+ID.employee_id;
+  let {data:s}=await sb.auth.getSession();
+  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
+  $('app').style.display='block';$('cta').style.display='block';
+  $('vDate').textContent=todayThai();$('vBranch').textContent=(ID.branch_id||ID.branch_name||'—');
+  // โหลดสถานะวันนี้
+  const r=await api('hr_attendance?employee_id='+encodeURIComponent(ID.employee_id));
+  if(r&&r.error){$('msg').style.color='#b91c1c';$('msg').textContent='โหลดสถานะไม่ได้: '+r.error;}
+  rec=(r&&r.today)||null;
+  render();
+}
+init();
+</script></body></html>

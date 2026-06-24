@@ -1,0 +1,198 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>ประกาศ · Yiaoya</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 96px;max-width:480px;margin:0 auto}
+.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
+.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
+.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
+.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
+.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
+.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+input,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;background:#fff}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.flbl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.chip{padding:8px 13px;border:1px solid var(--border);border-radius:99px;font-size:13px;cursor:pointer;background:#fff}
+.chip.on{background:var(--teal);color:#04342C;border-color:var(--teal);font-weight:700}
+.cta{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 14px;background:rgba(241,245,249,.96);border-top:1px solid var(--border);backdrop-filter:blur(6px)}
+.cta button{width:100%;padding:14px;background:var(--teal);color:#04342C;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}
+.cta button:disabled{opacity:.45}
+.msg{text-align:center;font-size:13px;margin-top:7px;min-height:18px;line-height:1.5}
+.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
+a.lk{color:var(--teal);font-weight:700;text-decoration:none}
+/* --- announce-specific (brand tokens reused) --- */
+.acard{cursor:pointer}
+.acard.unread{border-left:3px solid var(--teal)}
+.atop{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600;line-height:1.4}
+.pill.cat{background:#E6F7F5;color:#0F766E}
+.pill.new{background:var(--teal);color:#04342C}
+.pill.ack{background:#FEF3C7;color:#92400e}
+.pill.done{background:#DCFCE7;color:#166534}
+.atitle{font-size:15.5px;font-weight:700;color:var(--navy);line-height:1.35}
+.asnip{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ameta{font-size:12px;color:var(--faint);margin-top:8px;display:flex;align-items:center;gap:6px}
+.ameta .arr{margin-left:auto;color:#0F766E;font-weight:700}
+.abody{font-size:14.5px;line-height:1.7;color:#1E293B;white-space:pre-wrap;margin-top:4px}
+.abody.collapsed{display:none}
+.ackbtn{width:100%;padding:13px;background:var(--teal);color:#04342C;border:none;border-radius:10px;font-size:14.5px;font-weight:800;cursor:pointer;margin-top:12px}
+.ackbtn:disabled{opacity:.55;cursor:default}
+.ackbtn.done{background:#10B981;color:#fff}
+.amsg{text-align:center;font-size:12px;margin-top:8px;min-height:14px;line-height:1.5}
+.empty{text-align:center;padding:42px 20px;color:var(--faint);font-size:14px;line-height:1.6}
+.divline{font-size:13px;font-weight:700;color:var(--muted);margin:6px 2px 9px}
+</style></head>
+<body>
+<div class="head"><div class="eb">YIAOYA · HR</div><h1>ประกาศ</h1><div class="who" id="who">—</div></div>
+<div id="app" style="display:none">
+  <div class="note">ประกาศที่ส่งถึงคุณ · แตะการ์ดเพื่ออ่านรายละเอียด · ประกาศที่ต้องรับทราบจะมีปุ่มกดยืนยัน</div>
+  <div class="chips" id="filters"></div>
+  <div id="list"></div>
+</div>
+<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL,ANON);
+const $=(id)=>document.getElementById(id);
+let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
+const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
+async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
+async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+const CAT_LABELS={permanent:'บอร์ดถาวร',monthly:'บอร์ดประจำเดือน',policy:'นโยบาย',welfare:'สวัสดิการ',activity:'กิจกรรม',announcement:'แจ้งเตือน',urgent:'ด่วน',general:'ทั่วไป'};
+function catLabel(c){const k=String(c||'general').toLowerCase();return CAT_LABELS[k]||(c||'ทั่วไป');}
+
+let ME=null, ALL=[], FILTER='all';
+const ACKED_KEY='yy_ann_acked';   // local fallback record (ack endpoint ยังไม่มี · ดูรายงาน)
+function readAcked(){try{return JSON.parse(localStorage.getItem(ACKED_KEY)||'{}')||{};}catch(e){return {};}}
+
+// --- targeting match: ประกาศถึงพนักงานคนนี้หรือไม่ ---
+function arr(v){return Array.isArray(v)?v.filter(Boolean):(v?String(v).split(',').map(s=>s.trim()).filter(Boolean):[]);}
+function meVals(){
+  const m=ME||{};
+  return {
+    branch:[m.branch_id,m.branch_name].filter(Boolean).map(String),
+    pos:[m.position,m.job_title,m.role].filter(Boolean).map(String),
+    dept:[m.department].filter(Boolean).map(String),
+    emp:[m.employee_id].filter(Boolean).map(String),
+  };
+}
+function targeted(a){
+  const v=meVals();
+  // exclude list ตัดทิ้งก่อน
+  if(arr(a.target_exclude_employees).some(e=>v.emp.includes(String(e))))return false;
+  const tb=arr(a.target_branches),tp=arr(a.target_positions),td=arr(a.target_departments),te=arr(a.target_employees);
+  // ไม่มี target ใด ๆ = ส่งทั้งบริษัท → ถึงทุกคน
+  if(!tb.length&&!tp.length&&!td.length&&!te.length)return true;
+  // ระบุพนักงานเจาะจง → ต้องมีชื่อ
+  if(te.length&&te.some(e=>v.emp.includes(String(e))))return true;
+  if(tb.length&&tb.some(b=>v.branch.includes(String(b))))return true;
+  if(tp.length&&tp.some(p=>v.pos.includes(String(p))))return true;
+  if(td.length&&td.some(d=>v.dept.includes(String(d))))return true;
+  return false;
+}
+
+function snippet(a){
+  const raw=String(a.body_md||a.body||'');
+  return raw.replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/[#*_>`~]/g,' ').replace(/\s+/g,' ').trim().slice(0,120);
+}
+function pubDate(a){
+  const d=a.published_at||a.posted_at||a.scheduled_at;
+  if(!d)return '';
+  const t=new Date(d);if(isNaN(t.getTime()))return '';
+  const M=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return t.getDate()+' '+M[t.getMonth()]+' '+(t.getFullYear()+543);
+}
+
+function render(){
+  const acked=readAcked();
+  let list=ALL.slice();
+  if(FILTER==='ack')list=list.filter(a=>a.requires_ack&&!acked[a.announcement_id||a.ann_id]);
+  if(!list.length){$('list').innerHTML='<div class="empty">'+(FILTER==='ack'?'ไม่มีประกาศที่ต้องรับทราบ':'ยังไม่มีประกาศสำหรับคุณ')+'</div>';return;}
+  $('list').innerHTML=list.map(card).join('');
+}
+function card(a){
+  const id=a.announcement_id||a.ann_id||'';
+  const acked=readAcked();const isAck=!!acked[id];
+  const pills=['<span class="pill cat">'+esc(catLabel(a.category))+'</span>'];
+  if(a.requires_ack&&!isAck)pills.push('<span class="pill ack">ต้องรับทราบ</span>');
+  if(a.requires_ack&&isAck)pills.push('<span class="pill done">รับทราบแล้ว</span>');
+  const sn=snippet(a),dt=pubDate(a);
+  let footer='';
+  if(a.requires_ack){
+    footer=isAck
+      ? '<button class="ackbtn done" disabled>รับทราบแล้ว</button>'
+      : '<button class="ackbtn" data-ack="'+esc(id)+'">กดรับทราบ</button>';
+  }
+  return '<div class="card acard" data-id="'+esc(id)+'">'+
+    '<div class="atop">'+pills.join('')+'</div>'+
+    '<div class="atitle">'+esc(a.title||'(ไม่มีหัวข้อ)')+'</div>'+
+    (sn?'<div class="asnip" data-snip>'+esc(sn)+'</div>':'')+
+    '<div class="abody collapsed" data-body>'+esc(String(a.body_md||a.body||''))+'</div>'+
+    '<div class="ameta">'+(dt?'ประกาศ '+dt:esc(id))+'<span class="arr" data-arr>เปิดอ่าน &rsaquo;</span></div>'+
+    '<div data-footer style="display:none">'+footer+'<div class="amsg" data-msg></div></div>'+
+  '</div>';
+}
+
+function init2(){
+  $('filters').innerHTML=[['all','ทั้งหมด'],['ack','ต้องรับทราบ']]
+    .map(([k,l])=>'<span class="chip'+(FILTER===k?' on':'')+'" data-f="'+k+'">'+l+'</span>').join('');
+  $('filters').onclick=(e)=>{const c=e.target.closest('.chip');if(!c)return;FILTER=c.dataset.f;init2();render();};
+
+  $('list').onclick=(e)=>{
+    const ackB=e.target.closest('[data-ack]');
+    if(ackB){doAck(ackB);return;}
+    const c=e.target.closest('.acard');if(!c)return;
+    const body=c.querySelector('[data-body]'),foot=c.querySelector('[data-footer]'),snip=c.querySelector('[data-snip]'),arr=c.querySelector('[data-arr]');
+    const open=body.classList.contains('collapsed');
+    body.classList.toggle('collapsed',!open);
+    foot.style.display=open?'block':'none';
+    if(snip)snip.style.display=open?'none':'';
+    if(arr)arr.innerHTML=open?'ย่อ &rsaquo;':'เปิดอ่าน &rsaquo;';
+  };
+}
+
+function doAck(btn){
+  // ⚠ hr_announce ยังไม่มี action 'ack' (ดูรายงาน) → ยังไม่ส่งจริง · บันทึก local ชั่วคราว
+  const id=btn.getAttribute('data-ack');
+  const wrap=btn.closest('[data-footer]');const msg=wrap&&wrap.querySelector('[data-msg]');
+  btn.disabled=true;
+  if(msg){msg.style.color='var(--muted)';msg.textContent='ระบบรับทราบกำลังเชื่อมต่อ';}
+  // เก็บ local เพื่อ UX (ไม่ fake การส่ง backend)
+  const acked=readAcked();acked[id]=new Date().toISOString();
+  try{localStorage.setItem(ACKED_KEY,JSON.stringify(acked));}catch(e){}
+  btn.classList.add('done');btn.textContent='รับทราบแล้ว (รออัปเดตระบบ)';
+}
+
+async function init(){
+  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
+  $('who').textContent=(ID.employee_name||ID.display_name||'')+' · '+ID.employee_id;
+  let {data:s}=await sb.auth.getSession();
+  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
+  $('app').style.display='block';
+  // โหลดโปรไฟล์ (employee.updated) เพื่อใช้ match targeting
+  try{
+    const pr=await api('hr_list?type=employee.updated&limit=3000');
+    const items=(pr&&(pr.items||pr.data))||[];
+    for(const it of items){const p=it.payload||it;if(p.employee_id===ID.employee_id){ME=p;break;}}
+  }catch(e){}
+  if(!ME)ME={employee_id:ID.employee_id,branch_id:ID.branch_id||'',branch_name:ID.branch_name||''};
+  // โหลดประกาศ
+  let r;try{r=await api('hr_announce',{action:'list'});}catch(e){$('list').innerHTML='<div class="empty">โหลดประกาศไม่สำเร็จ</div>';return;}
+  const anns=(r&&r.announcements)||[];
+  ALL=anns
+    .filter(a=>String(a.status||'published').toLowerCase()==='published')
+    .filter(targeted)
+    .sort((a,b)=>String(b.published_at||b.posted_at||'').localeCompare(String(a.published_at||a.posted_at||'')));
+  init2();render();
+}
+init();
+</script></body></html>

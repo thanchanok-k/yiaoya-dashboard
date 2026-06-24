@@ -1,0 +1,136 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>KPI ของฉัน · Yiaoya</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 40px;max-width:480px;margin:0 auto}
+.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
+.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
+.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
+.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
+.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
+.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+.dl{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #F1F2F4;font-size:14px}
+.dl:last-child{border-bottom:none}
+.dl .k{color:var(--muted);flex-shrink:0}
+.dl .v{color:var(--text);font-weight:600;text-align:right;word-break:break-word}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px}
+.stat{border-radius:12px;padding:14px}
+.stat.navy{background:var(--navy)}
+.stat.light{background:#E6F7F5;border:1px solid var(--border)}
+.stat-l{font-size:11px}
+.stat.navy .stat-l{color:#9FE1CB}
+.stat.light .stat-l{color:var(--muted)}
+.stat-v{font-size:30px;font-weight:700;line-height:1;margin-top:4px}
+.stat.navy .stat-v{color:#fff}
+.stat.light .stat-v{color:var(--navy)}
+.stat-v .unit{font-size:14px;font-weight:400}
+.stat.navy .stat-v .unit{color:#9FE1CB}
+.stat.light .stat-v .unit{color:var(--faint)}
+.stat-meta{font-size:11px;margin-top:5px}
+.stat.navy .stat-meta{color:#5DCAA5}
+.stat.light .stat-meta{color:var(--faint)}
+.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
+a.lk{color:var(--teal);font-weight:700;text-decoration:none}
+.lock{display:flex;gap:8px;align-items:flex-start;background:#F8FAFB;border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6}
+.lock svg{width:16px;height:16px;color:#0F766E;flex-shrink:0;margin-top:1px}
+</style></head>
+<body>
+<div class="head"><div class="eb">YIAOYA · HR</div><h1>KPI ของฉัน</h1><div class="who" id="who">—</div></div>
+<div id="app" style="display:none">
+  <div class="note">สรุปคะแนน KPI ของคุณ (อ่านอย่างเดียว) · ข้อมูลนี้เป็นของคุณเท่านั้น ไม่แสดงของคนอื่น</div>
+
+  <div class="card"><div class="sec"><span class="num">1</span>คะแนนล่าสุด</div>
+    <div class="stats">
+      <div class="stat navy">
+        <div class="stat-l">คะแนนรวมล่าสุด</div>
+        <div class="stat-v"><span id="score">—</span><span class="unit">/100</span></div>
+        <div class="stat-meta" id="period">รอบ —</div>
+      </div>
+      <div class="stat light">
+        <div class="stat-l">เฉลี่ยทุกรอบ</div>
+        <div class="stat-v"><span id="avg">—</span><span class="unit">/100</span></div>
+        <div class="stat-meta" id="periods">— รอบ</div>
+      </div>
+    </div>
+    <div class="hint" id="cmpHint"></div>
+  </div>
+
+  <div class="card"><div class="sec"><span class="num">2</span>เทียบค่าเฉลี่ย</div>
+    <div id="cmp"><div class="hint">กำลังโหลด…</div></div>
+  </div>
+
+  <div class="lock">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span>คะแนน KPI นี้เป็นของคุณเท่านั้น (PDPA) · ระบบรู้ว่าเป็นคุณจากบัญชี LINE ที่เปิดเข้ามา · รายละเอียดรายหมวดดูได้ที่รายงาน KPI เต็มใน LINE OA</span>
+  </div>
+</div>
+<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL,ANON);
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
+const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
+async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
+async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
+
+function fmtPeriod(p){p=String(p||'');const m=p.match(/(\d{4})-?(\d{2})?/);if(!m)return p||'—';return m[2]?(m[2]+'/'+m[1]):m[1];}
+function dl(rows){
+  const out=rows.filter(([,v])=>v!=null&&String(v).trim()!=='')
+    .map(([k,v])=>`<div class="dl"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('');
+  return out||'<div class="hint">ยังไม่มีข้อมูลเปรียบเทียบ</div>';
+}
+function delta(a,b){const d=Math.round((a-b)*10)/10;return (d>0?'+':'')+d;}
+
+function render(data){
+  // หา record ของฉันจาก by_employee (summary รวมทุกคน → กรองเฉพาะของฉัน client-side)
+  const list=(data&&data.by_employee)||[];
+  const me=list.find(e=>e.employee_id===ID.employee_id);
+  if(!me){
+    $('score').textContent='—';$('avg').textContent='—';
+    $('period').textContent='ยังไม่มีคะแนน';$('periods').textContent='0 รอบ';
+    $('cmp').innerHTML='<div class="hint">ยังไม่มีคะแนน KPI ของคุณในระบบ · คะแนนจะแสดงหลังรอบประเมินเสร็จสิ้น · สอบถาม HR ได้</div>';
+    return;
+  }
+  $('score').textContent=me.latest_score!=null?me.latest_score:'—';
+  $('avg').textContent=me.avg_score!=null?me.avg_score:'—';
+  $('period').textContent='รอบ '+fmtPeriod(me.latest_period);
+  $('periods').textContent=(me.periods||0)+' รอบ';
+
+  // เปรียบเทียบกับค่าเฉลี่ยรวม + ค่าเฉลี่ยสาขาของฉัน
+  const overall=data.overall_avg;
+  const myBr=(data.by_branch||[]).find(b=>b.branch_id===me.branch_id);
+  const cmpRows=[];
+  if(overall!=null)cmpRows.push(['คะแนนล่าสุดของฉัน', me.latest_score+' / 100']);
+  if(overall!=null)cmpRows.push(['ค่าเฉลี่ยทั้งองค์กร', overall+' / 100']);
+  if(myBr)cmpRows.push(['ค่าเฉลี่ยสาขา ('+esc(me.branch_id||'—')+')', myBr.avg_score+' / 100 · '+(myBr.employees||0)+' คน']);
+  $('cmp').innerHTML=dl(cmpRows);
+
+  if(overall!=null){
+    const d=delta(me.latest_score,overall);
+    const word=Number(d)>0?'สูงกว่า':(Number(d)<0?'ต่ำกว่า':'เท่ากับ');
+    $('cmpHint').textContent='คะแนนล่าสุดของคุณ '+word+'ค่าเฉลี่ยองค์กร '+(d==='0'?'':d+' คะแนน')+(d==='0'?'พอดี':'');
+  }
+}
+
+async function init(){
+  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
+  $('who').textContent=(ID.employee_name||ID.display_name||'')+' · '+ID.employee_id;
+  let {data:s}=await sb.auth.getSession();
+  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
+  $('app').style.display='block';
+  try{
+    const data=await api('hr_kpi_summary');
+    if(data&&data.error){$('cmp').innerHTML='<div class="hint">โหลดข้อมูลไม่สำเร็จ: '+esc(data.error)+'</div>';return;}
+    render(data);
+  }catch(e){$('cmp').innerHTML='<div class="hint">โหลดข้อมูลไม่สำเร็จ · ลองใหม่อีกครั้ง</div>';}
+}
+init();
+</script></body></html>
