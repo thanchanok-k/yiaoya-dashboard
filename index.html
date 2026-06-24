@@ -27,6 +27,12 @@ body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,syste
 .sb-label .chev{font-size:13px;opacity:.55;transition:transform .15s}
 .sb-label.col .chev{transform:rotate(-90deg)}
 .sb-label .gcount{margin-left:auto;font-size:9px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.6);border-radius:8px;padding:1px 6px;font-weight:600;letter-spacing:0}
+.sb-sub{padding:6px 14px 6px 28px;font-size:11.5px;color:rgba(255,255,255,.58);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.sb-sub:hover{color:rgba(255,255,255,.88)}
+.sb-sub .chev{font-size:12px;opacity:.5;transition:transform .15s}
+.sb-sub.col .chev{transform:rotate(-90deg)}
+.sb-sub .gcount{margin-left:auto;font-size:9px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.55);border-radius:8px;padding:1px 6px;font-weight:600}
+.sb-item.lvl2{padding-left:36px;font-size:12.5px}
 .sb-search{margin:10px 12px 6px;position:relative}
 .sb-search input{width:100%;padding:7px 10px 7px 30px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:12px;outline:none}
 .sb-search input::placeholder{color:rgba(255,255,255,.45)}
@@ -778,13 +784,13 @@ let currentRole='director';
    ║  1. <div class="sb-item" data-view="X"><i class="ti ti-..."></i>ชื่อไทย</div> ║
    ║  2. <section class="view" data-view="X">...</section>  (กล่องเนื้อหา)         ║
    ║  3. VIEW_TITLE.X = 'ชื่อหัวข้อ'  (ไม่ใส่ = หัวข้อว่าง)                          ║
-   ║  4. เพิ่ม 'X' ใน NAV_GROUPS กลุ่มที่เหมาะ (ไม่ใส่ = ตกกอง "อื่น ๆ")            ║
+   ║  4. เพิ่ม 'X' ใน NAV_TREE กลุ่ม/หมวดที่เหมาะ (ไม่ใส่ = ตกกอง "อื่น ๆ")          ║
    ║  5. เพิ่ม 'X' ใน VIEWS_BY_ROLE ของ role ที่ควรเห็น (ไม่ใส่ = เห็นเฉพาะ director)║
    ║ ถ้าเป็น ported page (โหลดจาก _ported/X.js) เพิ่มอีก 3 จุด:                     ║
    ║  6. PORTED_FN.X='mountX'  7. PORTED_SCRIPT.X='_ported/X.js'  8. PORTED_WRAP.X='wrap-X' ║
    ║  + ใน section ใส่ <div id="wrap-X"></div> และไฟล์ _ported/X.js มี window.mountX ║
    ╚══════════════════════════════════════════════════════════════════════════╝
-   buildNav() จัดเรียงตาม NAV_GROUPS ตอน runtime (reuse element เดิม คงไอคอน/onclick/count) */
+   buildNav() จัดเรียงตาม NAV_TREE ตอน runtime (โดเมน→sub→เมนู · reuse element เดิม คงไอคอน/onclick/count) */
 /* โครง 3 ชั้น: โดเมน → (sub-category) → เมนู · โดเมนที่ไม่มี subs = เมนูตรง 1 ชั้น */
 const NAV_TREE=[
  {label:'ภาพรวม', views:['overview']},
@@ -843,7 +849,7 @@ function navAudit(){
   const W=[];
   secs.filter(v=>!items.includes(v)).forEach(v=>W.push('• "'+v+'": มี <section> แต่ไม่มีเมนู (เข้าไม่ถึง) → เพิ่ม sb-item (จุด 1)'));
   items.filter(v=>!secs.includes(v)&&v!=='overview').forEach(v=>W.push('• "'+v+'": มีเมนูแต่ไม่มี <section> (จุด 2)'));
-  items.filter(v=>!inG.has(v)).forEach(v=>W.push('• "'+v+'": ไม่อยู่ NAV_GROUPS → ตกกอง "อื่น ๆ" (จุด 4)'));
+  items.filter(v=>!inG.has(v)).forEach(v=>W.push('• "'+v+'": ไม่อยู่ NAV_TREE → ตกกอง "อื่น ๆ" (จุด 4)'));
   items.filter(v=>!VIEW_TITLE[v]).forEach(v=>W.push('• "'+v+'": ไม่มีใน VIEW_TITLE → หัวข้อว่าง (จุด 3)'));
   items.filter(v=>!inR.has(v)).forEach(v=>W.push('• "'+v+'": ไม่อยู่ใน role ใดเลย → เห็นเฉพาะ director (จุด 5)'));
   if(W.length){ console.warn('%c[navAudit] เมนูยังไม่ครบ '+W.length+' จุด — ดู DASHBOARD_เพิ่มเมนูใหม่.md','color:#D97706;font-weight:700');
@@ -869,27 +875,37 @@ function initAccordion(){
 function updateNav(){
  initAccordion(); const nav=$('sbnav'); if(!nav) return;
  const allowed=VIEWS_BY_ROLE[currentRole]||ALL_VIEWS;
- const searching=_navQ.length>0; const stat={};
+ const searching=_navQ.length>0; const dS={}, sS={};
  nav.querySelectorAll('.sb-item').forEach(it=>{
-  const g=it.dataset.grp;
+  const d=it.dataset.dom, s=it.dataset.sub;
   const roleOK=allowed.includes(it.dataset.view);
   const matchOK=!searching || it.textContent.toLowerCase().includes(_navQ);
-  const colHidden=!searching && _collapsed.has(g);
-  it.style.display=(roleOK&&matchOK&&!colHidden)?'':'none';
-  stat[g]=stat[g]||{r:0,m:0}; if(roleOK)stat[g].r++; if(roleOK&&matchOK)stat[g].m++;
+  const hidden=!searching && (_colDom.has(d) || (s&&_colSub.has(s)));
+  it.style.display=(roleOK&&matchOK&&!hidden)?'':'none';
+  dS[d]=dS[d]||{r:0,m:0}; if(roleOK)dS[d].r++; if(roleOK&&matchOK)dS[d].m++;
+  if(s){ sS[s]=sS[s]||{r:0,m:0}; if(roleOK)sS[s].r++; if(roleOK&&matchOK)sS[s].m++; }
  });
- nav.querySelectorAll('.sb-label').forEach(lb=>{
-  const g=lb.dataset.grp, gi=stat[g]||{r:0,m:0};
-  lb.style.display=(gi.r>0 && (!searching||gi.m>0))?'':'none';
-  const gc=lb.querySelector('.gcount'); if(gc) gc.textContent=gi.r||'';
-  lb.classList.toggle('col', !searching && _collapsed.has(g));
+ nav.querySelectorAll('.sb-sub').forEach(sl=>{
+  const s=sl.dataset.sub, d=sl.dataset.dom, st=sS[s]||{r:0,m:0};
+  const domHidden=!searching && _colDom.has(d);
+  sl.style.display=(st.r>0 && (!searching||st.m>0) && !domHidden)?'':'none';
+  const gc=sl.querySelector('.gcount'); if(gc) gc.textContent=st.r||'';
+  sl.classList.toggle('col', !searching && _colSub.has(s));
+ });
+ nav.querySelectorAll('.sb-label').forEach(dl=>{
+  const d=dl.dataset.dom, st=dS[d]||{r:0,m:0};
+  dl.style.display=(st.r>0 && (!searching||st.m>0))?'':'none';
+  const gc=dl.querySelector('.gcount'); if(gc) gc.textContent=st.r||'';
+  dl.classList.toggle('col', !searching && _colDom.has(d));
  });
 }
 function collapseToActive(){
  initAccordion();
  const active=document.querySelector('.sb-item.active');
- const ag=active?active.dataset.grp:null;
- _collapsed=new Set(_navGroups.filter(g=>g!==ag));
+ const ad=active?active.dataset.dom:null, as=active?active.dataset.sub:null;
+ _colDom=new Set(); _colSub=new Set();
+ document.querySelectorAll('#sbnav .sb-label').forEach(l=>{ if(l.dataset.dom!==ad) _colDom.add(l.dataset.dom); });
+ document.querySelectorAll('#sbnav .sb-sub').forEach(l=>{ if(l.dataset.sub!==as) _colSub.add(l.dataset.sub); });
 }
 function applyRole(role){
  if(!VIEWS_BY_ROLE[role]) role='director';
