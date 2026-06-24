@@ -54,12 +54,13 @@ function se2MapRow(p) {
     comment: p.comment || '',
     submitted_at: se2Date(p.submitted_at || p.created_at || p.updated_at),
     status: (p.leadership_feedback || p.rehire_recommendation) ? 'done' : 'pending',
-    _raw: p,
+    // PDPA: ไม่แนบ payload ดิบ (_raw) — เก็บเฉพาะ field ที่ whitelist ไว้ข้างบน
   };
 }
 
 var _se2Rows = [];
-var _se2Raw = {};
+// PDPA: cache เฉพาะ row ที่ map/whitelist แล้ว (ไม่ใช่ payload ดิบ) ต่อ target — กัน PII ที่ไม่ได้ render ค้าง heap
+var _se2ById = {};
 
 function se2Fetch() {
   return sb.functions.invoke(SE_FN + '?type=' + encodeURIComponent(SE_TYPE) + '&limit=' + SE_LIMIT).then(function (res) {
@@ -70,8 +71,9 @@ function se2Fetch() {
       var id = p.target_id || p.entity_id || p.id || p.employee_id || '';
       if (!id || seen[id]) return;   // payload ล่าสุดต่อ target (items มาเรียงใหม่→เก่า)
       seen[id] = true;
-      _se2Raw[id] = p;
-      rows.push(se2MapRow(p));
+      var row = se2MapRow(p);
+      _se2ById[id] = row;
+      rows.push(row);
     });
     _se2Rows = rows;
     return rows;

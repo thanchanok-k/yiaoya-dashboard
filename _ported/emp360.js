@@ -82,7 +82,8 @@ function e3MapEmp(p) {
     food_like: p.food_like || '',
     food_allergy: p.food_allergy || '',
     favorite_things: p.favorite_things || '',
-    _raw: p,
+    // PDPA: ไม่เก็บ payload ดิบ (_raw) ใน heap — เก็บเฉพาะ field ที่ whitelist ไว้ข้างบน
+    // (national_id/salary/bank_account/free-text ที่ไม่ได้ render จะไม่ค้างในหน่วยความจำ)
   };
 }
 
