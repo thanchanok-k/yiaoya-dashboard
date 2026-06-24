@@ -273,6 +273,8 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="license"><i class="ti ti-certificate"></i>ใบอนุญาต<span class="ct" id="ct-license"></span></div>
       <div class="sb-item" data-view="insurance"><i class="ti ti-shield-heart"></i>ประกัน/สวัสดิการ<span class="ct" id="ct-insurance"></span></div>
       <div class="sb-item" data-view="document"><i class="ti ti-files"></i>ติดตามเอกสาร<span class="ct" id="ct-document"></span></div>
+      <div class="sb-label">วางแผนขยายสาขา</div>
+      <div class="sb-item" data-view="expansion"><i class="ti ti-building-plus"></i>ROI อุปกรณ์<span class="ct" id="ct-expansion"></span></div>
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
@@ -682,6 +684,10 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
     <section class="view" data-view="license"><div class="sec"><span class="sec-bar"></span>ใบอนุญาต<span class="sec-c">Native</span></div><div id="wrap-license"></div></section>
     <section class="view" data-view="insurance"><div class="sec"><span class="sec-bar"></span>ประกัน/สวัสดิการ<span class="sec-c">Native</span></div><div id="wrap-insurance"></div></section>
     <section class="view" data-view="document"><div class="sec"><span class="sec-bar"></span>ติดตามเอกสาร<span class="sec-c">Native</span></div><div id="wrap-document"></div></section>
+    <section class="view" data-view="expansion">
+      <div class="sec"><span class="sec-bar"></span>วางแผนขยายสาขา · ROI อุปกรณ์<span class="sec-c">Native Supabase · expansion_roi · BTL devices</span></div>
+      <div id="expWrap"></div>
+    </section>
     <section class="view" data-view="events">
       <div class="sec"><span class="sec-bar"></span>เหตุการณ์ทั้งหมด<span class="sec-c"><span class="dot"></span>realtime</span></div>
       <div class="card"><div id="eventsAll"></div></div>
@@ -700,7 +706,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',hub360:'ภาพรวม 360°',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',dept:'รายได้ตามแผนก'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',dept:'รายได้ตามแผนก'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -2588,6 +2594,40 @@ function mountHub360(){
   const ct=$('ct-hub360');if(ct)ct.textContent='360°';
  }).catch(e=>{console.error('hub360',e);$('hubWrap').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
 }
+function mountExpansion(){
+ if(!$('expWrap'))return;
+ const B=n=>'฿'+Number(n||0).toLocaleString('th-TH',{maximumFractionDigits:0});
+ $('expWrap').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลด ROI อุปกรณ์…</span></div>';
+ sb.functions.invoke('expansion_roi').then(({data})=>{
+  const rows=(data&&data.rows)||[];
+  if(!rows.length){$('expWrap').innerHTML='<div class="empty-card"><i class="ti ti-building-plus"></i><span>ยังไม่มีข้อมูลอุปกรณ์</span></div>';return;}
+  rows.forEach(r=>{if(typeof r.scenarios==='string'){try{r.scenarios=JSON.parse(r.scenarios);}catch(e){r.scenarios=[];}}if(!Array.isArray(r.scenarios))r.scenarios=[];});
+  const totCap=rows.reduce((a,r)=>a+ +r.price,0);
+  const allM=rows.flatMap(r=>r.scenarios.map(s=>+s.months)).filter(x=>x);
+  const fastest=allM.length?Math.min.apply(null,allM):0;
+  const kpi=(l,v,sub,c)=>'<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:13px 15px;border-top:3px solid '+c+'"><div style="font-size:10.5px;color:var(--text-muted,#64748B);font-weight:600">'+l+'</div><div style="font-size:20px;font-weight:800;color:var(--navy,#0D2F4F);margin-top:2px">'+v+'</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">'+(sub||'')+'</div></div>';
+  let h='<div style="font-size:12px;color:var(--text-muted,#64748B);margin-bottom:12px">ฐานข้อมูลลงทุนอุปกรณ์ สำหรับวางแผนเปิดสาขาใหม่ · ประมาณการ '+(rows[0]?rows[0].patients_per_day:10)+' คนไข้/วัน/เครื่อง</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px">'
+   +kpi('รวมลงทุน (ครบทุกเครื่อง)',B(totCap),rows.length+' เครื่อง · BTL','#185FA5')
+   +kpi('คืนทุนเร็วสุด',fastest+' เดือน','ถ้าตั้งราคาเต็ม','#0F766E')
+   +kpi('เครื่องถูกสุด',B(Math.min.apply(null,rows.map(r=>+r.price))),'เริ่มต้นลงทุน','#C2410C')+'</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px">';
+  rows.forEach(r=>{const ms=r.scenarios.map(s=>+s.months).filter(x=>x);const minM=ms.length?Math.min.apply(null,ms):0,maxM=ms.length?Math.max.apply(null,ms):0;
+   h+='<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:14px;padding:16px">'
+     +'<div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font-size:15px;font-weight:800;color:var(--navy,#0D2F4F)">'+esc(r.device)+'</div><span style="background:#EFF6FF;color:#1D4ED8;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+esc(r.brand||"")+'</span></div>'
+     +'<div style="font-size:23px;font-weight:800;color:#185FA5;margin:4px 0">'+B(r.price)+'</div>'
+     +'<div style="font-size:12px;color:#0F766E;font-weight:700;margin-bottom:8px"><i class="ti ti-clock-dollar"></i> คืนทุน '+minM+'–'+maxM+' เดือน</div>'
+     +'<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><thead><tr style="text-align:left"><th style="font-size:10px;color:var(--text-muted,#64748B);font-weight:600;padding:3px 0">ราคา/ครั้ง</th><th style="font-size:10px;color:var(--text-muted,#64748B);font-weight:600;text-align:right">รายได้/วัน</th><th style="font-size:10px;color:var(--text-muted,#64748B);font-weight:600;text-align:right">คืนทุน</th></tr></thead><tbody>'
+     +r.scenarios.map(sc=>'<tr><td style="font-size:12px;padding:3px 0;color:var(--navy,#0D2F4F)">'+B(sc.price)+'</td><td style="font-size:12px;text-align:right">'+B(sc.rev_day)+'</td><td style="font-size:12px;text-align:right;font-weight:700;color:'+(sc.months<=3?"#0F766E":sc.months<=5?"#B45309":"#DC2626")+'">'+sc.months+' ด.</td></tr>').join('')
+     +'</tbody></table>'
+     +'<div style="font-size:10.5px;color:var(--text-muted,#64748B);border-top:1px solid var(--border,#E2E8F0);padding-top:6px"><b>วัสดุ:</b> '+esc(r.refill||"-")+'</div>'
+     +'<div style="font-size:10.5px;color:var(--text-muted,#64748B);margin-top:3px"><b>ดูแล:</b> '+esc(r.maintenance||"-")+'</div></div>';
+  });
+  h+='</div>';
+  $('expWrap').innerHTML=h;
+  const ct=$('ct-expansion');if(ct)ct.textContent=rows.length;
+ }).catch(e=>{console.error('expansion',e);$('expWrap').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
+}
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
  sb.auth.getUser().then(({data})=>{
@@ -2615,7 +2655,7 @@ function start(){
  renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
  renderBankTabs(); $('bkPeriod').value=_curMonth(); $('bkGen').onclick=bkGenerate; $('bkCsv').onclick=bkDownloadCsv; loadBankHistory();
  if($('rcDate')&&!$('rcDate').value)$('rcDate').value=new Date().toISOString().slice(0,10); $('rcGen').onclick=rcGenerate;
- mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountDept();mountMkt();mountHub360();
+ mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountDept();mountMkt();mountHub360();mountExpansion();
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
