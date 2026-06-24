@@ -743,8 +743,11 @@ const VIEWS_BY_ROLE={
  director: ALL_VIEWS.slice(),
  accountant:['overview','events','accdigest','accexp','accpr','accpetty','accsales','accpayroll','accdf','acctax','accbank','accpayset','accroster'],
  hr:['overview','employees','branches','leaves','ot','kpi',
-     'digest','balance','kpisum','contract','anniv','leaveana','otsum',
-     'announce','leavereq','otreq','pinfo','incident','oneonone','probreview','expense','survey','doctorshift','accreq'],
+     'digest','balance','kpisum','leaveana','otsum','contract','anniv',
+     'leavereq','otreq','pinfo','expense','accreq',
+     'announce','incident','oneonone','probreview','survey',
+     'employeemgr','onboard','offboard','recruit','training','disciplinary','license','insurance','document','doctorshift','calendar',
+     'payrollmgr','kpimgr','events'],
  staff:['overview'],
  purchasing:['overview','purdash','purpr','purpo','purgr','purvendor','puritem','purrfq','purstock','purscan','purlookup','puractivity','events'],
 };
@@ -752,6 +755,39 @@ const VIEWS_BY_ROLE={
    Today: ROLE_MAP + the view-as switcher demonstrate the behavior. */
 const ROLE_MAP={'admin@yiaoya-hub.com':'director','thanchanok.k@altmedical.info':'director'};
 let currentRole='director';
+
+/* ===== Sidebar: จัดกลุ่มเมนูใหม่เป็น sub-category ตามประเภทงาน (regroup ตอน runtime) =====
+   reuse element เดิม (คงไอคอน/onclick/count) · เมนูที่ไม่อยู่ใน config → กอง "อื่น ๆ" (ไม่หาย) */
+const NAV_GROUPS=[
+ {label:'ภาพรวม', views:['overview']},
+ {label:'ข้อมูล · Entities', views:['employees','branches','prices','payments','appointments','leaves','ot','kpi']},
+ {label:'HR · แดชบอร์ด', views:['digest','balance','kpisum','leaveana','otsum','contract','anniv']},
+ {label:'HR · คำขอ/อนุมัติ', views:['leavereq','otreq','pinfo','expense','accreq']},
+ {label:'HR · บันทึก/ประเมิน', views:['announce','incident','oneonone','probreview','survey']},
+ {label:'HR · ทะเบียนพนักงาน', views:['employeemgr','onboard','offboard','recruit','training','disciplinary','license','insurance','document','doctorshift','calendar']},
+ {label:'HR · เงินเดือน/KPI', views:['payrollmgr','kpimgr']},
+ {label:'บัญชี · Accountant', views:['accdigest','accexp','accpr','accpetty','accsales','accpayroll','accdf','acctax','accbank','accpayset','accroster']},
+ {label:'จัดซื้อ · Purchase', views:['purdash','purpr','purpo','purgr','purvendor','puritem','purrfq','purstock','purscan','purlookup','puractivity']},
+ {label:'การตลาด · โฆษณา', views:['mkt','adops','adcreative']},
+ {label:'ผู้บริหาร · HQ', views:['aihq','hub360','dept','expansion']},
+ {label:'ระบบ', views:['events','ecosystem']},
+];
+function buildNav(){
+ const nav=$('sbnav'); if(!nav||nav._built) return;
+ const items={}; nav.querySelectorAll('.sb-item').forEach(it=>{ items[it.dataset.view]=it; });
+ const search=nav.querySelector('.sb-search');
+ nav.querySelectorAll('.sb-label').forEach(l=>l.remove());
+ const frag=document.createDocumentFragment(); const used=new Set();
+ NAV_GROUPS.forEach(g=>{
+  const present=g.views.filter(v=>items[v]); if(!present.length) return;
+  const lab=document.createElement('div'); lab.className='sb-label'; lab.textContent=g.label; frag.appendChild(lab);
+  present.forEach(v=>{ frag.appendChild(items[v]); used.add(v); });
+ });
+ const left=Object.keys(items).filter(v=>!used.has(v));
+ if(left.length){ const lab=document.createElement('div'); lab.className='sb-label'; lab.textContent='อื่น ๆ'; frag.appendChild(lab); left.forEach(v=>frag.appendChild(items[v])); }
+ nav.innerHTML=''; if(search) nav.appendChild(search); nav.appendChild(frag);
+ nav._built=true;
+}
 
 /* ===== Sidebar accordion + search (ทำงานร่วม role filter ใน updateNav เดียว) ===== */
 let _navInit=false, _navGroups=[], _collapsed=new Set(), _navQ='';
@@ -2729,6 +2765,7 @@ function mountAiHQ(){
 }
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+ buildNav();
  sb.auth.getUser().then(({data})=>{
    const e=(data&&data.user&&data.user.email)||'admin';
    // ลำดับความสำคัญ: ตัวตนจาก LINE (ถ้าล็อกอินผ่าน LINE) → ROLE_MAP อีเมล → director
