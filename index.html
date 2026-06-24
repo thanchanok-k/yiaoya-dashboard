@@ -756,8 +756,20 @@ const VIEWS_BY_ROLE={
 const ROLE_MAP={'admin@yiaoya-hub.com':'director','thanchanok.k@altmedical.info':'director'};
 let currentRole='director';
 
-/* ===== Sidebar: จัดกลุ่มเมนูใหม่เป็น sub-category ตามประเภทงาน (regroup ตอน runtime) =====
-   reuse element เดิม (คงไอคอน/onclick/count) · เมนูที่ไม่อยู่ใน config → กอง "อื่น ๆ" (ไม่หาย) */
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║  กฏการเพิ่มเมนูใหม่ (READ ME ก่อนเพิ่มหน้า/เมนู) — ดูเต็มที่ DASHBOARD_เพิ่มเมนูใหม่.md ║
+   ╠══════════════════════════════════════════════════════════════════════════╣
+   ║ เพิ่ม "เมนู" 1 อันต้องแตะ 5 จุด (navAudit() จะเตือนใน console ถ้าลืม):        ║
+   ║  1. <div class="sb-item" data-view="X"><i class="ti ti-..."></i>ชื่อไทย</div> ║
+   ║  2. <section class="view" data-view="X">...</section>  (กล่องเนื้อหา)         ║
+   ║  3. VIEW_TITLE.X = 'ชื่อหัวข้อ'  (ไม่ใส่ = หัวข้อว่าง)                          ║
+   ║  4. เพิ่ม 'X' ใน NAV_GROUPS กลุ่มที่เหมาะ (ไม่ใส่ = ตกกอง "อื่น ๆ")            ║
+   ║  5. เพิ่ม 'X' ใน VIEWS_BY_ROLE ของ role ที่ควรเห็น (ไม่ใส่ = เห็นเฉพาะ director)║
+   ║ ถ้าเป็น ported page (โหลดจาก _ported/X.js) เพิ่มอีก 3 จุด:                     ║
+   ║  6. PORTED_FN.X='mountX'  7. PORTED_SCRIPT.X='_ported/X.js'  8. PORTED_WRAP.X='wrap-X' ║
+   ║  + ใน section ใส่ <div id="wrap-X"></div> และไฟล์ _ported/X.js มี window.mountX ║
+   ╚══════════════════════════════════════════════════════════════════════════╝
+   buildNav() จัดเรียงตาม NAV_GROUPS ตอน runtime (reuse element เดิม คงไอคอน/onclick/count) */
 const NAV_GROUPS=[
  {label:'ภาพรวม', views:['overview']},
  {label:'ข้อมูล · Entities', views:['employees','branches','prices','payments','appointments','leaves','ot','kpi']},
@@ -784,9 +796,32 @@ function buildNav(){
   present.forEach(v=>{ frag.appendChild(items[v]); used.add(v); });
  });
  const left=Object.keys(items).filter(v=>!used.has(v));
- if(left.length){ const lab=document.createElement('div'); lab.className='sb-label'; lab.textContent='อื่น ๆ'; frag.appendChild(lab); left.forEach(v=>frag.appendChild(items[v])); }
+ if(left.length){ const lab=document.createElement('div'); lab.className='sb-label'; lab.textContent='อื่น ๆ'; frag.appendChild(lab); left.forEach(v=>frag.appendChild(items[v]));
+   console.warn('[buildNav] เมนูยังไม่ถูกจัดกลุ่ม (ตกกอง "อื่น ๆ") → เพิ่มใน NAV_GROUPS:', left); }
  nav.innerHTML=''; if(search) nav.appendChild(search); nav.appendChild(frag);
  nav._built=true;
+}
+
+/* navAudit — เช็คความครบของเมนูตาม "กฏการเพิ่มเมนู" แล้วเตือนใน console (รันตอน start)
+   เปิด DevTools Console เพื่อดู: เมนูไหนยังไม่ครบ ต้องไปเติมจุดไหน */
+function navAudit(){
+ try{
+  const nav=$('sbnav'); if(!nav) return [];
+  const items=[...nav.querySelectorAll('.sb-item')].map(i=>i.dataset.view);
+  const secs=[...document.querySelectorAll('.view')].map(s=>s.dataset.view).filter(Boolean);
+  const inG=new Set(); NAV_GROUPS.forEach(g=>g.views.forEach(v=>inG.add(v)));
+  const inR=new Set(); Object.values(VIEWS_BY_ROLE).forEach(a=>a.forEach(v=>inR.add(v)));
+  const W=[];
+  secs.filter(v=>!items.includes(v)).forEach(v=>W.push('• "'+v+'": มี <section> แต่ไม่มีเมนู (เข้าไม่ถึง) → เพิ่ม sb-item (จุด 1)'));
+  items.filter(v=>!secs.includes(v)&&v!=='overview').forEach(v=>W.push('• "'+v+'": มีเมนูแต่ไม่มี <section> (จุด 2)'));
+  items.filter(v=>!inG.has(v)).forEach(v=>W.push('• "'+v+'": ไม่อยู่ NAV_GROUPS → ตกกอง "อื่น ๆ" (จุด 4)'));
+  items.filter(v=>!VIEW_TITLE[v]).forEach(v=>W.push('• "'+v+'": ไม่มีใน VIEW_TITLE → หัวข้อว่าง (จุด 3)'));
+  items.filter(v=>!inR.has(v)).forEach(v=>W.push('• "'+v+'": ไม่อยู่ใน role ใดเลย → เห็นเฉพาะ director (จุด 5)'));
+  if(W.length){ console.warn('%c[navAudit] เมนูยังไม่ครบ '+W.length+' จุด — ดู DASHBOARD_เพิ่มเมนูใหม่.md','color:#D97706;font-weight:700');
+   W.forEach(w=>console.warn('  '+w)); }
+  else console.info('%c[navAudit] เมนูครบถ้วนทุกจุด ✓','color:#0F766E;font-weight:700');
+  return W;
+ }catch(e){ console.error('navAudit error',e); return []; }
 }
 
 /* ===== Sidebar accordion + search (ทำงานร่วม role filter ใน updateNav เดียว) ===== */
@@ -2679,7 +2714,7 @@ function mountExpansion(){
  const pcol=m=>m==null?'#64748B':m<=6?'#0F766E':m<=12?'#B45309':'#DC2626';
  const ist='padding:7px 10px;border:1px solid var(--border,#E2E8F0);border-radius:7px;font-size:13px;width:100%;font-family:inherit;color:var(--navy,#0D2F4F)';
  $('expWrap').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลด…</span></div>';
- Promise.all([sb.functions.invoke('expansion_roi'),sb.functions.invoke('jera_daily_sales',{body:{action:'get',days:60}}),sb.functions.invoke('branch_costs',{body:{action:'get'}}),sb.functions.invoke('acc_payroll',{body:{action:'get'}})]).then(([er,ds,bc,pr])=>{
+ Promise.all([sb.functions.invoke('expansion_roi'),sb.functions.invoke('jera_daily_sales',{body:{action:'get',days:60}}),sb.functions.invoke('branch_costs',{body:{action:'get'}}),sb.functions.invoke('acc_employee_payroll',{body:{action:'get'}})]).then(([er,ds,bc,pr])=>{
   const rows=((er&&er.data)||{}).rows||[];
   if(!rows.length){$('expWrap').innerHTML='<div class="empty-card"><i class="ti ti-building-plus"></i><span>ยังไม่มีข้อมูลอุปกรณ์</span></div>';return;}
   const J=x=>{if(typeof x==='string'){try{return JSON.parse(x);}catch(e){return null;}}return x;};
@@ -2688,7 +2723,7 @@ function mountExpansion(){
   const nets=dr.map(r=>+r.net||0); const avgDay=nets.length?Math.round(nets.reduce((a,b)=>a+b,0)/nets.length):0; const monthRun=avgDay*30;
   const billsDay=dr.length?Math.round(dr.reduce((a,r)=>a+(+r.bills||0),0)/dr.length):0;
   const C=((bc&&bc.data)||{}).costs||{};
-  const prT=((pr&&pr.data)||{}).totals||{}; const staffReal=+(prT.total_gross||0); const staffN=+(prT.count||0);
+  const profs=((pr&&pr.data)||{}).profiles||[]; const staffReal=Math.round(profs.reduce((a,p)=>a+(+p.base_salary||0),0)); const staffN=profs.length;
   const kpi=(l,v,sub,c)=>'<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:13px 15px;border-top:3px solid '+c+'"><div style="font-size:10.5px;color:var(--text-muted,#64748B);font-weight:600">'+l+'</div><div style="font-size:19px;font-weight:800;color:var(--navy,#0D2F4F);margin-top:2px">'+v+'</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">'+(sub||'')+'</div></div>';
   let h='<div class="card" style="padding:16px;margin-bottom:14px;border-left:4px solid #0F766E"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-building-store" style="color:#0F766E"></i> สาขาปัจจุบัน (ศาลายา) — ยอดขายจริง <span style="font-size:11px;color:#0F766E;font-weight:600">● ดึงสด</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">'
    +kpi('ยอดขายเฉลี่ย/วัน',B(avgDay),dr.length+' วันล่าสุด (จริง)','#0F766E')+kpi('ยอดขาย/เดือน (run-rate)',B(monthRun),'จริง × 30','#185FA5')+kpi('บิล/วัน',billsDay+' บิล','จริง','#C2410C')+'</div></div>';
@@ -2708,8 +2743,8 @@ function mountExpansion(){
    +'<div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">2. ต้นทุนแรกเข้า (จ่ายครั้งเดียว)</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">'
    +'<div><div style="font-size:11px;color:#64748B;margin-bottom:3px">ตกแต่ง/ก่อสร้าง</div>'+num('bc_renovation',C.renovation)+'</div><div><div style="font-size:11px;color:#64748B;margin-bottom:3px">เซ็ตอัป/เฟอร์นิเจอร์</div>'+num('bc_setup',C.setup)+'</div><div><div style="font-size:11px;color:#64748B;margin-bottom:3px">ใบอนุญาต/จดทะเบียน</div>'+num('bc_license',C.license)+'</div></div>'
    +'<div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">3. ค่าใช้จ่ายต่อเดือน</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:6px">'
-   +'<div><div style="font-size:11px;color:#64748B;margin-bottom:3px">ค่าเช่า/เดือน</div>'+num('bc_rent',C.rent_monthly)+'</div><div><div style="font-size:11px;color:#64748B;margin-bottom:3px">ค่าพนักงาน/เดือน</div>'+num('bc_staff',C.staff_monthly)+'</div><div><div style="font-size:11px;color:#64748B;margin-bottom:3px">อื่นๆ/เดือน</div>'+num('bc_other',C.other_monthly)+'</div></div>'
-   +'<div style="font-size:10.5px;color:#0F766E;margin-bottom:14px">💡 payroll จริงในระบบ: '+B(staffReal)+' ('+staffN+' คน '+(staffN<10?'· ยังคีย์ไม่ครบ':'')+') <a href="#" id="bcUseStaff" style="color:#185FA5">ใช้ค่านี้</a></div>'
+   +'<div><div style="font-size:11px;color:#64748B;margin-bottom:3px">ค่าเช่า/เดือน</div>'+num('bc_rent',C.rent_monthly)+'</div><div><div style="font-size:11px;color:#64748B;margin-bottom:3px">ค่าพนักงาน/เดือน</div>'+num('bc_staff',(+C.staff_monthly||staffReal))+'</div><div><div style="font-size:11px;color:#64748B;margin-bottom:3px">อื่นๆ/เดือน</div>'+num('bc_other',C.other_monthly)+'</div></div>'
+   +'<div style="font-size:10.5px;color:#0F766E;margin-bottom:14px">💡 ค่าพนักงานจริงในระบบ: '+B(staffReal)+' ('+staffN+' คน · ดึงสด)'+'' <a href="#" id="bcUseStaff" style="color:#185FA5">ใช้ค่านี้</a></div>'
    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px"><div><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F)">4. สาขาใหม่ทำได้ ~<span id="edPerfV">'+(C.perf_pct||60)+'</span>% ของศาลายา</div><input type="range" id="edPerf" min="20" max="120" value="'+(C.perf_pct||60)+'" style="width:100%"></div><div><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F)">กำไรขั้นต้น (หลังต้นทุนยา/ของ) ~<span id="edMarV">'+(C.margin_pct||40)+'</span>%</div><input type="range" id="edMargin" min="20" max="80" value="'+(C.margin_pct||40)+'" style="width:100%"></div></div>'
    +'<button id="bcSave" style="background:#0F766E;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit"><i class="ti ti-device-floppy"></i> บันทึกสมมติฐาน</button> <span id="bcMsg" style="font-size:12px;color:#0F766E"></span>'
    +'<div id="edRes" style="margin-top:14px"></div></div>';
@@ -2765,7 +2800,7 @@ function mountAiHQ(){
 }
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
- buildNav();
+ buildNav(); navAudit();
  sb.auth.getUser().then(({data})=>{
    const e=(data&&data.user&&data.user.email)||'admin';
    // ลำดับความสำคัญ: ตัวตนจาก LINE (ถ้าล็อกอินผ่าน LINE) → ROLE_MAP อีเมล → director
