@@ -1,0 +1,139 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>ออนบอร์ดของฉัน · Yiaoya</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 40px;max-width:480px;margin:0 auto}
+.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
+.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
+.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
+.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
+.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
+.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+.flbl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
+a.lk{color:var(--teal);font-weight:700;text-decoration:none}
+/* progress */
+.prog-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+.prog-pct{font-size:30px;font-weight:800;color:var(--navy);line-height:1}
+.prog-meta{font-size:12px;color:var(--muted)}
+.bar{height:8px;background:#EEF2F6;border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--teal);border-radius:99px;transition:width .4s}
+.phase-badge{display:inline-block;padding:3px 11px;border-radius:99px;font-size:11.5px;font-weight:700;background:#E6F7F5;color:#0F766E}
+/* meta grid */
+.kv{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid #F1F5F9}
+.kv:last-child{border-bottom:none}.kv .k{color:var(--muted)}.kv .v{color:var(--navy);font-weight:600;text-align:right}
+.empty-icon{margin-top:0}
+/* checklist */
+.phase-h{font-size:12px;font-weight:700;color:var(--navy);margin:14px 0 7px;display:flex;align-items:center;gap:7px}
+.phase-h:first-child{margin-top:0}
+.phase-h .pcount{font-size:11px;font-weight:500;color:var(--faint)}
+.task{display:flex;align-items:flex-start;gap:10px;padding:8px 0;font-size:13.5px;line-height:1.45;border-bottom:1px solid #F4F6F9}
+.task:last-child{border-bottom:none}
+.tick{width:19px;height:19px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.tick.done{background:var(--teal)}.tick.current{background:#FEF3C7;border:1.5px solid #F59E0B}.tick.pending{background:#fff;border:1.5px solid var(--border)}
+.tick svg{width:11px;height:11px}
+.task.done .tname{color:var(--muted)}
+.task.current .tname{color:var(--navy);font-weight:600}
+.task.pending .tname{color:#475569}
+.tname{flex:1}
+.tflag{font-size:10.5px;font-weight:700;color:#92400e;background:#FEF3C7;border-radius:6px;padding:1px 7px;white-space:nowrap;margin-top:1px}
+/* docs */
+.doc{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:13.5px;border-bottom:1px solid #F4F6F9}
+.doc:last-child{border-bottom:none}
+.doc .dot{width:7px;height:7px;border-radius:50%;background:var(--teal);flex-shrink:0}
+</style></head>
+<body>
+<div class="head"><div class="eb">YIAOYA · HR</div><h1>ออนบอร์ดของฉัน</h1><div class="who" id="who">—</div></div>
+<div id="app" style="display:none"></div>
+<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL,ANON);
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
+const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
+async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
+async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
+
+const PHASES=['preboarding','day1','week1','month1'];
+const PHASE_LABEL={preboarding:'ก่อนเริ่มงาน',day1:'วันแรก',week1:'สัปดาห์แรก',month1:'เดือนแรก',probation:'ทดลองงาน'};
+const TICK_OK='<svg viewBox="0 0 24 24" fill="none" stroke="#04342C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+function renderEmpty(){
+  $('app').style.display='block';
+  $('app').innerHTML=`<div class="card" style="text-align:center;padding:38px 18px">
+    <div style="width:60px;height:60px;border-radius:50%;background:#E6F7F5;margin:0 auto 14px;display:flex;align-items:center;justify-content:center">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:6px">เสร็จสมบูรณ์แล้ว</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.5">ไม่มีงานออนบอร์ดที่ค้าง<br>ยินดีต้อนรับสู่ทีม Yiaoya</div>
+  </div>`;
+}
+
+function render(row){
+  $('app').style.display='block';
+  const pct=Math.max(0,Math.min(100,row.progress_pct||0));
+  const tasks=row.tasks||[];
+  const done=tasks.filter(t=>t.state==='done').length;
+
+  // checklist grouped by phase
+  let checklist='';
+  for(const ph of PHASES){
+    const list=tasks.filter(t=>t.phase===ph); if(!list.length) continue;
+    const d=list.filter(t=>t.state==='done').length;
+    checklist+=`<div class="phase-h">${esc(PHASE_LABEL[ph]||ph)} <span class="pcount">${d}/${list.length}</span></div>`;
+    for(const t of list){
+      const tickInner = t.state==='done'?TICK_OK:'';
+      const flag = t.state==='current'?'<span class="tflag">กำลังทำ</span>':'';
+      checklist+=`<div class="task ${t.state}"><span class="tick ${t.state}">${tickInner}</span><span class="tname">${esc(t.name)}</span>${flag}</div>`;
+    }
+  }
+
+  const docs=(row.docs||[]).map(d=>`<div class="doc"><span class="dot"></span>${esc(d.label||d.doc_type)}</div>`).join('');
+  const statusNote = row.status_done ? '<div class="note">ออนบอร์ดเสร็จสมบูรณ์แล้ว · ยินดีต้อนรับสู่ทีม</div>' : '';
+
+  $('app').innerHTML=`
+    ${statusNote}
+    <div class="card">
+      <div class="prog-top">
+        <div><div class="prog-pct">${pct}%</div><div class="prog-meta">${done}/${tasks.length} ขั้นตอน</div></div>
+        <span class="phase-badge">${esc(row.phase_label||'')}</span>
+      </div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+    </div>
+
+    <div class="card"><div class="sec"><span class="num">i</span>ข้อมูลของฉัน</div>
+      <div class="kv"><span class="k">เริ่มงาน</span><span class="v">${esc(row.start_date||'—')}</span></div>
+      <div class="kv"><span class="k">สาขา</span><span class="v">${esc(row.branch_id||'—')}</span></div>
+      <div class="kv"><span class="k">Buddy / พี่เลี้ยง</span><span class="v">${esc(row.buddy_name||'ยังไม่ได้จับคู่')}</span></div>
+      <div class="kv"><span class="k">หัวหน้า</span><span class="v">${esc(row.supervisor_name||'—')}</span></div>
+    </div>
+
+    <div class="card"><div class="sec"><span class="num">1</span>เช็กลิสต์ออนบอร์ด</div>
+      ${checklist||'<div class="hint">ไม่มีรายการ</div>'}
+      <div class="hint" style="margin-top:11px">สถานะแต่ละขั้นอิงเฟสปัจจุบันของคุณ · HR เป็นผู้อัปเดตความคืบหน้าจริง</div>
+    </div>
+
+    <div class="card"><div class="sec"><span class="num">2</span>เอกสารที่ต้องส่ง · 7 ฉบับ</div>
+      ${docs}
+      <div class="hint" style="margin-top:10px">เซ็นรับทราบเอกสาร/กฎระเบียบได้ที่ <a class="lk" href="m-ack.html">หน้ารับทราบเอกสาร →</a></div>
+    </div>`;
+}
+
+async function init(){
+  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
+  $('who').textContent=(ID.employee_name||ID.display_name)+' · '+ID.employee_id;
+  let {data:s}=await sb.auth.getSession();
+  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
+  const r=await api('hr_onboard?employee_id='+encodeURIComponent(ID.employee_id));
+  if(r&&r.error){block('โหลดข้อมูลไม่สำเร็จ: '+esc(r.error));return;}
+  if(r&&r.row){render(r.row);} else {renderEmpty();}
+}
+init();
+</script></body></html>

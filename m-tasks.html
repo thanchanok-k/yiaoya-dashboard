@@ -1,0 +1,102 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>งานของฉัน · Yiaoya</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 40px;max-width:480px;margin:0 auto}
+.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
+.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
+.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
+.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
+.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
+.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+input,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;background:#fff}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.flbl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.chip{padding:8px 13px;border:1px solid var(--border);border-radius:99px;font-size:13px;cursor:pointer;background:#fff}
+.chip.on{background:var(--teal);color:#04342C;border-color:var(--teal);font-weight:700}
+.cta{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 14px;background:rgba(241,245,249,.96);border-top:1px solid var(--border);backdrop-filter:blur(6px)}
+.cta button{width:100%;padding:14px;background:var(--teal);color:#04342C;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}
+.cta button:disabled{opacity:.45}
+.msg{text-align:center;font-size:13px;margin-top:7px;min-height:18px;line-height:1.5}
+.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
+a.lk{color:var(--teal);font-weight:700;text-decoration:none}
+/* — m-tasks specific (สอดคล้องโทนแบรนด์) — */
+.grp{font-size:12px;letter-spacing:1px;font-weight:700;color:var(--muted);margin:14px 2px 8px}
+.task .tt{font-size:14.5px;font-weight:700;color:var(--navy);margin-bottom:6px;line-height:1.4}
+.task .meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.task .dt{font-size:11.5px;color:var(--faint);margin-top:8px}
+.badge{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700}
+.badge.high{background:#FEE2E2;color:#b91c1c}.badge.normal{background:#E0F2FE;color:#0369a1}.badge.low{background:#F1F5F9;color:#64748b}
+.task.done{opacity:.7}.task.done .tt{text-decoration:line-through;color:var(--muted)}
+.done-pill{background:#E6F7F5;color:#0F766E;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700}
+.btn-done{width:100%;margin-top:11px;padding:11px;background:var(--teal);color:#04342C;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer}
+.btn-done:disabled{opacity:.45}
+.empty{text-align:center;color:var(--faint);font-size:14px;padding:40px 10px}
+</style></head>
+<body>
+<div class="head"><div class="eb">YIAOYA · HR</div><h1>งานของฉัน</h1><div class="who" id="who">—</div></div>
+<div id="app" style="display:none">
+  <div class="note">งานที่ได้รับมอบหมาย · กด"ทำเสร็จ"เมื่อทำงานเรียบร้อยแล้ว</div>
+  <div id="list"></div>
+</div>
+<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL,ANON);
+const $=(id)=>document.getElementById(id);
+let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
+const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
+async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
+async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+const PLBL={high:'สำคัญ',normal:'ปกติ',low:'ไม่เร่ง'};
+function fmtDate(d){if(!d)return '';const x=new Date(d);if(isNaN(x))return esc(d);return x.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});}
+function card(t){
+  const done=t.status==='done';
+  const pr=(t.priority||'normal');
+  const due=t.due_date?`<span>ครบกำหนด ${fmtDate(t.due_date)}</span>`:'';
+  const badge=done?`<span class="done-pill">เสร็จแล้ว</span>`:`<span class="badge ${PLBL[pr]?pr:'normal'}">${PLBL[pr]||'ปกติ'}</span>`;
+  const detail=t.detail?`<div class="dt">${esc(t.detail)}</div>`:'';
+  const btn=done?'':`<button class="btn-done" data-id="${esc(t.task_id)}">ทำเสร็จ</button>`;
+  return `<div class="card task ${done?'done':''}"><div class="tt">${esc(t.title)}</div>
+    <div class="meta">${badge}${due}</div>${detail}${btn}</div>`;
+}
+function render(items){
+  const open=items.filter(t=>t.status!=='done'), done=items.filter(t=>t.status==='done');
+  if(!items.length){$('list').innerHTML='<div class="empty">ไม่มีงานค้าง</div>';return;}
+  let html='';
+  if(open.length){html+='<div class="grp">งานที่ต้องทำ ('+open.length+')</div>'+open.map(card).join('');}
+  if(done.length){html+='<div class="grp">เสร็จแล้ว ('+done.length+')</div>'+done.map(card).join('');}
+  if(!open.length&&done.length){html='<div class="empty">ไม่มีงานค้าง</div>'+html;}
+  $('list').innerHTML=html;
+  $('list').querySelectorAll('.btn-done').forEach(b=>b.onclick=()=>complete(b));
+}
+async function complete(btn){
+  const id=btn.dataset.id;btn.disabled=true;btn.textContent='กำลังบันทึก…';
+  const r=await api('hr_task',{action:'complete',task_id:id});
+  if(r.error){btn.disabled=false;btn.textContent='ทำเสร็จ';alert('ผิดพลาด: '+r.error);return;}
+  await load();
+}
+async function load(){
+  const r=await api('hr_task?assignee_id='+encodeURIComponent(ID.employee_id));
+  if(r.error){$('list').innerHTML='<div class="empty">โหลดงานไม่สำเร็จ · '+esc(r.error)+'</div>';return;}
+  render(r.items||[]);
+}
+async function init(){
+  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
+  $('who').textContent=(ID.employee_name||ID.display_name)+' · '+ID.employee_id;
+  let {data:s}=await sb.auth.getSession();
+  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
+  $('app').style.display='block';
+  $('list').innerHTML='<div class="empty">กำลังโหลด…</div>';
+  await load();
+}
+init();
+</script></body></html>
