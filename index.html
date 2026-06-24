@@ -2866,7 +2866,7 @@ function mountExpansion(){
   const rows=((er&&er.data)||{}).rows||[];
   if(!rows.length){$('expWrap').innerHTML='<div class="empty-card"><i class="ti ti-building-plus"></i><span>ยังไม่มีข้อมูลอุปกรณ์</span></div>';return;}
   const J=x=>{if(typeof x==='string'){try{return JSON.parse(x);}catch(e){return null;}}return x;};
-  rows.forEach(r=>{r.scenarios=J(r.scenarios)||[];if(!Array.isArray(r.scenarios))r.scenarios=[];r.actual=J(r.actual)||null;});
+  rows.forEach(r=>{r.scenarios=J(r.scenarios)||[];if(!Array.isArray(r.scenarios))r.scenarios=[];r.actual=J(r.actual)||null;r.models=J(r.models)||null;r.live_period=J(r.live_period)||null;});
   const dr=((ds&&ds.data)||{}).rows||[];
   const nets=dr.map(r=>+r.net||0); const avgDay=nets.length?Math.round(nets.reduce((a,b)=>a+b,0)/nets.length):0; const monthRun=avgDay*30;
   const billsDay=dr.length?Math.round(dr.reduce((a,r)=>a+(+r.bills||0),0)/dr.length):0;
@@ -2879,9 +2879,21 @@ function mountExpansion(){
   h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:18px">';
   rows.forEach(r=>{const a=r.actual;const realBy={};if(a&&a.real)a.real.forEach(x=>realBy[x.price]=+x.months);const realMs=a&&a.real?a.real.map(x=>+x.months):[];const rMin=realMs.length?Math.min.apply(null,realMs):null,rMax=realMs.length?Math.max.apply(null,realMs):null;const estMin=Math.min.apply(null,r.scenarios.map(x=>+x.months));
    h+='<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:14px;padding:16px"><div style="display:flex;justify-content:space-between"><div style="font-size:15px;font-weight:800;color:var(--navy,#0D2F4F)">'+esc(r.device)+'</div><span style="background:#EFF6FF;color:#1D4ED8;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+esc(r.brand||"")+'</span></div><div style="font-size:23px;font-weight:800;color:#185FA5;margin:4px 0">'+B(r.price)+'</div>';
+   const M=r.models;
+   if(M){
+    const hasReal=M.real&&M.real.price_per;const prim=hasReal?M.real:M.blended;const pm=prim&&prim.payback_months;
+    h+='<div style="background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px;padding:10px 12px;margin:6px 0"><div style="font-size:11px;color:#0F766E;font-weight:700">📍 คืนทุนจริง <span style="font-size:9.5px;background:#0F766E;color:#fff;padding:1px 6px;border-radius:8px;font-weight:600">ดึงสด JERA</span></div><div style="font-size:20px;font-weight:800;color:'+pcol(pm)+'">'+(pm!=null?pm+' เดือน':'ยังไม่มีการใช้จริง')+'</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">ใช้จริง '+(r.uses_per_day||0)+'/วัน'+(r.live_period?' · '+r.live_period.start+'→'+r.live_period.end:'')+'</div></div>';
+    const mrow=(lab,m,note)=>'<tr style="text-align:right"><td style="font-size:11.5px;text-align:left;color:var(--navy,#0D2F4F)">'+lab+(note?' <span style="color:#94A3B8;font-size:9.5px">'+note+'</span>':'')+'</td><td style="font-size:12px;color:#185FA5;font-weight:600">'+((m&&m.price_per)?B(m.price_per):'—')+'</td><td style="font-size:12px;font-weight:700;color:'+pcol(m&&m.payback_months)+'">'+((m&&m.payback_months!=null)?m.payback_months+'ด.':'—')+'</td></tr>';
+    h+='<table style="width:100%;border-collapse:collapse;margin:6px 0"><thead><tr style="text-align:right"><th style="font-size:10px;color:#64748B;text-align:left">โมเดลราคา</th><th style="font-size:10px;color:#64748B">/ครั้ง</th><th style="font-size:10px;color:#0F766E">คืนทุน</th></tr></thead><tbody>'
+     +(hasReal?mrow('ขายจริง (เฉลี่ย)',M.real):'')
+     +(hasReal?mrow('ราคาตั้ง (list)',M.list):'')
+     +mrow('เกลี่ยทั้งคลินิก',M.blended,hasReal?'':'ขายรวมแพ็ก')
+     +'</tbody></table><div style="font-size:9.5px;color:#94A3B8;margin:-2px 0 0">ราคาขายจริงต่อครั้งจาก JERA course-sales · คืนทุน = ราคาเครื่อง ÷ (ราคา×ใช้/วัน×26วัน)</div></div>';
+   } else {
    if(a&&realMs.length){h+='<div style="background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px;padding:10px 12px;margin:6px 0"><div style="font-size:11px;color:#0F766E;font-weight:700">📍 คืนทุนจริง</div><div style="font-size:20px;font-weight:800;color:'+pcol(rMin)+'">'+rMin+'–'+rMax+' เดือน</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">ใช้จริง '+a.per_day+'/วัน · PDF '+estMin+'ด.</div></div>';}
    else{h+='<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:8px 12px;margin:6px 0;font-size:12px;color:#B91C1C">⚠️ ไม่มีการใช้จริง · PDF '+estMin+'ด.</div>';}
    h+='<table style="width:100%;border-collapse:collapse;margin:6px 0"><thead><tr style="text-align:right"><th style="font-size:10px;color:#64748B;text-align:left">ราคา/ครั้ง</th><th style="font-size:10px;color:#64748B">PDF</th><th style="font-size:10px;color:#0F766E">จริง</th></tr></thead><tbody>'+r.scenarios.map(sc=>'<tr style="text-align:right"><td style="font-size:12px;text-align:left;color:var(--navy,#0D2F4F)">'+B(sc.price)+'</td><td style="font-size:12px;color:#94A3B8">'+sc.months+'ด.</td><td style="font-size:12px;font-weight:700;color:'+pcol(realBy[sc.price]!=null?realBy[sc.price]:null)+'">'+(realBy[sc.price]!=null?realBy[sc.price]+'ด.':'—')+'</td></tr>').join('')+'</tbody></table></div>';
+   }
   });
   h+='</div>';
   const num=(id,val,ph)=>'<input type="number" id="'+id+'" class="bcIn" value="'+(+val||0)+'" placeholder="'+(ph||'0')+'" style="'+ist+'">';
