@@ -2732,7 +2732,7 @@ function mountHub360(){
   $('hubWrap').innerHTML=h;
   (function(){if(!$('icSvgWrap'))return;
    const roasArr=months.map((m,i)=>adS[i]?Math.round(rev[i]/adS[i]*10)/10:0);
-   const M=[{k:'rev',l:'รายได้',c:'#0F766E',v:rev,money:1},{k:'ad',l:'ค่าแอด',c:'#DC2626',v:adS,money:1},{k:'msg',l:'ทักแชท',c:'#185FA5',v:msg},{k:'newp',l:'คนไข้ใหม่',c:'#3DC5B7',v:newJ},{k:'roas',l:'ROAS',c:'#0D2F4F',v:roasArr,suf:'x'}];
+   const M=[{k:'rev',l:'รายได้',c:'#5FA89C',v:rev,money:1},{k:'ad',l:'ค่าแอด',c:'#C99A9A',v:adS,money:1},{k:'msg',l:'ทักแชท',c:'#86A7C4',v:msg},{k:'newp',l:'คนไข้ใหม่',c:'#7CC2B6',v:newJ},{k:'roas',l:'ROAS',c:'#8793A6',v:roasArr,suf:'x'}];
    const auxDept=months.map(m=>{const o={};drows.filter(r=>r.month===m).forEach(r=>{o[r.dept]=(o[r.dept]||0)+ +r.amount;});return o;});
    const auxNew=months.map(m=>drows.filter(r=>r.month===m&&r.new_patient).length);
    const auxOld=months.map(m=>drows.filter(r=>r.month===m&&r.kind==='course'&&!r.new_patient).length);
@@ -2745,9 +2745,9 @@ function mountHub360(){
      let g='';for(let k=0;k<=4;k++){const yy=H-34-(k/4)*(H-60);const lv=mx*k/4;g+='<line x1="'+pad+'" y1="'+yy+'" x2="'+(W-12)+'" y2="'+yy+'" stroke="#EEF2F6"/><text x="'+(pad-8)+'" y="'+(yy+3)+'" font-size="10" fill="#94A3B8" text-anchor="end">'+(sr.money?Bk(lv):(Math.round(lv*10)/10)+(sr.suf||''))+'</text>';}
      months.forEach((m,i)=>{if(n>14&&i%2)return;g+='<text x="'+X(i)+'" y="'+(H-12)+'" font-size="9" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
      const pts=sr.v.map((v,i)=>X(i)+','+Y(v)).join(' ');
-     g+='<polygon points="'+pad+','+(H-34)+' '+pts+' '+X(n-1)+','+(H-34)+'" fill="'+sr.c+'" opacity="0.09"/><polyline points="'+pts+'" fill="none" stroke="'+sr.c+'" stroke-width="2.8"/>';
-     sr.v.forEach((v,i)=>g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="2.7" fill="'+sr.c+'"/>');
-     g+='<line id="icGuide" x1="0" y1="14" x2="0" y2="'+(H-32)+'" stroke="'+sr.c+'" stroke-width="1.3" stroke-dasharray="3 3" style="opacity:0"></line>';
+     g+='<polygon points="'+pad+','+(H-34)+' '+pts+' '+X(n-1)+','+(H-34)+'" fill="'+sr.c+'" opacity="0.05"/><polyline points="'+pts+'" fill="none" stroke="'+sr.c+'" stroke-width="1.6"/>';
+     sr.v.forEach((v,i)=>g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="1.8" opacity="0.85" fill="'+sr.c+'"/>');
+     g+='<line id="icGuide" x1="0" y1="14" x2="0" y2="'+(H-32)+'" stroke="'+sr.c+'" stroke-width="1" stroke-dasharray="2 3" style="opacity:0"></line>';
      $('icSvgWrap').innerHTML='<svg id="icSvg" viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+g+'</svg>';}
    $('icTabs').innerHTML=M.map(sr=>'<button class="icTab" data-k="'+sr.k+'" style="border:1px solid '+sr.c+';background:'+(sr.k===curK?sr.c:'#fff')+';color:'+(sr.k===curK?'#fff':sr.c)+';border-radius:8px;padding:6px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+sr.l+'</button>').join('');
    const setTab=k=>{curK=k;document.querySelectorAll('.icTab').forEach(b=>{const sr=M.find(x=>x.k===b.dataset.k);b.style.background=b.dataset.k===k?sr.c:'#fff';b.style.color=b.dataset.k===k?'#fff':sr.c;});draw();};
