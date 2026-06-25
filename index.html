@@ -2889,14 +2889,25 @@ function mountExpansion(){
    h+='<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:14px;padding:16px"><div style="display:flex;justify-content:space-between"><div style="font-size:15px;font-weight:800;color:var(--navy,#0D2F4F)">'+esc(r.device)+'</div><span style="background:#EFF6FF;color:#1D4ED8;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+esc(r.brand||"")+'</span></div><div style="font-size:23px;font-weight:800;color:#185FA5;margin:4px 0">'+B(r.price)+'</div>';
    const M=r.models;
    if(M){
-    const hasReal=M.real&&M.real.price_per;const prim=hasReal?M.real:M.blended;const pm=prim&&prim.payback_months;
-    h+='<div style="background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px;padding:10px 12px;margin:6px 0"><div style="font-size:11px;color:#0F766E;font-weight:700">📍 คืนทุนจริง <span style="font-size:9.5px;background:#0F766E;color:#fff;padding:1px 6px;border-radius:8px;font-weight:600">ดึงสด JERA</span></div><div style="font-size:20px;font-weight:800;color:'+pcol(pm)+'">'+(pm!=null?pm+' เดือน':'ยังไม่มีการใช้จริง')+'</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">ใช้จริง '+(r.uses_per_day||0)+'/วัน'+(r.live_period?' · '+r.live_period.start+'→'+r.live_period.end:'')+'</div></div>';
-    const mrow=(lab,m,note)=>'<tr style="text-align:right"><td style="font-size:11.5px;text-align:left;color:var(--navy,#0D2F4F)">'+lab+(note?' <span style="color:#94A3B8;font-size:9.5px">'+note+'</span>':'')+'</td><td style="font-size:12px;color:#185FA5;font-weight:600">'+((m&&m.price_per)?B(m.price_per):'—')+'</td><td style="font-size:12px;font-weight:700;color:'+pcol(m&&m.payback_months)+'">'+((m&&m.payback_months!=null)?m.payback_months+'ด.':'—')+'</td></tr>';
-    h+='<table style="width:100%;border-collapse:collapse;margin:6px 0"><thead><tr style="text-align:right"><th style="font-size:10px;color:#64748B;text-align:left">โมเดลราคา</th><th style="font-size:10px;color:#64748B">/ครั้ง</th><th style="font-size:10px;color:#0F766E">คืนทุน</th></tr></thead><tbody>'
-     +(hasReal?mrow('ขายจริง (เฉลี่ย)',M.real):'')
-     +(hasReal?mrow('ราคาตั้ง (list)',M.list):'')
-     +mrow('เกลี่ยทั้งคลินิก',M.blended,hasReal?'':'ขายรวมแพ็ก')
-     +'</tbody></table><div style="font-size:9.5px;color:#94A3B8;margin:-2px 0 0">ราคาขายจริงต่อครั้งจาก JERA course-sales · คืนทุน = ราคาเครื่อง ÷ (ราคา×ใช้/วัน×26วัน)</div></div>';
+    const kind=r.kind||'primary';const hasReal=M.real&&M.real.price_per;const period=r.live_period?' · '+r.live_period.start+'→'+r.live_period.end:'';
+    if(kind==='support'){
+     h+='<div style="background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px;padding:10px 12px;margin:6px 0"><div style="font-size:11px;color:#0F766E;font-weight:700">🔧 เครื่องเสริม <span style="font-size:9.5px;background:#0F766E;color:#fff;padding:1px 6px;border-radius:8px;font-weight:600">ดึงสด JERA</span></div><div style="font-size:18px;font-weight:800;color:var(--navy,#0D2F4F)">ใช้จริง '+(r.uses_per_day||0)+'/วัน</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">ทุนเครื่อง '+B(r.price)+' · ใช้ร่วมในคอร์ส'+period+'</div></div>'
+      +'<div style="font-size:11px;color:#0F766E;background:#ECFDF5;border-radius:8px;padding:7px 10px;line-height:1.5">เครื่องเสริมราคาถูก ใช้ร่วมในคอร์ส — รายได้เกลี่ยอยู่ในเครื่องหลักแล้ว จึงไม่คิดคืนทุนแยก</div>';
+    } else if(kind==='screening'){
+     const pm=M.real&&M.real.payback_months;
+     h+='<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:10px 12px;margin:6px 0"><div style="font-size:11px;color:#9A3412;font-weight:700">🔎 เครื่องคัดกรอง <span style="font-size:9.5px;background:#C2410C;color:#fff;padding:1px 6px;border-radius:8px;font-weight:600">ดึงสด JERA</span></div><div style="font-size:18px;font-weight:800;color:var(--navy,#0D2F4F)">สแกน '+B((M.real&&M.real.price_per)||0)+'/ครั้ง</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">ทุนเครื่อง '+B(r.price)+' · สแกน '+(r.uses_per_day||0)+'/วัน'+period+'</div></div>'
+      +'<div style="font-size:11px;color:#9A3412;background:#FFF7ED;border-radius:8px;padding:7px 10px;line-height:1.5">คุ้มค่าที่ดึงลูกค้าใหม่เข้าคอร์ส ไม่ใช่คืนทุนต่อสแกน'+(pm!=null?' (ถ้าคิดต่อสแกนล้วน ~'+pm+' เดือน)':'')+'</div>';
+    } else {
+     const prim=hasReal?M.real:M.blended;const pm=prim&&prim.payback_months;
+     h+='<div style="background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px;padding:10px 12px;margin:6px 0"><div style="font-size:11px;color:#0F766E;font-weight:700">📍 คืนทุนจริง <span style="font-size:9.5px;background:#0F766E;color:#fff;padding:1px 6px;border-radius:8px;font-weight:600">ดึงสด JERA</span></div><div style="font-size:20px;font-weight:800;color:'+pcol(pm)+'">'+(pm!=null?pm+' เดือน':'ยังไม่มีการใช้จริง')+'</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">ใช้จริง '+(r.uses_per_day||0)+'/วัน'+period+'</div></div>';
+     const mrow=(lab,m,note)=>'<tr style="text-align:right"><td style="font-size:11.5px;text-align:left;color:var(--navy,#0D2F4F)">'+lab+(note?' <span style="color:#94A3B8;font-size:9.5px">'+note+'</span>':'')+'</td><td style="font-size:12px;color:#185FA5;font-weight:600">'+((m&&m.price_per)?B(m.price_per):'—')+'</td><td style="font-size:12px;font-weight:700;color:'+pcol(m&&m.payback_months)+'">'+((m&&m.payback_months!=null)?m.payback_months+'ด.':'—')+'</td></tr>';
+     h+='<table style="width:100%;border-collapse:collapse;margin:6px 0"><thead><tr style="text-align:right"><th style="font-size:10px;color:#64748B;text-align:left">โมเดลราคา</th><th style="font-size:10px;color:#64748B">/ครั้ง</th><th style="font-size:10px;color:#0F766E">คืนทุน</th></tr></thead><tbody>'
+      +(hasReal?mrow('ขายจริง (เฉลี่ย)',M.real):'')
+      +(hasReal?mrow('ราคาตั้ง (list)',M.list):'')
+      +mrow('เกลี่ยทั้งคลินิก',M.blended,hasReal?'':'ขายรวมแพ็ก')
+      +'</tbody></table><div style="font-size:9.5px;color:#94A3B8;margin:-2px 0 0">ราคาขายจริงต่อครั้งจาก JERA course-sales · คืนทุน = ราคาเครื่อง ÷ (ราคา×ใช้/วัน×26วัน)</div>';
+    }
+    h+='</div>';
    } else {
    if(a&&realMs.length){h+='<div style="background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px;padding:10px 12px;margin:6px 0"><div style="font-size:11px;color:#0F766E;font-weight:700">📍 คืนทุนจริง</div><div style="font-size:20px;font-weight:800;color:'+pcol(rMin)+'">'+rMin+'–'+rMax+' เดือน</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">ใช้จริง '+a.per_day+'/วัน · PDF '+estMin+'ด.</div></div>';}
    else{h+='<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:8px 12px;margin:6px 0;font-size:12px;color:#B91C1C">⚠️ ไม่มีการใช้จริง · PDF '+estMin+'ด.</div>';}
