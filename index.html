@@ -1164,8 +1164,10 @@ async function resolveAccess(){
   if(accessRole){ const { data:ra } = await sb.from('role_access').select('view_key').eq('role_key',accessRole); (ra||[]).forEach(r=>eff.add(r.view_key)); }
   const { data:aa } = await sb.from('app_access').select('view_key,employee_id,uid'); (aa||[]).forEach(r=>{ if((empId&&r.employee_id===empId)||r.uid===user.id) eff.add(r.view_key); });
   if(st && st.role==='hr_director'){ eff.add('accessmgr'); eff.add('employeemgr'); } /* HR director ต้องเข้าหน้าจัดการสิทธิ์ได้ */
-  if(!accessRole && eff.size<=1){ EFFECTIVE_VIEWS=null; } /* ยังไม่ตั้งสิทธิ์ → ใช้ของเดิม */
-  else { EFFECTIVE_VIEWS=[...eff]; }
+  /* fail-closed: คนที่ "มีตัวตนใน app_staff แต่ไม่ใช่ owner" → เห็นเฉพาะสิทธิ์จริง (อย่างน้อย overview)
+     ไม่ตกไป VIEWS_BY_ROLE['director']=ALL · เฉพาะกรณีไม่มี row ใน app_staff เลย (st null) ถึงคง fallback เดิม กันล็อกเอาท์ระหว่างเปลี่ยนผ่าน */
+  if(st){ EFFECTIVE_VIEWS=[...eff]; }
+  else { EFFECTIVE_VIEWS=null; }
   applyRole(currentRole);
  }catch(e){ console.warn('resolveAccess',e); EFFECTIVE_VIEWS=null; }
 }
