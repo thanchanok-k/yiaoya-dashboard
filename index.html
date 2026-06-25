@@ -3153,6 +3153,7 @@ function mountPromo(){
    +'</div>';
  }
  // ---- helpers แผนลงมือ (strategist) ----
+ const B=n=>'฿'+Number(n||0).toLocaleString('th-TH',{maximumFractionDigits:0});
  const TEAMC=(t)=>{const m={'หน้าบ้าน':'#3DC5B7','ต้อนรับ':'#3DC5B7','ขาย':'#3DC5B7','คลินิก':'#185FA5','แพทย์':'#185FA5','กายภาพ':'#185FA5','การตลาด':'#C2410C','คอนเทนต์':'#C2410C','บัญชี':'#0F766E','การเงิน':'#0F766E','จัดซื้อ':'#7C3AED','สต็อก':'#7C3AED'};for(const k in m)if((t||'').includes(k))return m[k];return '#64748B';};
  const dOff=(o)=>{o=parseInt(o,10);if(isNaN(o))return '';return o===0?'D-Day':(o>0?'D+'+o:'D'+o);};
  const dAbs=(launch,o)=>{o=parseInt(o,10);if(!launch||isNaN(o))return dOff(o);const d=new Date(launch+'T00:00:00');d.setDate(d.getDate()+o);return d.toLocaleDateString('th-TH',{day:'2-digit',month:'short'})+' ('+dOff(o)+')';};
@@ -3170,13 +3171,31 @@ function mountPromo(){
   h+='<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:9px;padding:11px 13px;margin-bottom:13px">'
    +'<div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:12.5px;margin-bottom:3px"><i class="ti ti-chess-king" style="color:#185FA5"></i> กลยุทธ์</div>'
    +sline('จุดยืน',s.positioning)+sline('ทำไมต้องทำตอนนี้',s.why_now)+sline('กลุ่มเป้าหมาย',s.target_segment)+sline('ตัวชี้วัดสำเร็จ',s.success_metric)+sline('ความเสี่ยง',s.risk)+sline('งบ/ต้นทุน',s.budget_note)+(pl.duration?sline('ระยะเวลา',pl.duration):'')+'</div>';
+  const rt=pl.revenue_target;
+  if(rt){const fn=rt.from_new||{},fe=rt.from_existing||{};const numB=(v)=>(v!=null&&v!=='')?B(+v):'—';
+   h+='<div style="background:linear-gradient(135deg,#0D2F4F,#185FA5);border-radius:10px;padding:13px 15px;margin-bottom:14px;color:#fff">'
+    +'<div style="font-weight:800;font-size:12.5px;margin-bottom:9px"><i class="ti ti-target-arrow"></i> เป้ายอดขาย'+(rt.timeframe?' · '+esc(rt.timeframe):'')+'</div>'
+    +'<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">'
+    +'<div><div style="font-size:10px;opacity:.8">ยอดเป้า</div><div style="font-size:20px;font-weight:800">'+numB(rt.target_revenue)+'</div></div>'
+    +'<div><div style="font-size:10px;opacity:.8">ต้องขาย</div><div style="font-size:20px;font-weight:800">'+(rt.target_units!=null?rt.target_units+' ดีล':'—')+'</div></div>'
+    +(rt.assumed_price!=null?'<div><div style="font-size:10px;opacity:.8">ราคา/ดีล</div><div style="font-size:20px;font-weight:800">'+numB(rt.assumed_price)+'</div></div>':'')
+    +'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    +'<div style="flex:1;min-width:130px;background:rgba(61,197,183,.22);border-radius:8px;padding:8px 10px"><div style="font-size:10.5px;opacity:.9">🧲 จากคนไข้ใหม่</div><div style="font-weight:800;font-size:14px">'+numB(fn.revenue)+(fn.units!=null?' · '+fn.units+' ดีล':'')+'</div></div>'
+    +'<div style="flex:1;min-width:130px;background:rgba(255,255,255,.13);border-radius:8px;padding:8px 10px"><div style="font-size:10.5px;opacity:.9">🏪 จากคนไข้เก่า</div><div style="font-weight:800;font-size:14px">'+numB(fe.revenue)+(fe.units!=null?' · '+fe.units+' ดีล':'')+'</div></div>'
+    +'</div>'
+    +(rt.assumptions?'<div style="font-size:10.5px;opacity:.85;margin-top:9px">📌 สมมติฐาน: '+esc(rt.assumptions)+'</div>':'')
+    +(rt.breakeven?'<div style="font-size:10.5px;opacity:.85;margin-top:3px">⚖️ จุดคุ้ม: '+esc(rt.breakeven)+'</div>':'')
+    +'</div>';}
   const jr=pl.patient_journey||[];
   if(jr.length){h+='<div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:12.5px;margin-bottom:7px"><i class="ti ti-route" style="color:#3DC5B7"></i> เส้นทางคนไข้</div><div style="margin-bottom:14px">';
    jr.forEach((j,i)=>{h+='<div style="display:flex;gap:9px">'
     +'<div style="flex:none;display:flex;flex-direction:column;align-items:center"><div style="width:22px;height:22px;border-radius:50%;background:#3DC5B7;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</div>'+(i<jr.length-1?'<div style="width:2px;flex:1;background:#CBD5E1;margin:2px 0;min-height:14px"></div>':'')+'</div>'
     +'<div style="flex:1;padding-bottom:8px"><div style="font-weight:700;color:var(--navy,#0D2F4F);font-size:12.5px">'+esc(j.stage||'')+(j.touchpoint?' <span style="font-weight:500;color:#94A3B8;font-size:11px">· '+esc(j.touchpoint)+'</span>':'')+'</div>'
     +'<div style="font-size:11.5px;color:#475569;margin-top:1px">'+esc(j.what_happens||'')+'</div>'
-    +((j.owner_team||j.system)?'<div style="font-size:10.5px;margin-top:3px">'+(j.owner_team?'<span style="background:'+TEAMC(j.owner_team)+';color:#fff;border-radius:10px;padding:1px 8px;font-weight:700">'+esc(j.owner_team)+'</span> ':'')+(j.system?'<span style="color:#94A3B8">⚙ '+esc(j.system)+'</span>':'')+'</div>':'')+'</div></div>';});
+    +((j.owner_team||j.system)?'<div style="font-size:10.5px;margin-top:3px">'+(j.owner_team?'<span style="background:'+TEAMC(j.owner_team)+';color:#fff;border-radius:10px;padding:1px 8px;font-weight:700">'+esc(j.owner_team)+'</span> ':'')+(j.system?'<span style="color:#94A3B8">⚙ '+esc(j.system)+'</span>':'')+'</div>':'')
+    +(j.conversion_target?'<div style="font-size:10.5px;margin-top:3px;color:#185FA5"><i class="ti ti-arrows-right"></i> เป้าแปลง: <b>'+esc(j.conversion_target)+'</b></div>':'')
+    +(j.revenue_action?'<div style="font-size:11px;margin-top:4px;background:#FFF7ED;border-radius:6px;padding:5px 8px;color:#9A3412"><b>💰 ทำให้เกิดยอด:</b> '+esc(j.revenue_action)+'</div>':'')+'</div></div>';});
    h+='</div>';}
   const fd=pl.frontdesk||[];
   if(fd.length){h+='<div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:12.5px;margin-bottom:7px"><i class="ti ti-building-store" style="color:#3DC5B7"></i> 🏪 หน้าบ้านต้องทำ</div><div style="margin-bottom:14px">';
