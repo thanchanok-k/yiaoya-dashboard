@@ -122,6 +122,23 @@ function lv2RequestStats(rows) {
   };
 }
 
+// write-back จริง → window.sb.functions.invoke('hr_approve', {request_id, decision, note})
+// คืน { ok:true } เมื่อ data.ok · { error, status } เมื่อพลาด (status 403 → caller บอก "ต้องเป็น HR")
+function lv2Approve(requestId, decision, failMsg, note) {
+  var sbc = (typeof window !== 'undefined' && window.sb) ? window.sb : sb;
+  var body = { request_id: requestId, decision: decision };
+  if (note != null && note !== '') body.note = note;
+  return sbc.functions.invoke('hr_approve', { body: body }).then(function (res) {
+    var err = res && res.error, data = (res && res.data) || {};
+    var status = (err && (err.status || (err.context && err.context.status))) || (data && data.status) || 0;
+    if (err || data.error || !data.ok) {
+      return { error: (data && data.error) || (err && err.message) || failMsg, status: status };
+    }
+    lv2InvalidateCache();
+    return { ok: true };
+  });
+}
+
 var LV_BACKEND = {
   // list pending — { requests, stats, branches }
   leaveAdminListPending: function (filter) {
@@ -160,23 +177,13 @@ var LV_BACKEND = {
       return d;
     });
   },
-  // approve → hr_approve decision=approved
+  // approve → hr_approve decision=approved (write-back จริง)
   leaveAdminApprove: function (requestId) {
-    return sb.functions.invoke('hr_approve', { body: { request_id: requestId, decision: 'approved' } }).then(function (res) {
-      var err = res && res.error, data = (res && res.data) || {};
-      if (err || data.error) return { error: (data.error) || (err && err.message) || 'อนุมัติไม่สำเร็จ' };
-      lv2InvalidateCache();
-      return { ok: true };
-    });
+    return lv2Approve(requestId, 'approved', 'อนุมัติไม่สำเร็จ');
   },
-  // reject → hr_approve decision=rejected
-  leaveAdminReject: function (requestId) {
-    return sb.functions.invoke('hr_approve', { body: { request_id: requestId, decision: 'rejected' } }).then(function (res) {
-      var err = res && res.error, data = (res && res.data) || {};
-      if (err || data.error) return { error: (data.error) || (err && err.message) || 'ปฏิเสธไม่สำเร็จ' };
-      lv2InvalidateCache();
-      return { ok: true };
-    });
+  // reject → hr_approve decision=rejected (write-back จริง)
+  leaveAdminReject: function (requestId, note) {
+    return lv2Approve(requestId, 'rejected', 'ปฏิเสธไม่สำเร็จ', note);
   },
   // view medical cert (PDPA proxy) — backend ไม่มี proxy → stub
   leaveCertView: function () {
@@ -935,8 +942,8 @@ function LV2_RUN_PAGE_JS() {
     if (!confirm('Approve คำขอลานี้? (จะ update balance + time attendance + แจ้ง branch lead)')) return;
     google.script.run
       .withSuccessHandler(r => {
-        if (r && r.error) { showToast(r.error, 'error'); return; }
-        showToast('Approved', 'success');
+        if (r && r.error) { showToast(Number(r.status) === 403 ? 'ต้องเป็น HR' : r.error, 'error'); return; }
+        showToast('อนุมัติแล้ว', 'success');
         lvCloseModal();
         _cacheInvalidate(); // v1.10.245 · mutation → invalidate ทุก tab
         loadCurrent(true);
@@ -947,17 +954,18 @@ function LV2_RUN_PAGE_JS() {
   window.approveReq = approveReq;
 
   function rejectReq(id) {
-    if (!confirm('Reject คำขอลานี้?')) return;
+    var note = prompt('Reject คำขอลานี้? — ใส่เหตุผล (ถ้ามี)', '');
+    if (note === null) return; // กดยกเลิก
     google.script.run
       .withSuccessHandler(r => {
-        if (r && r.error) { showToast(r.error, 'error'); return; }
-        showToast('Rejected', 'success');
+        if (r && r.error) { showToast(Number(r.status) === 403 ? 'ต้องเป็น HR' : r.error, 'error'); return; }
+        showToast('ปฏิเสธแล้ว', 'success');
         lvCloseModal();
         _cacheInvalidate(); // v1.10.245 · mutation → invalidate ทุก tab
         loadCurrent(true);
       })
       .withFailureHandler(onErr)
-      .leaveAdminReject(id);
+      .leaveAdminReject(id, note);
   }
   window.rejectReq = rejectReq;
 

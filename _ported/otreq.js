@@ -93,6 +93,22 @@ function ot2EmployeesFromItems(items) {
 
 var _OT_ITEMS_CACHE = [];   // cache items ดิบไว้ให้ stub overview/employees ใช้
 
+// write-back จริง → window.sb.functions.invoke('hr_approve', {request_id, decision, note})
+// คืน { ok:true } เมื่อ data.ok · { error, status } เมื่อพลาด (status 403 → caller บอก "ต้องเป็น HR")
+function ot2Approve(requestId, decision, failMsg, note) {
+  var sbc = (typeof window !== 'undefined' && window.sb) ? window.sb : sb;
+  var body = { request_id: requestId, decision: decision };
+  if (note != null && note !== '') body.note = note;
+  return sbc.functions.invoke('hr_approve', { body: body }).then(function (res) {
+    var err = res && res.error, data = (res && res.data) || {};
+    var status = (err && (err.status || (err.context && err.context.status))) || (data && data.status) || 0;
+    if (err || data.error || !data.ok) {
+      return { error: (data && data.error) || (err && err.message) || failMsg, status: status };
+    }
+    return { ok: true };
+  });
+}
+
 var OT_BACKEND = {
   // ---- OT จริง ----
   // list OT requests → { items:[...], stats:{pending,total_approved_hours} }
@@ -104,23 +120,13 @@ var OT_BACKEND = {
       return { items: items, stats: ot2StatsFromItems(items) };
     });
   },
-  // approve → hr_approve
+  // approve → hr_approve (write-back จริง)
   attendAdminApproveOT: function (requestId) {
-    return sb.functions.invoke('hr_approve', { body: { request_id: requestId, decision: 'approved' } }).then(function (res) {
-      var data = (res && res.data) || {};
-      if (res && res.error) return { error: (res.error.message || 'approve failed') };
-      if (data.error) return { error: data.error };
-      return { ok: true };
-    });
+    return ot2Approve(requestId, 'approved', 'อนุมัติไม่สำเร็จ');
   },
-  // reject → hr_approve (decision rejected + reason)
+  // reject → hr_approve (decision rejected + reason/note · write-back จริง)
   attendAdminRejectOT: function (requestId, reason) {
-    return sb.functions.invoke('hr_approve', { body: { request_id: requestId, decision: 'rejected', reason: reason } }).then(function (res) {
-      var data = (res && res.data) || {};
-      if (res && res.error) return { error: (res.error.message || 'reject failed') };
-      if (data.error) return { error: data.error };
-      return { ok: true };
-    });
+    return ot2Approve(requestId, 'rejected', 'ปฏิเสธไม่สำเร็จ', reason);
   },
   // create OT → hr_ot_request body
   attendAdminCreateOT: function (payload) {
@@ -1073,8 +1079,8 @@ function OT_RUN_PAGE_JS() {
     if (!confirm('Approve OT request?')) return;
     google.script.run
       .withSuccessHandler(res => {
-        if (res && res.error) return showToast(res.error, 'error');
-        showToast('Approved', 'success');
+        if (res && res.error) return showToast(Number(res.status) === 403 ? 'ต้องเป็น HR' : res.error, 'error');
+        showToast('อนุมัติแล้ว', 'success');
         loadOT();
       })
       .withFailureHandler(err => showToast(err.message, 'error'))
@@ -1092,8 +1098,8 @@ function OT_RUN_PAGE_JS() {
     if (!reason) return showToast('ใส่เหตุผล', 'error');
     google.script.run
       .withSuccessHandler(res => {
-        if (res && res.error) return showToast(res.error, 'error');
-        showToast('Rejected', 'success');
+        if (res && res.error) return showToast(Number(res.status) === 403 ? 'ต้องเป็น HR' : res.error, 'error');
+        showToast('ปฏิเสธแล้ว', 'success');
         closeOtReject();
         loadOT();
       })
