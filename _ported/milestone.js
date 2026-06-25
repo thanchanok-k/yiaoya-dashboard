@@ -18,6 +18,7 @@
    MS_BACKEND — map google.script.run → Supabase edge fn hr_list (type=milestone.updated)
    ============================================================ */
 var MS_FN = 'hr_list';
+var MS_WRITE_FN = 'hr_write';   // edge fn กลาง CRUD (add/edit/soft-delete)
 var MS_TYPE = 'milestone.updated';
 var MS_LIMIT = 2000;
 
@@ -165,14 +166,24 @@ function ms2FetchAll() {
   return sb.functions.invoke(MS_FN + '?type=' + encodeURIComponent(MS_TYPE) + '&limit=' + MS_LIMIT).then(function (res) {
     var data = (res && res.data) || {};
     var items = ms2ToArr(data.items);
-    var seen = {}; var rows = [];
+    var seen = {}; var rows = [];   // id → index (เก็บล่าสุด)
+    // dedupe เก็บล่าสุดต่อ id (payload เรียงเก่า→ใหม่) · soft-delete (event ล่าสุด=deleted) → ทิ้ง
     items.forEach(function (p) {
       var id = p.milestone_id || p.entity_id || p.id || '';
-      if (!id || seen[id]) return;
-      seen[id] = true;
+      if (!id) return;
+      var isDel = !!(p && (p._status === 'deleted' || p._deleted === true || p.deleted === true));
+      if (seen[id] != null) {
+        if (isDel) { rows[seen[id]] = null; delete _ms2Raw[id]; return; }
+        _ms2Raw[id] = p;
+        rows[seen[id]] = ms2MapMilestone(p);
+        return;
+      }
+      if (isDel) return;
+      seen[id] = rows.length;
       _ms2Raw[id] = p;
       rows.push(ms2MapMilestone(p));
     });
+    rows = rows.filter(function (r) { return r; }); // กรองช่องที่ถูก soft-delete ทิ้ง
     _ms2Rows = rows;
     return rows;
   }).catch(function (e) {
@@ -261,28 +272,105 @@ var MS_BACKEND = {
     });
   },
 
-  // ---- mutations: เขียนกลับไม่ได้บน dashboard → stub + toast ----
-  milestoneAdminAdd: function () {
-    ms2NotReady('เพิ่ม milestone');
-    return Promise.resolve({ error: 'เพิ่ม milestone ยังไม่พร้อมบน dashboard (read-only)' });
+  // ---- mutations: เขียนจริงผ่าน hr_write ----
+  // add — ไม่ส่ง entity_id = สร้างใหม่
+  milestoneAdminAdd: function (payload) {
+    return ms2Write({ payload: ms2BuildPayload(payload) });
   },
-  milestoneAdminUpdate: function () {
-    ms2NotReady('แก้ไข milestone');
-    return Promise.resolve({ error: 'แก้ไข milestone ยังไม่พร้อมบน dashboard (read-only)' });
+  // update — ส่ง entity_id = id เดิม
+  milestoneAdminUpdate: function (id, payload) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี milestone_id' });
+    var p = ms2BuildPayload(payload); p.id = id; p.milestone_id = id;
+    return ms2Write({ entity_id: id, payload: p });
   },
-  milestoneAdminToggleActive: function () {
-    ms2NotReady('เปิด/ปิด milestone');
-    return Promise.resolve({ error: 'toggle ยังไม่พร้อมบน dashboard (read-only)' });
+  // toggle active — อ่านค่าปัจจุบันจาก cache แล้วเขียน flip (คง field รอบเวลาเดิมครบ)
+  milestoneAdminToggleActive: function (id) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี milestone_id' });
+    var cur = null;
+    for (var i = 0; i < _ms2Rows.length; i++) { if (_ms2Rows[i].milestone_id === id) { cur = _ms2Rows[i]; break; } }
+    if (!cur) return Promise.resolve({ error: 'ไม่พบ milestone' });
+    var p = ms2BuildPayload(cur); p.id = id; p.milestone_id = id; p.active = !cur.active;
+    return ms2Write({ entity_id: id, payload: p });
   },
-  milestoneAdminRemove: function () {
-    ms2NotReady('ลบ milestone');
-    return Promise.resolve({ error: 'ลบ milestone ยังไม่พร้อมบน dashboard (read-only)' });
+  // soft delete — เขียน event ใหม่ deleted=true ทับ entity เดิม
+  milestoneAdminRemove: function (id) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี milestone_id' });
+    return ms2Write({ entity_id: id, deleted: true, payload: { id: id, milestone_id: id } });
   },
+  // seed defaults — ยังไม่รองรับบน dashboard (batch ฝั่ง backend)
   milestoneAdminSeedDefaults: function () {
     ms2NotReady('Seed defaults');
-    return Promise.resolve({ error: 'Seed defaults ยังไม่พร้อมบน dashboard (read-only)' });
+    return Promise.resolve({ error: 'Seed defaults ยังไม่พร้อมบน dashboard (ใช้ปุ่ม + เพิ่มทีละข้อ)' });
   },
 };
+
+// payload milestone → คอลัมน์เดิม (ส่ง field รอบเวลาตาม recurrence · กัน null)
+function ms2BuildPayload(payload) {
+  payload = payload || {};
+  var rec = String(payload.recurrence || 'monthly').toLowerCase();
+  if (['monthly', 'yearly', 'weekly', 'one_time'].indexOf(rec) < 0) rec = 'monthly';
+  var p = {
+    title: payload.title || '',
+    description: payload.description || '',
+    recurrence: rec,
+    severity: payload.severity || 'normal',
+    time: payload.time || '',
+    icon: payload.icon || 'calendar',
+    link: payload.link || '',
+    target_role: payload.target_role || 'all_hr',
+    auto_handled: !!payload.auto_handled,
+    notes: payload.notes || '',
+    active: (payload.active === false ? false : true),
+  };
+  if (rec === 'monthly') p.dom = (payload.dom != null ? payload.dom : '');
+  if (rec === 'yearly') { p.dom = (payload.dom != null ? payload.dom : ''); p.month = (payload.month != null ? payload.month : ''); }
+  if (rec === 'weekly') { p.day_of_week = (payload.day_of_week != null ? payload.day_of_week : ''); p.week_of_month = (payload.week_of_month != null ? payload.week_of_month : 'all'); }
+  if (rec === 'one_time') p.date_iso = payload.date_iso || payload.date || '';
+  return p;
+}
+
+// ตรวจ 403/401
+function ms2Is403(err) {
+  if (!err) return false;
+  if (err.context && typeof err.context.status === 'number' &&
+    (err.context.status === 403 || err.context.status === 401)) return true;
+  if (typeof err.status === 'number' && (err.status === 403 || err.status === 401)) return true;
+  var msg = String(err.message || err.error || err).toLowerCase();
+  return msg.indexOf('403') >= 0 || msg.indexOf('forbidden') >= 0 ||
+    msg.indexOf('401') >= 0 || msg.indexOf('unauthor') >= 0 || msg.indexOf('not allowed') >= 0;
+}
+
+// unwrap error body (FunctionsHttpError → context) → Promise<string>
+function ms2ErrMsg(err, data) {
+  if (data && data.ok === false && data.error) return Promise.resolve(String(data.error));
+  if (!err) return Promise.resolve('unknown');
+  if (err.context && typeof err.context.json === 'function') {
+    return err.context.json().then(function (b) {
+      return (b && (b.error || b.message)) ? String(b.error || b.message) : (err.message || String(err));
+    }).catch(function () { return err.message || String(err); });
+  }
+  return Promise.resolve(err.message || String(err));
+}
+
+// เขียนกลับผ่าน hr_write — body: { event_type, entity_id?, deleted?, payload }
+function ms2Write(opts) {
+  opts = opts || {};
+  var body = { event_type: MS_TYPE, payload: opts.payload || {} };
+  if (opts.entity_id) body.entity_id = opts.entity_id;
+  if (opts.deleted) body.deleted = true;
+  return sb.functions.invoke(MS_WRITE_FN, { body: body }).then(function (res) {
+    var data = (res && res.data) || null;
+    var err = res && res.error;
+    if (err || (data && data.ok === false)) {
+      if (ms2Is403(err)) return { error: 'ต้องเป็น HR / ล็อกอินก่อน' };
+      return ms2ErrMsg(err, data).then(function (m) { return { error: m }; });
+    }
+    return { ok: true, entity_id: (data && data.entity_id) || opts.entity_id || '' };
+  }).catch(function (e) {
+    if (ms2Is403(e)) return { error: 'ต้องเป็น HR / ล็อกอินก่อน' };
+    return ms2ErrMsg(e, null).then(function (m) { return { error: m }; });
+  });
+}
 
 var _ms2NotReadyShown = {};
 function ms2NotReady(feature) {
@@ -781,8 +869,8 @@ function MS_RUN_PAGE_JS() {
       { type: 'warn', title: 'ระวัง', items: [
         'แก้ recurrence แล้ว next_occurrence ใน sidebar จะ refresh หลัง reload',
         'Milestone ที่ <code>auto_handled = true</code> ต้องมี cron/trigger ทำงานคู่กัน — ไม่งั้นจะไม่ทำอะไร',
-        'ลบ milestone → สูญถาวร (ไม่มี soft delete) ใช้ toggle off แทนถ้าจะ pause',
-        'หมายเหตุ: บน dashboard นี้เป็น read-only — การเพิ่ม/แก้/ลบ/seed ยังไม่พร้อม',
+        'ลบ milestone บน dashboard = soft delete (event ใหม่ deleted=true · กู้คืนได้) ใช้ toggle off แทนถ้าจะ pause',
+        'การเพิ่ม/แก้/ลบ/toggle เขียนกลับ Supabase จริง · Seed defaults ยังไม่พร้อม (เพิ่มทีละข้อ)',
       ]},
     ],
   };
@@ -1059,6 +1147,7 @@ function MS_RUN_PAGE_JS() {
     google.script.run
       .withSuccessHandler(r => {
         if (r && r.error) { showToast(r.error, 'error'); loadList(); return; }
+        showToast('อัปเดตสถานะแล้ว', 'success'); loadList();
       })
       .withFailureHandler(e => { showToast('Error: ' + e.message, 'error'); loadList(); })
       .milestoneAdminToggleActive(id);

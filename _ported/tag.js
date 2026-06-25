@@ -19,6 +19,7 @@
      tagAdminAdd/Update/Remove/AdoptOrphan → { ok / error } stub + toast
    ============================================================ */
 var TG_FN = 'hr_list';
+var TG_WRITE_FN = 'hr_write';   // edge fn กลาง CRUD (add/edit/soft-delete)
 var TG_TYPE = 'tag.updated';
 
 function tg2ToArr(v) {
@@ -50,6 +51,58 @@ function tg2MapTag(p) {
   };
 }
 
+// soft-delete? (latest event = deleted)
+function tg2IsDeleted(p) {
+  return !!(p && (p._status === 'deleted' || p._deleted === true || tg2Bool(p._deleted) || p.deleted === true));
+}
+
+function tg2GetSb() {
+  return (typeof window !== 'undefined' && window.sb) ? window.sb : (typeof sb !== 'undefined' ? sb : null);
+}
+
+// unwrap error → Promise<string>
+function tg2ErrMsg(err, data) {
+  if (data && data.ok === false && data.error) return Promise.resolve(String(data.error));
+  if (!err) return Promise.resolve('unknown');
+  if (err.context && typeof err.context.json === 'function') {
+    return err.context.json().then(function (b) {
+      return (b && (b.error || b.message)) ? String(b.error || b.message) : (err.message || String(err));
+    }).catch(function () { return err.message || String(err); });
+  }
+  return Promise.resolve(err.message || String(err));
+}
+
+function tg2Is403(err) {
+  if (!err) return false;
+  if (err.context && typeof err.context.status === 'number' && (err.context.status === 403 || err.context.status === 401)) return true;
+  if (typeof err.status === 'number' && (err.status === 403 || err.status === 401)) return true;
+  var msg = String(err.message || err.error || err).toLowerCase();
+  return msg.indexOf('403') >= 0 || msg.indexOf('forbidden') >= 0 ||
+    msg.indexOf('401') >= 0 || msg.indexOf('unauthor') >= 0 || msg.indexOf('not allowed') >= 0;
+}
+
+// เขียนกลับผ่าน hr_write — คืน { ok } หรือ { error }
+function tg2Write(opts) {
+  opts = opts || {};
+  var sb = tg2GetSb();
+  if (!sb || !sb.functions) return Promise.resolve({ error: 'no sb' });
+  var body = { event_type: TG_TYPE, payload: opts.payload || {} };
+  if (opts.entity_id) body.entity_id = opts.entity_id;
+  if (opts.deleted) body.deleted = true;
+  return sb.functions.invoke(TG_WRITE_FN, { body: body }).then(function (res) {
+    var data = (res && res.data) || null;
+    var err = res && res.error;
+    if (err || (data && data.ok === false)) {
+      if (tg2Is403(err)) return { error: 'ต้องเป็น HR / ล็อกอินก่อน (403)' };
+      return tg2ErrMsg(err, data).then(function (m) { return { error: m }; });
+    }
+    return { ok: true, entity_id: (data && data.entity_id) || opts.entity_id || '', id: (data && data.entity_id) || opts.entity_id || '' };
+  }).catch(function (e) {
+    if (tg2Is403(e)) return { error: 'ต้องเป็น HR / ล็อกอินก่อน (403)' };
+    return tg2ErrMsg(e, null).then(function (m) { return { error: m }; });
+  });
+}
+
 // cache แถวล่าสุดต่อ tag_id
 var _tg2Tags = [];
 
@@ -64,6 +117,7 @@ function tg2FetchTags() {
       var key = id || nm;
       if (!key || seen[key]) return;
       seen[key] = true;
+      if (tg2IsDeleted(p)) return;   // กรองรายการที่ลบ (soft delete) ทิ้ง
       rows.push(tg2MapTag(p));
     });
     _tg2Tags = rows;
@@ -107,31 +161,39 @@ var TG_BACKEND = {
     });
   },
 
-  // ---- write: เขียนกลับไม่ได้บน dashboard → stub + toast ----
-  tagAdminAdd: function () {
-    tg2NotReady('เพิ่มแท็ก');
-    return Promise.resolve({ error: 'เพิ่มแท็ก ยังไม่พร้อมบน dashboard (read-only)' });
+  // ---- write: เขียนกลับจริงผ่าน hr_write ----
+  // เพิ่ม — ไม่ส่ง entity_id = สร้างใหม่ (tag_id เป็น business key อยู่ใน payload)
+  tagAdminAdd: function (payload) {
+    payload = payload || {};
+    if (!payload.tag_id || !payload.tag_name) return Promise.resolve({ error: 'กรอก tag_id + tag_name' });
+    return tg2Write({ entity_id: payload.tag_id, payload: {
+      tag_id: payload.tag_id, tag_name: payload.tag_name,
+      category: payload.category || '', description: payload.description || '',
+    } });
   },
-  tagAdminUpdate: function () {
-    tg2NotReady('แก้ไขแท็ก');
-    return Promise.resolve({ error: 'แก้ไขแท็ก ยังไม่พร้อมบน dashboard (read-only)' });
+  // แก้ — ส่ง entity_id เดิม
+  tagAdminUpdate: function (id, payload) {
+    payload = payload || {};
+    if (!id) return Promise.resolve({ error: 'ไม่มี tag_id' });
+    return tg2Write({ entity_id: id, payload: {
+      tag_id: id, tag_name: payload.tag_name || '',
+      category: payload.category || '', description: payload.description || '',
+    } });
   },
-  tagAdminRemove: function () {
-    tg2NotReady('ลบแท็ก');
-    return Promise.resolve({ error: 'ลบแท็ก ยังไม่พร้อมบน dashboard (read-only)' });
+  // ลบ (soft) — เขียน event ใหม่ deleted:true ทับ entity เดิม
+  tagAdminRemove: function (id) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี tag_id' });
+    return tg2Write({ entity_id: id, deleted: true, payload: { tag_id: id } });
   },
-  tagAdminAdoptOrphan: function () {
-    tg2NotReady('รับ orphan เข้าระบบ');
-    return Promise.resolve({ error: 'รับ orphan เข้าระบบ ยังไม่พร้อมบน dashboard (read-only)' });
+  // รับ orphan เข้าระบบ — สร้าง row ใหม่จาก tag_name (gen tag_id จากชื่อ)
+  tagAdminAdoptOrphan: function (tagName, cat) {
+    if (!tagName) return Promise.resolve({ error: 'ไม่มีชื่อแท็ก' });
+    var newId = 'TAG_' + String(tagName).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24);
+    return tg2Write({ entity_id: newId, payload: {
+      tag_id: newId, tag_name: tagName, category: cat || 'auto-adopted', description: '',
+    } });
   },
 };
-
-var _tg2NotReadyShown = {};
-function tg2NotReady(feature) {
-  if (_tg2NotReadyShown[feature]) return;
-  _tg2NotReadyShown[feature] = true;
-  if (typeof window !== 'undefined' && window.tg2Toast) window.tg2Toast('ฟีเจอร์ "' + feature + '" ยังไม่พร้อมบน dashboard (read-only)', 'error');
-}
 
 /* ============================================================
    mountTag — set innerHTML (CSS+markup) แล้วรัน JS หน้าเดิม
@@ -457,7 +519,7 @@ function TG_RUN_PAGE_JS() {
           'tag_name ใช้ snake_case เท่านั้น — code ใน Apps Script อ้างชื่อนี้',
           'หลังสร้างแล้ว Tag ID แก้ไม่ได้ (ถ้าผิดต้องลบสร้างใหม่)',
           'ลบแท็กที่มีคนใช้อยู่ → ระบบจะ block (ต้องลบจาก employee ก่อน)',
-          'หมายเหตุ: บน dashboard นี้เป็น read-only — การเพิ่ม/แก้/ลบ/adopt ยังไม่พร้อม',
+          'การลบเป็น soft delete — เขียน event ใหม่ทับ กู้คืนได้',
         ],
       },
     ],

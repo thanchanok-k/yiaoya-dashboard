@@ -19,6 +19,7 @@
      mutations            → { error } stub + toast
    ============================================================ */
 var HD_FN = 'hr_list';
+var HD_WRITE_FN = 'hr_write';   // edge fn กลาง CRUD (add/edit/soft-delete)
 var HD_TYPE = 'holiday.updated';
 
 function hd2ToArr(v) {
@@ -63,11 +64,63 @@ function hd2MapHol(p) {
   };
 }
 
+function hd2GetSb() {
+  return (typeof window !== 'undefined' && window.sb) ? window.sb : (typeof sb !== 'undefined' ? sb : null);
+}
+
+// soft-delete? (latest event = deleted)
+function hd2IsDeleted(p) {
+  return !!(p && (p._status === 'deleted' || p._deleted === true || hd2Bool(p._deleted) || p.deleted === true));
+}
+
+// unwrap error → Promise<string>
+function hd2ErrMsg(err, data) {
+  if (data && data.ok === false && data.error) return Promise.resolve(String(data.error));
+  if (!err) return Promise.resolve('unknown');
+  if (err.context && typeof err.context.json === 'function') {
+    return err.context.json().then(function (b) {
+      return (b && (b.error || b.message)) ? String(b.error || b.message) : (err.message || String(err));
+    }).catch(function () { return err.message || String(err); });
+  }
+  return Promise.resolve(err.message || String(err));
+}
+
+function hd2Is403(err) {
+  if (!err) return false;
+  if (err.context && typeof err.context.status === 'number' && (err.context.status === 403 || err.context.status === 401)) return true;
+  if (typeof err.status === 'number' && (err.status === 403 || err.status === 401)) return true;
+  var msg = String(err.message || err.error || err).toLowerCase();
+  return msg.indexOf('403') >= 0 || msg.indexOf('forbidden') >= 0 ||
+    msg.indexOf('401') >= 0 || msg.indexOf('unauthor') >= 0 || msg.indexOf('not allowed') >= 0;
+}
+
+// เขียนกลับผ่าน hr_write — คืน { ok, entity_id } หรือ { error }
+function hd2Write(opts) {
+  opts = opts || {};
+  var sb = hd2GetSb();
+  if (!sb || !sb.functions) return Promise.resolve({ error: 'no sb' });
+  var body = { event_type: HD_TYPE, payload: opts.payload || {} };
+  if (opts.entity_id) body.entity_id = opts.entity_id;
+  if (opts.deleted) body.deleted = true;
+  return sb.functions.invoke(HD_WRITE_FN, { body: body }).then(function (res) {
+    var data = (res && res.data) || null;
+    var err = res && res.error;
+    if (err || (data && data.ok === false)) {
+      if (hd2Is403(err)) return { error: 'ต้องเป็น HR / ล็อกอินก่อน (403)' };
+      return hd2ErrMsg(err, data).then(function (m) { return { error: m }; });
+    }
+    return { ok: true, entity_id: (data && data.entity_id) || opts.entity_id || '' };
+  }).catch(function (e) {
+    if (hd2Is403(e)) return { error: 'ต้องเป็น HR / ล็อกอินก่อน (403)' };
+    return hd2ErrMsg(e, null).then(function (m) { return { error: m }; });
+  });
+}
+
 // cache row ล่าสุดต่อ holiday (backend ไม่มี endpoint แยก)
 var _hd2Hols = [];
 
 function hd2FetchHols() {
-  var sb = (typeof window !== 'undefined' && window.sb) ? window.sb : (typeof sb !== 'undefined' ? sb : null);
+  var sb = hd2GetSb();
   if (!sb || !sb.functions) {
     _hd2Hols = [];
     return Promise.resolve([]);
@@ -77,6 +130,7 @@ function hd2FetchHols() {
     var items = hd2ToArr(data.items);
     var seen = {}; var rows = [];
     items.forEach(function (p) {
+      if (hd2IsDeleted(p)) return;   // กรองรายการที่ลบ (soft delete) ทิ้ง
       var row = hd2MapHol(p);
       var key = row.id || (row.date + '|' + row.branch_id + '|' + row.name);
       if (!key || seen[key]) return;
@@ -144,38 +198,113 @@ var HD_BACKEND = {
     });
   },
 
-  // ---- mutations: เขียนกลับไม่ได้บน dashboard → stub + toast ----
-  holidayAdd: function () {
-    hd2NotReady('เพิ่มวันหยุด');
-    return Promise.resolve({ error: 'เพิ่มวันหยุดยังไม่พร้อมบน dashboard (read-only)' });
+  // ---- mutations: เขียนกลับจริงผ่าน hr_write ----
+  // เพิ่ม — ไม่ส่ง entity_id = สร้างใหม่
+  holidayAdd: function (payload) {
+    payload = payload || {};
+    if (!(payload.holiday_date || payload.date) || !payload.name) return Promise.resolve({ error: 'กรอกวันที่และชื่อ' });
+    return hd2Write({ entity_id: null, payload: hd2BuildPayload(payload) });
   },
-  holidayUpdate: function () {
-    hd2NotReady('แก้ไขวันหยุด');
-    return Promise.resolve({ error: 'แก้ไขวันหยุดยังไม่พร้อมบน dashboard (read-only)' });
+  // แก้ — ส่ง entity_id เดิม
+  holidayUpdate: function (id, payload) {
+    payload = payload || {};
+    if (!id) return Promise.resolve({ error: 'ไม่มี holiday id' });
+    var p = hd2BuildPayload(payload);
+    p.id = id;
+    return hd2Write({ entity_id: id, payload: p });
   },
-  holidayRemove: function () {
-    hd2NotReady('ลบวันหยุด');
-    return Promise.resolve({ error: 'ลบวันหยุดยังไม่พร้อมบน dashboard (read-only)' });
+  // ลบ (soft) — เขียน event ใหม่ deleted:true ทับ entity เดิม
+  holidayRemove: function (id) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี holiday id' });
+    return hd2Write({ entity_id: id, deleted: true, payload: { id: id } });
   },
+  // Seed วันหยุดราชการมาตรฐาน — ยังไม่มี catalog บน dashboard → ปิดไว้
   holidaySeedPublicYear: function () {
-    hd2NotReady('Seed วันหยุดราชการ');
-    return Promise.resolve({ error: 'Seed ยังไม่พร้อมบน dashboard (read-only)' });
+    return Promise.resolve({ error: 'Seed วันหยุดมาตรฐานยังไม่พร้อมบน dashboard (เพิ่มทีละวันได้)' });
   },
-  holidayCopyYear: function () {
-    hd2NotReady('คัดลอกวันหยุดจากปีก่อน');
-    return Promise.resolve({ error: 'คัดลอกปีก่อนยังไม่พร้อมบน dashboard (read-only)' });
+  // คัดลอกวันหยุดทั้งปีจากปีก่อน → สร้าง event ใหม่ทีละวัน (เลื่อนปี)
+  holidayCopyYear: function (fromYear, toYear) {
+    var rows = (_hd2Hols || []).filter(function (h) { return (h.date || '').slice(0, 4) === String(fromYear); });
+    if (!rows.length) return Promise.resolve({ error: 'ไม่มีวันหยุดในปี ' + fromYear + ' ให้คัดลอก' });
+    var existing = {};
+    (_hd2Hols || []).filter(function (h) { return (h.date || '').slice(0, 4) === String(toYear); })
+      .forEach(function (h) { existing[h.date + '|' + h.branch_id + '|' + h.name] = true; });
+    var added = 0, skipped = 0;
+    var chain = Promise.resolve();
+    rows.forEach(function (h) {
+      var newDate = String(toYear) + (h.date || '').slice(4);
+      if (existing[newDate + '|' + h.branch_id + '|' + h.name]) { skipped++; return; }
+      chain = chain.then(function () {
+        return hd2Write({ entity_id: null, payload: hd2BuildPayload({
+          holiday_date: newDate, name: h.name, type: h.type, branch_id: h.branch_id,
+          recurring: h.recurring, is_paid: h.is_paid, closes_office: h.closes_office,
+          closes_frontline: h.closes_frontline, substitute_for: h.substitute_for, notes: h.notes,
+        }) }).then(function (r) { if (r && r.ok) added++; else skipped++; });
+      });
+    });
+    return chain.then(function () { return { ok: true, added: added, skipped: skipped }; });
   },
-  holidayAddRecurring: function () {
-    hd2NotReady('สร้างวันหยุดประจำทั้งปี');
-    return Promise.resolve({ error: 'วันหยุดประจำยังไม่พร้อมบน dashboard (read-only)' });
+  // วันหยุดประจำ (สัปดาห์ที่ n ของทุกเดือนทั้งปี) → สร้าง event ใหม่ทีละวัน
+  holidayAddRecurring: function (input) {
+    input = input || {};
+    if (!input.name) return Promise.resolve({ error: 'กรอกชื่อวันหยุด' });
+    var dates = hd2RecurringDates(input.year, input.nth, input.weekday);
+    if (!dates.length) return Promise.resolve({ error: 'คำนวณวันไม่ได้' });
+    var added = 0;
+    var chain = Promise.resolve();
+    dates.forEach(function (d) {
+      chain = chain.then(function () {
+        return hd2Write({ entity_id: null, payload: hd2BuildPayload({
+          holiday_date: d, name: input.name, type: 'company', branch_id: input.branch_id || 'ALL',
+          recurring: 'one_time', is_paid: input.is_paid, closes_office: input.closes_office,
+          closes_frontline: input.closes_frontline,
+        }) }).then(function (r) { if (r && r.ok) added++; });
+      });
+    });
+    return chain.then(function () { return { ok: true, added: added, summary: 'สร้าง ' + added + ' วัน' }; });
   },
 };
 
-var _hd2NotReadyShown = {};
-function hd2NotReady(feature) {
-  if (_hd2NotReadyShown[feature]) return;
-  _hd2NotReadyShown[feature] = true;
-  if (typeof window !== 'undefined' && window.hd2Toast) window.hd2Toast('ฟีเจอร์ "' + feature + '" ยังไม่พร้อมบน dashboard', 'error');
+// แปลง form payload → payload ที่ hd2MapHol อ่านได้ (กัน null)
+function hd2BuildPayload(p) {
+  p = p || {};
+  return {
+    holiday_date: hd2Date(p.holiday_date || p.date),
+    name: String(p.name || '').trim(),
+    type: p.type || 'public',
+    branch_id: p.branch_id || 'ALL',
+    recurring: p.recurring || 'yearly',
+    is_paid: p.is_paid !== false,
+    closes_office: !!p.closes_office,
+    closes_frontline: !!p.closes_frontline,
+    substitute_for: String(p.substitute_for || '').trim(),
+    notes: String(p.notes || '').trim(),
+  };
+}
+
+// คืน array ของ 'YYYY-MM-DD' สำหรับ "สัปดาห์ที่ nth (weekday) ของทุกเดือน" ในปีนั้น (nth=-1 = สุดท้าย)
+function hd2RecurringDates(year, nth, weekday) {
+  year = parseInt(year, 10); nth = parseInt(nth, 10); weekday = parseInt(weekday, 10);
+  if (!year || isNaN(nth) || isNaN(weekday)) return [];
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var out = [];
+  for (var m = 0; m < 12; m++) {
+    var day = null;
+    if (nth === -1) {
+      var last = new Date(year, m + 1, 0);
+      for (var d = last.getDate(); d >= 1; d--) {
+        if (new Date(year, m, d).getDay() === weekday) { day = d; break; }
+      }
+    } else {
+      var count = 0;
+      var dim = new Date(year, m + 1, 0).getDate();
+      for (var dd = 1; dd <= dim; dd++) {
+        if (new Date(year, m, dd).getDay() === weekday) { count++; if (count === nth) { day = dd; break; } }
+      }
+    }
+    if (day) out.push(year + '-' + pad(m + 1) + '-' + pad(day));
+  }
+  return out;
 }
 
 /* ============================================================
@@ -651,7 +780,7 @@ function HD_RUN_PAGE_JS() {
       { type: 'warn', title: 'ระวัง', items: [
         'วันสำคัญทางศาสนา (มาฆ/วิสาข/อาสาฬห/เข้าพรรษา) เปลี่ยนทุกปี — ระบบ seed ไม่ใส่ให้',
         'ตรวจประกาศ ครม. แต่ละปี เพื่อยืนยันวันชดเชย',
-        'หมายเหตุ: บน dashboard นี้เป็น read-only — เพิ่ม/แก้/ลบ/seed ยังไม่พร้อม',
+        'เพิ่ม/แก้/ลบ/คัดลอกปีก่อน/วันหยุดประจำ ใช้งานได้ · ลบเป็น soft delete กู้คืนได้ · Seed มาตรฐานยังไม่พร้อม',
       ]},
     ],
   };

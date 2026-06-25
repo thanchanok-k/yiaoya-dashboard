@@ -19,6 +19,7 @@
    ⚠️ map เฉพาะ field ที่มีใน payload — ไม่มี = ว่าง (JS เดิม guard ด้วย optional render อยู่แล้ว)
    ============================================================ */
 var DS_FN = 'hr_list';
+var DS_WRITE_FN = 'hr_write';   // edge fn กลาง CRUD (create/approve/void · soft-delete)
 var DS_TYPE = 'disciplinary.updated';
 
 function ds2ToArr(v) {
@@ -95,6 +96,55 @@ function ds2FilterTab(all, tab) {
   }
 }
 
+function ds2GetSb() {
+  return (typeof window !== 'undefined' && window.sb) ? window.sb : (typeof sb !== 'undefined' ? sb : null);
+}
+// ตรวจ 403/401 จาก res ของ functions.invoke
+function ds2Is403(res) {
+  if (!res) return false;
+  var err = res.error || res;
+  if (!err) return false;
+  if (err.context && typeof err.context.status === 'number') {
+    if (err.context.status === 403 || err.context.status === 401) return true;
+  }
+  if (typeof err.status === 'number' && (err.status === 403 || err.status === 401)) return true;
+  var msg = String(err.message || err.error || err).toLowerCase();
+  return msg.indexOf('403') >= 0 || msg.indexOf('forbidden') >= 0 ||
+    msg.indexOf('401') >= 0 || msg.indexOf('unauthor') >= 0 || msg.indexOf('not allowed') >= 0;
+}
+// unwrap error body (FunctionsHttpError → error.context เป็น Response) → Promise<string>
+function ds2UnwrapErr(err) {
+  if (err && err.context && typeof err.context.json === 'function') {
+    return err.context.json().then(function (j) {
+      return (j && (j.error || j.message)) || (err.message || 'error');
+    }).catch(function () { return (err && err.message) || 'error'; });
+  }
+  return Promise.resolve((err && err.message) || String(err || 'error'));
+}
+// raw payload ล่าสุดต่อ record (ใช้ merge ตอน approve/void เพื่อคงฟิลด์เดิม)
+var _ds2Raw = {};
+// เขียนกลับผ่าน hr_write — { ok, denied, error, entity_id }
+function ds2Write(opts) {
+  opts = opts || {};
+  var sb = ds2GetSb();
+  if (!sb || !sb.functions) return Promise.resolve({ ok: false, denied: false, error: 'no sb' });
+  var body = { event_type: DS_TYPE, payload: opts.payload || {} };
+  if (opts.entity_id) body.entity_id = opts.entity_id;
+  if (opts.deleted) body.deleted = true;
+  return sb.functions.invoke(DS_WRITE_FN, { body: body }).then(function (res) {
+    if (res && res.error) {
+      if (ds2Is403(res)) return { ok: false, denied: true, error: null };
+      return ds2UnwrapErr(res.error).then(function (m) { return { ok: false, denied: false, error: m }; });
+    }
+    var data = (res && res.data) || {};
+    if (!data.ok) return { ok: false, denied: false, error: (data.error || 'save failed') };
+    return { ok: true, denied: false, error: null, entity_id: data.entity_id || opts.entity_id || '' };
+  }).catch(function (e) {
+    if (ds2Is403({ error: e })) return { ok: false, denied: true, error: null };
+    return ds2UnwrapErr(e).then(function (m) { return { ok: false, denied: false, error: m }; });
+  });
+}
+
 var DS_BACKEND = {
   // role gate — dashboard user = hr/owner เต็มสิทธิ์
   disciplinaryAdminWhoAmI: function () {
@@ -105,7 +155,17 @@ var DS_BACKEND = {
     opts = opts || {};
     return sb.functions.invoke(DS_FN + '?type=' + encodeURIComponent(DS_TYPE)).then(function (res) {
       var data = (res && res.data) || {};
-      var all = ds2ToArr(data.items || data.rows).map(ds2MapRow).filter(function (r) { return r.record_id; });
+      var rawItems = ds2ToArr(data.items || data.rows).filter(function (p) {
+        // กรองรายการที่ลบ (soft delete) ทิ้ง
+        return !(p && (p._status === 'deleted' || p._deleted === true || ds2Bool(p._deleted)));
+      });
+      _ds2Raw = {};
+      rawItems.forEach(function (p) {
+        if (!p) return;
+        var rid = ds2Str(p.record_id || p.disciplinary_id || p.entity_id || p.id || '');
+        if (rid) _ds2Raw[rid] = p;
+      });
+      var all = rawItems.map(ds2MapRow).filter(function (r) { return r.record_id; });
       var counts = ds2Counts(all);
       var rows = ds2FilterTab(all, opts.tab || 'pending_review');
       if (opts.search) {
@@ -127,7 +187,9 @@ var DS_BACKEND = {
   disciplinaryAdminTodaySummary: function () {
     return sb.functions.invoke(DS_FN + '?type=' + encodeURIComponent(DS_TYPE)).then(function (res) {
       var data = (res && res.data) || {};
-      var all = ds2ToArr(data.items || data.rows).map(ds2MapRow).filter(function (r) { return r.record_id; });
+      var all = ds2ToArr(data.items || data.rows).filter(function (p) {
+        return !(p && (p._status === 'deleted' || p._deleted === true || ds2Bool(p._deleted)));
+      }).map(ds2MapRow).filter(function (r) { return r.record_id; });
       return {
         ok: true,
         pending_review: all.filter(function (r) { return r.review_status === 'pending_review'; }).length,
@@ -136,29 +198,128 @@ var DS_BACKEND = {
       };
     }).catch(function () { return { ok: false }; });
   },
-  // approve — backend ไม่มี write-back → stub + toast
-  disciplinaryAdminApprove: function () {
-    ds2NotReady('อนุมัติใบวินัย');
-    return Promise.resolve({ ok: false, error: 'การอนุมัติยังไม่พร้อมบน dashboard' });
+  // approve — เขียนกลับผ่าน hr_write (merge raw เดิม · ตั้ง review_status=approved)
+  disciplinaryAdminApprove: function (id) {
+    if (!id) return Promise.resolve({ ok: false, error: 'ไม่มี record_id' });
+    var raw = _ds2Raw[id] || {};
+    var p = {};
+    Object.keys(raw).forEach(function (k) { if (k.charAt(0) !== '_') p[k] = raw[k]; });
+    p.record_id = id;
+    p.review_status = 'approved';
+    return ds2Write({ entity_id: id, payload: p });
   },
-  // void — stub
-  disciplinaryAdminVoid: function () {
-    ds2NotReady('ยกเลิกใบวินัย');
-    return Promise.resolve({ ok: false, error: 'การยกเลิกยังไม่พร้อมบน dashboard' });
+  // void — เขียนกลับผ่าน hr_write (review_status=voided + void_reason)
+  disciplinaryAdminVoid: function (id, reason) {
+    if (!id) return Promise.resolve({ ok: false, error: 'ไม่มี record_id' });
+    var raw = _ds2Raw[id] || {};
+    var p = {};
+    Object.keys(raw).forEach(function (k) { if (k.charAt(0) !== '_') p[k] = raw[k]; });
+    p.record_id = id;
+    p.review_status = 'voided';
+    p.void_reason = reason || '';
+    return ds2Write({ entity_id: id, payload: p });
   },
-  // HR ออกใบ — context stub (ไม่มี employee resolver / categories endpoint)
+  // HR ออกใบ — context derive จากพนักงานที่เคยมีในระบบ (จาก rows เดิม) + หมวดมาตรฐาน
   disciplinaryAdminIssueContext: function () {
-    ds2NotReady('HR ออกใบผ่านเว็บ');
-    return Promise.resolve({ ok: false, error: 'การออกใบผ่าน dashboard ยังไม่พร้อม — ใช้ผ่าน LINE OA / หน้าเดิม' });
+    var p = _ds2RowsForCtx ? Promise.resolve(_ds2RowsForCtx) : Promise.resolve([]);
+    return p.then(function () {
+      var emps = [], seen = {};
+      Object.keys(_ds2Raw).forEach(function (rid) {
+        var r = _ds2Raw[rid] || {};
+        var eid = ds2Str(r.employee_id);
+        if (!eid || seen[eid]) return;
+        seen[eid] = true;
+        emps.push({
+          employee_id: eid,
+          full_name: ds2Str(r.employee_name || r.employee || eid),
+          nickname: '',
+          position: ds2Str(r.employee_position || r.position || ''),
+          branch_id: ds2Str(r.branch_id || r.branch || ''),
+        });
+      });
+      emps.sort(function (a, b) { return String(a.full_name).localeCompare(String(b.full_name), 'th'); });
+      return {
+        ok: true,
+        issuer: { name: 'HR (dashboard)' },
+        employees: emps,
+        categories_warning: DS_CATS_WARNING,
+        categories_commendation: DS_CATS_COMMEND,
+      };
+    });
   },
-  disciplinaryAdminEmployeeHistory: function () {
-    return Promise.resolve({ ok: false, error: 'ประวัติยังไม่พร้อมบน dashboard' });
+  // ประวัติพนักงาน — derive จาก rows ที่ดึงมาแล้ว (client-side · ไม่มี endpoint แยก)
+  disciplinaryAdminEmployeeHistory: function (id) {
+    var records = [];
+    Object.keys(_ds2Raw).forEach(function (rid) {
+      var raw = _ds2Raw[rid] || {};
+      if (ds2Str(raw.employee_id) !== ds2Str(id)) return;
+      var r = ds2MapRow(raw);
+      records.push({
+        record_type: r.record_type, level: r.level, level_label: r.level_label,
+        category_label: r.category_label, issued_at: r.issued_at, ack_status: r.ack_status,
+        expired: false,
+      });
+    });
+    records.sort(function (a, b) { return String(b.issued_at).localeCompare(String(a.issued_at)); });
+    var warnActive = records.filter(function (r) { return r.record_type === 'warning'; }).length;
+    var comm = records.filter(function (r) { return r.record_type === 'commendation'; }).length;
+    return Promise.resolve({ ok: true, records: records, summary: { warnings_active: warnActive, commendations: comm } });
   },
-  disciplinaryAdminHrIssue: function () {
-    ds2NotReady('HR ออกใบผ่านเว็บ');
-    return Promise.resolve({ ok: false, error: 'การออกใบผ่าน dashboard ยังไม่พร้อม' });
+  // HR ออกใบ (create) — เขียนกลับผ่าน hr_write (ไม่ส่ง entity_id = ใหม่)
+  disciplinaryAdminHrIssue: function (f) {
+    f = f || {};
+    if (!f.employee_id) return Promise.resolve({ ok: false, error: 'ไม่ได้เลือกพนักงาน' });
+    var emp = null;
+    Object.keys(_ds2Raw).forEach(function (rid) {
+      var r = _ds2Raw[rid] || {};
+      if (!emp && ds2Str(r.employee_id) === ds2Str(f.employee_id)) emp = r;
+    });
+    var lvlLabels = {
+      verbal: 'ตักเตือนวาจา', written: 'ลายลักษณ์อักษร', final: 'ครั้งสุดท้าย',
+      standard: 'ชมเชยปกติ', exceptional: 'เกียรติคุณ',
+    };
+    var catList = f.record_type === 'commendation' ? DS_CATS_COMMEND : DS_CATS_WARNING;
+    var catMeta = null;
+    catList.forEach(function (c) { if (c.key === f.category) catMeta = c; });
+    var payload = {
+      record_type: f.record_type || 'warning',
+      employee_id: f.employee_id,
+      employee_name: emp ? ds2Str(emp.employee_name || emp.employee) : '',
+      employee_position: emp ? ds2Str(emp.employee_position || emp.position) : '',
+      level: f.level || '',
+      level_label: lvlLabels[f.level] || f.level || '',
+      category: f.category || '',
+      category_label: catMeta ? catMeta.th : (f.category || ''),
+      description: f.description || '',
+      incident_date: f.incident_date || '',
+      attachment_url: f.attachment_url || '',
+      issuer_name: 'HR (dashboard)',
+      issued_at: new Date().toISOString().slice(0, 10),
+      // written/final → รอ HR ทบทวน · อื่น ๆ → อนุมัติ (mirror logic เดิม)
+      review_status: (f.level === 'written' || f.level === 'final') ? 'pending_review' : 'approved',
+      ack_status: 'pending',
+    };
+    return ds2Write({ entity_id: null, payload: payload });
   },
 };
+
+// หมวดมาตรฐาน (ใช้กับฟอร์ม HR ออกใบ · derive จากระบบเดิมไม่ได้ → คงชุดมาตรฐาน)
+var DS_CATS_WARNING = [
+  { key: 'attendance', th: 'มาสาย / ขาดงาน' },
+  { key: 'performance', th: 'ผลงานต่ำกว่ามาตรฐาน' },
+  { key: 'conduct', th: 'พฤติกรรม / มารยาท' },
+  { key: 'policy', th: 'ผิดระเบียบบริษัท' },
+  { key: 'safety', th: 'ความปลอดภัย' },
+  { key: 'other', th: 'อื่น ๆ' },
+];
+var DS_CATS_COMMEND = [
+  { key: 'performance', th: 'ผลงานดีเด่น' },
+  { key: 'teamwork', th: 'ทำงานเป็นทีม' },
+  { key: 'service', th: 'บริการดีเยี่ยม' },
+  { key: 'initiative', th: 'ริเริ่ม / พัฒนางาน' },
+  { key: 'other', th: 'อื่น ๆ' },
+];
+var _ds2RowsForCtx = null;
 
 var _ds2NotReadyShown = {};
 function ds2NotReady(feature) {
@@ -501,7 +662,8 @@ function DS_RUN_PAGE_JS() {
   function approve(id) {
     if (!confirm('อนุมัติใบนี้?')) return;
     google.script.run.withSuccessHandler(function (r) {
-      if (r && r.ok) reload();
+      if (r && r.ok) { showToast('อนุมัติแล้ว', 'success'); reload(); }
+      else if (r && r.denied) showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error');
       else showToast('Approve ล้มเหลว · ' + (r && r.error), 'error');
     }).disciplinaryAdminApprove(id);
   }
@@ -522,7 +684,8 @@ function DS_RUN_PAGE_JS() {
     var reason = gid('voidReason').value.trim();
     if (!reason) { alert('ต้องระบุเหตุผล'); return; }
     google.script.run.withSuccessHandler(function (r) {
-      if (r && r.ok) { closeModal(); reload(); }
+      if (r && r.ok) { closeModal(); showToast('ยกเลิกใบแล้ว', 'success'); reload(); }
+      else if (r && r.denied) showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error');
       else showToast('Void ล้มเหลว · ' + (r && r.error), 'error');
     }).disciplinaryAdminVoid(_state.voidId, reason);
   }
@@ -729,10 +892,14 @@ function DS_RUN_PAGE_JS() {
       if (res && res.ok) {
         _state.hrIssue = null;
         closeModal();
+        showToast('ออกใบเรียบร้อย', 'success');
         reload();
         google.script.run.withSuccessHandler(function (s) {
           if (s && s.ok) gid('stPr').textContent = s.pending_review || 0;
         }).disciplinaryAdminTodaySummary();
+      } else if (res && res.denied) {
+        showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error');
+        renderHrIssue();
       } else {
         showToast('ออกใบไม่สำเร็จ · ' + ((res && res.error) || 'unknown'), 'error');
         renderHrIssue();

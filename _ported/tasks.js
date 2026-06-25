@@ -23,6 +23,7 @@
      mutations                   → { ok / error } stub + toast
    ============================================================ */
 var TK_FN = 'hr_list';
+var TK_WRITE_FN = 'hr_write';   // edge fn กลาง CRUD (add/edit/soft-delete)
 var TK_TYPE = 'task.updated';
 
 function tk2ToArr(v) {
@@ -110,6 +111,74 @@ function tk2MapTask(p) {
   };
 }
 
+function tk2GetSb() {
+  return (typeof window !== 'undefined' && window.sb) ? window.sb : (typeof sb !== 'undefined' ? sb : null);
+}
+
+// soft-delete? (latest event = deleted)
+function tk2IsDeleted(p) {
+  return !!(p && (p._status === 'deleted' || p._deleted === true || tk2Bool(p._deleted) || p.deleted === true));
+}
+
+// unwrap error → Promise<string>
+function tk2ErrMsg(err, data) {
+  if (data && data.ok === false && data.error) return Promise.resolve(String(data.error));
+  if (!err) return Promise.resolve('unknown');
+  if (err.context && typeof err.context.json === 'function') {
+    return err.context.json().then(function (b) {
+      return (b && (b.error || b.message)) ? String(b.error || b.message) : (err.message || String(err));
+    }).catch(function () { return err.message || String(err); });
+  }
+  return Promise.resolve(err.message || String(err));
+}
+
+function tk2Is403(err) {
+  if (!err) return false;
+  if (err.context && typeof err.context.status === 'number' && (err.context.status === 403 || err.context.status === 401)) return true;
+  if (typeof err.status === 'number' && (err.status === 403 || err.status === 401)) return true;
+  var msg = String(err.message || err.error || err).toLowerCase();
+  return msg.indexOf('403') >= 0 || msg.indexOf('forbidden') >= 0 ||
+    msg.indexOf('401') >= 0 || msg.indexOf('unauthor') >= 0 || msg.indexOf('not allowed') >= 0;
+}
+
+// เขียนกลับผ่าน hr_write — คืน { ok, entity_id } หรือ { error }
+function tk2Write(opts) {
+  opts = opts || {};
+  var sb = tk2GetSb();
+  if (!sb || !sb.functions) return Promise.resolve({ error: 'no sb' });
+  var body = { event_type: TK_TYPE, payload: opts.payload || {} };
+  if (opts.entity_id) body.entity_id = opts.entity_id;
+  if (opts.deleted) body.deleted = true;
+  return sb.functions.invoke(TK_WRITE_FN, { body: body }).then(function (res) {
+    var data = (res && res.data) || null;
+    var err = res && res.error;
+    if (err || (data && data.ok === false)) {
+      if (tk2Is403(err)) return { error: 'ต้องเป็น HR / ล็อกอินก่อน (403)' };
+      return tk2ErrMsg(err, data).then(function (m) { return { error: m }; });
+    }
+    // optimistic: อัปเดต cache raw ให้ detail reopen เห็นค่าใหม่ก่อน refetch
+    if (opts.entity_id && opts.payload && !opts.deleted) _tk2Raw[opts.entity_id] = opts.payload;
+    if (opts.entity_id && opts.deleted) delete _tk2Raw[opts.entity_id];
+    return { ok: true, entity_id: (data && data.entity_id) || opts.entity_id || '' };
+  }).catch(function (e) {
+    if (tk2Is403(e)) return { error: 'ต้องเป็น HR / ล็อกอินก่อน (403)' };
+    return tk2ErrMsg(e, null).then(function (m) { return { error: m }; });
+  });
+}
+
+// today 'YYYY-MM-DD'
+function tk2Today() { return tk2Date(new Date()); }
+
+// อ่าน payload ดิบล่าสุดของ task (สำหรับ build payload เขียนทับ) → object (clone ตื้น)
+function tk2RawOf(taskId) {
+  var p = _tk2Raw[taskId];
+  var out = {};
+  if (p) { Object.keys(p).forEach(function (k) { if (k.charAt(0) !== '_') out[k] = p[k]; }); }
+  out.task_id = taskId;
+  if (!Array.isArray(out.checklist)) out.checklist = tk2Checklist(p || {});
+  return out;
+}
+
 // cache payload ดิบล่าสุดต่อ task (ให้ detail reuse · backend ไม่มี endpoint แยก)
 var _tk2Tasks = [];
 var _tk2Raw = {};
@@ -123,6 +192,7 @@ function tk2FetchTasks() {
       var id = p.task_id || p.entity_id || p.id || '';
       if (!id || seen[id]) return;
       seen[id] = true;
+      if (tk2IsDeleted(p)) { delete _tk2Raw[id]; return; }   // กรองรายการที่ลบ (soft delete) ทิ้ง
       _tk2Raw[id] = p;
       rows.push(tk2MapTask(p));
     });
@@ -220,50 +290,128 @@ var TK_BACKEND = {
     return tk2FetchTasks().then(build);
   },
 
-  // ---- mutations: เขียนกลับ/ส่ง LINE ไม่ได้บน dashboard → stub + toast ----
-  tasksAdminAdd: function () {
-    tk2NotReady('เพิ่มงาน ad-hoc');
-    return Promise.resolve({ error: 'เพิ่มงานยังไม่พร้อมบน dashboard (read-only)' });
+  // ---- mutations: เขียนกลับจริงผ่าน hr_write ----
+  // เพิ่มงาน ad-hoc — ไม่ส่ง entity_id = สร้างใหม่ · gen task_id ฝั่ง client
+  tasksAdminAdd: function (payload) {
+    payload = payload || {};
+    if (!payload.branch_id) return Promise.resolve({ error: 'เลือกสาขา' });
+    if (!payload.due_date) return Promise.resolve({ error: 'ระบุวันครบกำหนด' });
+    var taskId = 'TASK_' + Date.now().toString(36).toUpperCase();
+    var p = {
+      task_id: taskId,
+      branch_id: payload.branch_id,
+      owner: payload.owner || '',
+      template_id: payload.template_id || '',
+      due_date: payload.due_date,
+      notes: String(payload.notes || '').trim(),
+      status: 'pending',
+      escalation_count: 0,
+      created_at: tk2Today(),
+      checklist: [],
+    };
+    return tk2Write({ entity_id: taskId, payload: p }).then(function (r) {
+      if (r && r.ok) r.task_id = taskId;
+      return r;
+    });
   },
-  tasksAdminUpdate: function () {
-    tk2NotReady('บันทึก notes / แก้ข้อมูลงาน');
-    return Promise.resolve({ error: 'บันทึกยังไม่พร้อมบน dashboard (read-only)' });
+  // แก้ notes / due / owner — เขียนทับ entity เดิม (merge กับ payload ดิบล่าสุด)
+  tasksAdminUpdate: function (taskId, updates) {
+    updates = updates || {};
+    if (!taskId) return Promise.resolve({ error: 'ไม่มี task_id' });
+    var p = tk2RawOf(taskId);
+    if (updates.notes != null) p.notes = String(updates.notes).trim();
+    if (updates.due_date != null) p.due_date = updates.due_date;
+    if (updates.owner != null) p.owner = updates.owner;
+    return tk2Write({ entity_id: taskId, payload: p });
   },
-  tasksAdminMarkComplete: function () {
-    tk2NotReady('มาร์คงานเสร็จ');
-    return Promise.resolve({ error: 'มาร์คเสร็จยังไม่พร้อมบน dashboard (read-only)' });
+  // มาร์คเสร็จ
+  tasksAdminMarkComplete: function (taskId) {
+    if (!taskId) return Promise.resolve({ error: 'ไม่มี task_id' });
+    var p = tk2RawOf(taskId);
+    p.status = 'done';
+    p.completed_at = tk2Today();
+    return tk2Write({ entity_id: taskId, payload: p });
   },
-  tasksAdminMarkPending: function () {
-    tk2NotReady('ย้อนงานเป็น pending');
-    return Promise.resolve({ error: 'ย้อนเป็น pending ยังไม่พร้อมบน dashboard (read-only)' });
+  // ย้อนเป็น pending
+  tasksAdminMarkPending: function (taskId) {
+    if (!taskId) return Promise.resolve({ error: 'ไม่มี task_id' });
+    var p = tk2RawOf(taskId);
+    p.status = 'pending';
+    p.completed_at = '';
+    return tk2Write({ entity_id: taskId, payload: p });
   },
-  tasksAdminEscalate: function () {
-    tk2NotReady('Escalate (push LINE หา owner)');
-    return Promise.resolve({ error: 'Escalate ยังไม่พร้อมบน dashboard' });
+  // Escalate — เพิ่ม count (LINE push ยังไม่พร้อมบน dashboard — เขียนเฉพาะ count)
+  tasksAdminEscalate: function (taskId) {
+    if (!taskId) return Promise.resolve({ error: 'ไม่มี task_id' });
+    var p = tk2RawOf(taskId);
+    var cnt = tk2Num(p.escalation_count) + 1;
+    p.escalation_count = cnt;
+    return tk2Write({ entity_id: taskId, payload: p }).then(function (r) {
+      if (r && r.ok) r.escalation_count = cnt;
+      return r;
+    });
   },
-  tasksAdminRemove: function () {
-    tk2NotReady('ลบงาน + checklist');
-    return Promise.resolve({ error: 'ลบงานยังไม่พร้อมบน dashboard (read-only)' });
+  // ลบงาน (soft) + checklist (ฝังในงานเดียวกัน หายไปด้วย)
+  tasksAdminRemove: function (taskId) {
+    if (!taskId) return Promise.resolve({ error: 'ไม่มี task_id' });
+    return tk2Write({ entity_id: taskId, deleted: true, payload: { task_id: taskId } });
   },
-  tasksAdminAddChecklistItem: function () {
-    tk2NotReady('เพิ่ม checklist item');
-    return Promise.resolve({ error: 'เพิ่ม checklist ยังไม่พร้อมบน dashboard (read-only)' });
+  // เพิ่ม checklist item — append เข้า checklist ของงานแล้วเขียนทับ
+  tasksAdminAddChecklistItem: function (taskId, name) {
+    if (!taskId) return Promise.resolve({ error: 'ไม่มี task_id' });
+    if (!String(name || '').trim()) return Promise.resolve({ error: 'พิมพ์ชื่อ checklist' });
+    var p = tk2RawOf(taskId);
+    p.checklist = tk2ToArr(p.checklist).slice();
+    p.checklist.push({ tcl_id: 'TCL_' + Date.now().toString(36).toUpperCase(), task_name: String(name).trim(), status: 'pending', completed_at: '' });
+    return tk2Write({ entity_id: taskId, payload: p });
   },
-  tasksAdminUpdateChecklistItem: function () {
-    tk2NotReady('tick / แก้ checklist item');
-    return Promise.resolve({ error: 'แก้ checklist ยังไม่พร้อมบน dashboard (read-only)' });
+  // tick / แก้ checklist item — หา item ตาม tcl_id แล้วอัปเดต status
+  tasksAdminUpdateChecklistItem: function (tclId, updates) {
+    updates = updates || {};
+    if (!tclId) return Promise.resolve({ error: 'ไม่มี checklist id' });
+    var taskId = tk2FindTaskByTcl(tclId);
+    if (!taskId) return Promise.resolve({ error: 'ไม่พบงานของ checklist นี้' });
+    var p = tk2RawOf(taskId);
+    p.checklist = tk2ToArr(p.checklist).map(function (c) {
+      var cid = c.tcl_id || c.id || '';
+      if (String(cid) === String(tclId)) {
+        var nc = {}; Object.keys(c).forEach(function (k) { nc[k] = c[k]; });
+        if (updates.status != null) {
+          nc.status = updates.status;
+          nc.completed_at = (updates.status === 'done') ? tk2Today() : '';
+        }
+        if (updates.task_name != null) nc.task_name = updates.task_name;
+        return nc;
+      }
+      return c;
+    });
+    return tk2Write({ entity_id: taskId, payload: p });
   },
-  tasksAdminRemoveChecklistItem: function () {
-    tk2NotReady('ลบ checklist item');
-    return Promise.resolve({ error: 'ลบ checklist ยังไม่พร้อมบน dashboard (read-only)' });
+  // ลบ checklist item — กรองออกแล้วเขียนทับ
+  tasksAdminRemoveChecklistItem: function (tclId) {
+    if (!tclId) return Promise.resolve({ error: 'ไม่มี checklist id' });
+    var taskId = tk2FindTaskByTcl(tclId);
+    if (!taskId) return Promise.resolve({ error: 'ไม่พบงานของ checklist นี้' });
+    var p = tk2RawOf(taskId);
+    p.checklist = tk2ToArr(p.checklist).filter(function (c) {
+      var cid = c.tcl_id || c.id || '';
+      return String(cid) !== String(tclId);
+    });
+    return tk2Write({ entity_id: taskId, payload: p });
   },
 };
 
-var _tk2NotReadyShown = {};
-function tk2NotReady(feature) {
-  if (_tk2NotReadyShown[feature]) return;
-  _tk2NotReadyShown[feature] = true;
-  if (typeof window !== 'undefined' && window.tk2Toast) window.tk2Toast('ยังไม่พร้อมบน dashboard', 'error');
+// หา task_id จาก tcl_id (เดิน checklist ของ raw tasks ที่ cache ไว้)
+function tk2FindTaskByTcl(tclId) {
+  var keys = Object.keys(_tk2Raw);
+  for (var i = 0; i < keys.length; i++) {
+    var p = _tk2Raw[keys[i]];
+    var cl = tk2Checklist(p);
+    for (var j = 0; j < cl.length; j++) {
+      if (String(cl[j].tcl_id) === String(tclId)) return keys[i];
+    }
+  }
+  return '';
 }
 
 /* ============================================================
@@ -657,7 +805,7 @@ function TK_RUN_PAGE_JS() {
         'ลบงาน → checklist หาย ไม่สามารถกู้ได้',
         'Escalate ส่ง LINE → owner ต้อง link line_user_id แล้วเท่านั้น',
         'มาร์ค done แล้วย้อนได้ (revert) แต่ระบบจะ log ใน 90_Audit_Log',
-        'หมายเหตุ: บน dashboard นี้เป็น read-only — การเขียนกลับ / ส่ง LINE ยังไม่พร้อม',
+        'เพิ่ม/แก้/มาร์คเสร็จ/checklist ใช้งานได้ · ลบเป็น soft delete · Escalate เพิ่ม count เท่านั้น (LINE push ยังไม่พร้อม)',
       ]},
     ],
   };

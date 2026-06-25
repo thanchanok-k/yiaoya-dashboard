@@ -21,6 +21,7 @@
      pipAdminClose(...)        → { ok / error } stub + toast
    ============================================================ */
 var PP_FN = 'hr_list';
+var PP_WRITE_FN = 'hr_write';   // edge fn กลาง CRUD (add/edit/checkpoint/close · soft-delete)
 var PP_TYPE = 'pip.updated';
 var PP_LIMIT = 2000;
 
@@ -106,6 +107,8 @@ function pp2FetchRows() {
       var items = pp2ToArr(data.items);
       var seen = {}; var rows = [];
       items.forEach(function (p) {
+        // กรองรายการที่ลบ (soft delete) ทิ้ง
+        if (p && (p._status === 'deleted' || p._deleted === true || pp2Bool(p._deleted))) return;
         var id = p.pip_id || p.entity_id || p.id || '';
         if (!id || seen[id]) return;
         seen[id] = true;
@@ -119,6 +122,60 @@ function pp2FetchRows() {
       _pp2Rows = [];
       return [];
     });
+}
+
+function pp2GetSb() {
+  return (typeof window !== 'undefined' && window.sb) ? window.sb : (typeof sb !== 'undefined' ? sb : null);
+}
+// ตรวจ 403/401 จาก res ของ functions.invoke
+function pp2Is403(res) {
+  if (!res) return false;
+  var err = res.error || res;
+  if (!err) return false;
+  if (err.context && typeof err.context.status === 'number') {
+    if (err.context.status === 403 || err.context.status === 401) return true;
+  }
+  if (typeof err.status === 'number' && (err.status === 403 || err.status === 401)) return true;
+  var msg = String(err.message || err.error || err).toLowerCase();
+  return msg.indexOf('403') >= 0 || msg.indexOf('forbidden') >= 0 ||
+    msg.indexOf('401') >= 0 || msg.indexOf('unauthor') >= 0 || msg.indexOf('not allowed') >= 0;
+}
+// unwrap error body (FunctionsHttpError → error.context เป็น Response) → Promise<string>
+function pp2UnwrapErr(err) {
+  if (err && err.context && typeof err.context.json === 'function') {
+    return err.context.json().then(function (j) {
+      return (j && (j.error || j.message)) || (err.message || 'error');
+    }).catch(function () { return (err && err.message) || 'error'; });
+  }
+  return Promise.resolve((err && err.message) || String(err || 'error'));
+}
+// เขียนกลับผ่าน hr_write — { ok, denied, error, entity_id }
+function pp2Write(opts) {
+  opts = opts || {};
+  var sb = pp2GetSb();
+  if (!sb || !sb.functions) return Promise.resolve({ ok: false, denied: false, error: 'no sb' });
+  var body = { event_type: PP_TYPE, payload: opts.payload || {} };
+  if (opts.entity_id) body.entity_id = opts.entity_id;
+  if (opts.deleted) body.deleted = true;
+  return sb.functions.invoke(PP_WRITE_FN, { body: body }).then(function (res) {
+    if (res && res.error) {
+      if (pp2Is403(res)) return { ok: false, denied: true, error: null };
+      return pp2UnwrapErr(res.error).then(function (m) { return { ok: false, denied: false, error: m }; });
+    }
+    var data = (res && res.data) || {};
+    if (!data.ok) return { ok: false, denied: false, error: (data.error || 'save failed') };
+    return { ok: true, denied: false, error: null, entity_id: data.entity_id || opts.entity_id || '' };
+  }).catch(function (e) {
+    if (pp2Is403({ error: e })) return { ok: false, denied: true, error: null };
+    return pp2UnwrapErr(e).then(function (m) { return { ok: false, denied: false, error: m }; });
+  });
+}
+// merge raw payload เดิม (คงฟิลด์ที่ไม่ได้แก้) → object ใหม่ (ตัด _meta)
+function pp2MergeRaw(id) {
+  var raw = _pp2Raw[id] || {};
+  var p = {};
+  Object.keys(raw).forEach(function (k) { if (k.charAt(0) !== '_') p[k] = raw[k]; });
+  return p;
 }
 
 var PP_BACKEND = {
@@ -158,14 +215,72 @@ var PP_BACKEND = {
     });
   },
 
-  // ---- mutations: เขียนกลับไม่ได้บน dashboard → stub + toast ----
-  pipAdminCheckpoint: function () {
-    pp2NotReady('บันทึก checkpoint');
-    return Promise.resolve({ error: 'บันทึก checkpoint ยังไม่พร้อมบน dashboard (read-only)' });
+  // ---- mutations: เขียนกลับผ่าน hr_write ----
+  // upsert (add/edit) — entity_id ว่าง = เพิ่มใหม่ · มี = แก้ของเดิม
+  pipAdminUpsert: function (payload) {
+    payload = payload || {};
+    var entity = payload.pip_id || payload.id || '';
+    var p = entity ? pp2MergeRaw(entity) : {};
+    p.employee_name = payload.employee_name != null ? payload.employee_name : p.employee_name;
+    p.position = payload.position != null ? payload.position : p.position;
+    p.manager_name = payload.manager_name != null ? payload.manager_name : p.manager_name;
+    p.triggered_by = payload.triggered_by || p.triggered_by || 'kpi_low';
+    p.start_date = payload.start_date != null ? payload.start_date : p.start_date;
+    p.end_date = payload.end_date != null ? payload.end_date : p.end_date;
+    p.concern_areas = payload.concern_areas != null ? payload.concern_areas : p.concern_areas;
+    p.success_criteria = payload.success_criteria != null ? payload.success_criteria : p.success_criteria;
+    p.status = payload.status || p.status || 'active';
+    if (entity) p.pip_id = entity;
+    return pp2Write({ entity_id: entity || null, payload: p });
   },
-  pipAdminClose: function () {
-    pp2NotReady('ปิด PIP (improved / terminated)');
-    return Promise.resolve({ error: 'ปิด PIP ยังไม่พร้อมบน dashboard (read-only)' });
+  // บันทึก checkpoint — append/merge checkpoint เข้า payload เดิมแล้วเขียนกลับ
+  pipAdminCheckpoint: function (id, ck) {
+    if (!id) return Promise.resolve({ ok: false, error: 'ไม่มี pip_id' });
+    var p = pp2MergeRaw(id);
+    p.pip_id = id;
+    var cks = pp2ToArr(p.checkpoints);
+    ck = ck || {};
+    var marker = ck.day_marker != null ? ck.day_marker : ck.day;
+    var found = false;
+    cks = cks.map(function (x) {
+      x = x || {};
+      var xm = x.day_marker != null ? x.day_marker : x.day;
+      if (String(xm) === String(marker)) {
+        found = true;
+        return {
+          day_marker: marker,
+          completed_date: ck.completed_date || new Date().toISOString().slice(0, 10),
+          manager_assessment: ck.manager_assessment || x.manager_assessment || '',
+          action_items: ck.action_items || x.action_items || '',
+        };
+      }
+      return x;
+    });
+    if (!found) {
+      cks.push({
+        day_marker: marker,
+        completed_date: ck.completed_date || new Date().toISOString().slice(0, 10),
+        manager_assessment: ck.manager_assessment || '',
+        action_items: ck.action_items || '',
+      });
+    }
+    p.checkpoints = cks;
+    return pp2Write({ entity_id: id, payload: p });
+  },
+  // ปิด PIP (improved / terminated) — set status + outcome + closed_at แล้วเขียนกลับ
+  pipAdminClose: function (id, outcome, summary) {
+    if (!id) return Promise.resolve({ ok: false, error: 'ไม่มี pip_id' });
+    var p = pp2MergeRaw(id);
+    p.pip_id = id;
+    p.status = outcome || 'improved';
+    p.outcome_summary = summary || '';
+    p.closed_at = new Date().toISOString().slice(0, 10);
+    return pp2Write({ entity_id: id, payload: p });
+  },
+  // soft delete — เขียน event ใหม่ status=deleted ทับ entity เดิม
+  pipAdminDelete: function (id) {
+    if (!id) return Promise.resolve({ ok: false, error: 'ไม่มี pip_id' });
+    return pp2Write({ entity_id: id, deleted: true, payload: { pip_id: id } });
   },
 };
 
@@ -265,6 +380,21 @@ function PP_CSS() {
     // refresh btn (page-actions)
     '#pp .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:6px;border:1px solid #E2E8F0;background:white;color:#475569;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit}',
     '#pp .btn:hover{border-color:#3DC5B7}',
+    // modal (scope ใต้ #pp · z-index สูง · fixed)
+    '#pp .modal-bg{display:none;position:fixed;inset:0;background:rgba(13,47,79,.6);z-index:9000;align-items:center;justify-content:center;padding:20px}',
+    '#pp .modal-bg.open{display:flex}',
+    '#pp .modal{background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto}',
+    '#pp .modal-h{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}',
+    '#pp .modal-t{font-size:15px;font-weight:600;color:var(--navy)}',
+    '#pp .modal-x{background:none;border:none;font-size:20px;color:var(--muted);cursor:pointer}',
+    '#pp .modal-b{padding:16px 20px}',
+    '#pp .field{margin-bottom:12px}',
+    '#pp .field-l{display:block;font-size:11px;font-weight:600;color:var(--navy);margin-bottom:5px;letter-spacing:.3px}',
+    '#pp .field-l .req{color:var(--error)}',
+    '#pp .field-i{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;color:var(--navy);box-sizing:border-box}',
+    '#pp .field-i:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(61,197,183,.15)}',
+    '#pp .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}',
+    '#pp .modal-f{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:9px;justify-content:flex-end}',
   ].join('\n');
 }
 
@@ -322,6 +452,14 @@ function PP_MARKUP() {
     // tabs + body
     '<div class="tabs" id="tabs"></div>',
     '<div class="body" id="bodyWrap"><div class="empty">กำลังโหลด...</div></div>',
+    // modal (เพิ่ม/แก้ · checkpoint · ปิดเคส)
+    '<div class="modal-bg" id="ppModalBg" onclick="if(event.target===this)ppCloseModal()">',
+    '  <div class="modal">',
+    '    <div class="modal-h"><div class="modal-t" id="ppModalT">PIP ใหม่</div><button class="modal-x" onclick="ppCloseModal()">×</button></div>',
+    '    <div class="modal-b" id="ppModalB"></div>',
+    '    <div class="modal-f" id="ppModalF"></div>',
+    '  </div>',
+    '</div>',
   ].join('\n');
 }
 
@@ -464,7 +602,13 @@ function PP_RUN_PAGE_JS() {
           '<button class="rb p" onclick="ppRecordCheckpoint(\'' + esc(r.pip_id) + '\')">บันทึก checkpoint</button>' +
           '<button class="rb improve" onclick="ppCloseCase(\'' + esc(r.pip_id) + '\', \'improved\')">Improved · ปิด</button>' +
           '<button class="rb terminate" onclick="ppCloseCase(\'' + esc(r.pip_id) + '\', \'terminated\')">Terminate</button>' +
-        '</div>' : '<div class="ptext"><b>outcome:</b> ' + esc(r.outcome_summary || statusLabel(r.status)) + ' · ปิดเมื่อ ' + esc(r.closed_at) + '</div>') +
+          '<button class="rb" onclick="ppEditPip(\'' + esc(r.pip_id) + '\')">แก้ไข</button>' +
+          '<button class="rb" style="color:var(--error);border-color:#FECACA" onclick="ppDeletePip(\'' + esc(r.pip_id) + '\')">ลบ</button>' +
+        '</div>' : '<div class="ptext"><b>outcome:</b> ' + esc(r.outcome_summary || statusLabel(r.status)) + ' · ปิดเมื่อ ' + esc(r.closed_at) + '</div>' +
+          '<div class="pactions">' +
+          '<button class="rb" onclick="ppEditPip(\'' + esc(r.pip_id) + '\')">แก้ไข</button>' +
+          '<button class="rb" style="color:var(--error);border-color:#FECACA" onclick="ppDeletePip(\'' + esc(r.pip_id) + '\')">ลบ</button>' +
+          '</div>') +
       '</div>';
     }).join('');
   }
@@ -472,25 +616,177 @@ function PP_RUN_PAGE_JS() {
   function triggerLabel(t) { return ({ disciplinary: 'จาก disciplinary', kpi_low: 'KPI ต่ำ', manager_request: 'manager request' })[t] || t; }
   function statusLabel(s) { return ({ active: 'active', extended: 'extended', improved: 'improved · ผ่าน', terminated: 'terminated', cancelled: 'cancelled' })[s] || s; }
 
-  // ---- mutations: read-only บน dashboard → toast แจ้งยังไม่พร้อม (ไม่เปิด prompt) ----
-  function recordCheckpoint() {
-    showToast('ยังไม่พร้อมบน dashboard', 'error');
-  }
+  // ---- modal helpers ----
+  function closeModal() { var m = getById('ppModalBg'); if (m) m.classList.remove('open'); }
+  function openModal(title) { getById('ppModalT').textContent = title; getById('ppModalBg').classList.add('open'); }
 
-  function closeCase() {
-    showToast('ยังไม่พร้อมบน dashboard', 'error');
+  // ---- CRUD: เพิ่ม/แก้ PIP ----
+  // ฟอร์มตามคอลัมน์เดิม: employee_name(req) · position · manager_name · triggered_by ·
+  //   start_date · end_date · concern_areas(req) · success_criteria(req)
+  var _ppEditId = null;
+  var PP_TRIGGERS = [
+    ['kpi_low', 'KPI ต่ำ'], ['disciplinary', 'จาก disciplinary'], ['manager_request', 'manager request'],
+  ];
+
+  function buildPipForm(r) {
+    r = r || {};
+    var trigSel = PP_TRIGGERS.map(function (t) {
+      return '<option value="' + t[0] + '"' + ((r.triggered_by || 'kpi_low') === t[0] ? ' selected' : '') + '>' + t[1] + '</option>';
+    }).join('');
+    return '' +
+      '<div class="field"><label class="field-l">พนักงาน <span class="req">*</span></label>' +
+      '<input class="field-i" id="ppfName" value="' + esc(r.employee_name && r.employee_name !== '—' ? r.employee_name : '') + '" placeholder="ชื่อ-สกุล พนักงาน"></div>' +
+      '<div class="field-row">' +
+      '<div class="field"><label class="field-l">ตำแหน่ง</label>' +
+      '<input class="field-i" id="ppfPos" value="' + esc(r.position && r.position !== '—' ? r.position : '') + '"></div>' +
+      '<div class="field"><label class="field-l">Manager</label>' +
+      '<input class="field-i" id="ppfMgr" value="' + esc(r.manager_name && r.manager_name !== '—' ? r.manager_name : '') + '"></div>' +
+      '</div>' +
+      '<div class="field"><label class="field-l">สาเหตุ (trigger)</label>' +
+      '<select class="field-i" id="ppfTrig">' + trigSel + '</select></div>' +
+      '<div class="field-row">' +
+      '<div class="field"><label class="field-l">วันเริ่ม</label>' +
+      '<input type="date" class="field-i" id="ppfStart" value="' + esc(r.start_date || '') + '"></div>' +
+      '<div class="field"><label class="field-l">วันครบกำหนด</label>' +
+      '<input type="date" class="field-i" id="ppfEnd" value="' + esc(r.end_date || '') + '"></div>' +
+      '</div>' +
+      '<div class="field"><label class="field-l">จุดที่ต้องปรับ (concern) <span class="req">*</span></label>' +
+      '<textarea class="field-i" id="ppfConcern" rows="2">' + esc(r.concern_areas || '') + '</textarea></div>' +
+      '<div class="field"><label class="field-l">success criteria <span class="req">*</span></label>' +
+      '<textarea class="field-i" id="ppfCriteria" rows="2">' + esc(r.success_criteria || '') + '</textarea></div>';
   }
 
   function newPip() {
-    showToast('ยังไม่พร้อมบน dashboard', 'error');
+    _ppEditId = null;
+    openModal('PIP ใหม่');
+    getById('ppModalB').innerHTML = buildPipForm({});
+    getById('ppModalF').innerHTML =
+      '<button class="rb" onclick="ppCloseModal()">ยกเลิก</button>' +
+      '<button class="rb p" onclick="ppSavePip()">บันทึก</button>';
+  }
+
+  function editPip(id) {
+    var r = _state.rows.find(function (x) { return x.pip_id === id; }) ||
+      (_pp2Rows || []).find(function (x) { return x.pip_id === id; });
+    if (!r) { showToast('ไม่พบรายการ', 'error'); return; }
+    _ppEditId = id;
+    openModal('แก้ไข PIP · ' + (r.employee_name || id));
+    getById('ppModalB').innerHTML = buildPipForm(r);
+    getById('ppModalF').innerHTML =
+      '<button class="rb" onclick="ppCloseModal()">ยกเลิก</button>' +
+      '<button class="rb p" onclick="ppSavePip()">บันทึก</button>';
+  }
+
+  function savePip() {
+    var name = (getById('ppfName').value || '').trim();
+    var concern = (getById('ppfConcern').value || '').trim();
+    var criteria = (getById('ppfCriteria').value || '').trim();
+    if (!name) { showToast('กรอกชื่อพนักงาน', 'error'); return; }
+    if (!concern) { showToast('กรอกจุดที่ต้องปรับ', 'error'); return; }
+    if (!criteria) { showToast('กรอก success criteria', 'error'); return; }
+    var payload = {
+      pip_id: _ppEditId || null,
+      employee_name: name,
+      position: (getById('ppfPos').value || '').trim(),
+      manager_name: (getById('ppfMgr').value || '').trim(),
+      triggered_by: getById('ppfTrig').value,
+      start_date: getById('ppfStart').value,
+      end_date: getById('ppfEnd').value,
+      concern_areas: concern,
+      success_criteria: criteria,
+    };
+    var isEdit = !!_ppEditId;
+    google.script.run.withSuccessHandler(function (r) {
+      if (r && r.ok) { closeModal(); showToast(isEdit ? 'แก้ไข PIP แล้ว' : 'เพิ่ม PIP แล้ว', 'success'); reload(); }
+      else if (r && r.denied) showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error');
+      else showToast('บันทึกล้มเหลว · ' + (r && r.error), 'error');
+    }).pipAdminUpsert(payload);
+  }
+
+  function deletePip(id) {
+    var r = _state.rows.find(function (x) { return x.pip_id === id; });
+    var name = r ? (r.employee_name + ' · ' + r.pip_id) : id;
+    if (!confirm('ลบ PIP นี้?\n' + name + '\n(ลบแบบ soft — กู้คืนได้)')) return;
+    google.script.run.withSuccessHandler(function (r2) {
+      if (r2 && r2.ok) { showToast('ลบ PIP แล้ว', 'success'); reload(); }
+      else if (r2 && r2.denied) showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error');
+      else showToast('ลบล้มเหลว · ' + (r2 && r2.error), 'error');
+    }).pipAdminDelete(id);
+  }
+
+  // ---- checkpoint: เลือก day marker + assessment ----
+  function recordCheckpoint(id) {
+    var r = _state.rows.find(function (x) { return x.pip_id === id; });
+    if (!r) { showToast('ไม่พบรายการ', 'error'); return; }
+    _ppEditId = id;
+    openModal('บันทึก checkpoint · ' + (r.employee_name || id));
+    getById('ppModalB').innerHTML = '' +
+      '<div class="field"><label class="field-l">Checkpoint (วัน) <span class="req">*</span></label>' +
+      '<select class="field-i" id="ppckDay"><option value="30">Day 30</option><option value="60">Day 60</option><option value="90">Day 90</option></select></div>' +
+      '<div class="field"><label class="field-l">วันที่ประเมิน</label>' +
+      '<input type="date" class="field-i" id="ppckDate" value="' + esc(new Date().toISOString().slice(0, 10)) + '"></div>' +
+      '<div class="field"><label class="field-l">ผลประเมิน (manager assessment)</label>' +
+      '<textarea class="field-i" id="ppckAssess" rows="2"></textarea></div>' +
+      '<div class="field"><label class="field-l">action items</label>' +
+      '<textarea class="field-i" id="ppckAction" rows="2"></textarea></div>';
+    getById('ppModalF').innerHTML =
+      '<button class="rb" onclick="ppCloseModal()">ยกเลิก</button>' +
+      '<button class="rb p" onclick="ppSaveCheckpoint()">บันทึก</button>';
+  }
+
+  function saveCheckpoint() {
+    var ck = {
+      day_marker: getById('ppckDay').value,
+      completed_date: getById('ppckDate').value,
+      manager_assessment: (getById('ppckAssess').value || '').trim(),
+      action_items: (getById('ppckAction').value || '').trim(),
+    };
+    google.script.run.withSuccessHandler(function (r) {
+      if (r && r.ok) { closeModal(); showToast('บันทึก checkpoint แล้ว', 'success'); reload(); }
+      else if (r && r.denied) showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error');
+      else showToast('บันทึกล้มเหลว · ' + (r && r.error), 'error');
+    }).pipAdminCheckpoint(_ppEditId, ck);
+  }
+
+  // ---- close case: improved / terminated + outcome summary ----
+  function closeCase(id, outcome) {
+    var r = _state.rows.find(function (x) { return x.pip_id === id; });
+    if (!r) { showToast('ไม่พบรายการ', 'error'); return; }
+    _ppEditId = id;
+    _ppCloseOutcome = outcome || 'improved';
+    var label = _ppCloseOutcome === 'improved' ? 'Improved (ผ่าน)' : 'Terminated';
+    openModal('ปิด PIP · ' + label + ' · ' + (r.employee_name || id));
+    getById('ppModalB').innerHTML = '' +
+      '<div class="field"><label class="field-l">สรุปผล (outcome) <span class="req">*</span></label>' +
+      '<textarea class="field-i" id="ppclSummary" rows="3" placeholder="สรุปผลการประเมิน · เหตุผลในการปิดเคส"></textarea></div>';
+    getById('ppModalF').innerHTML =
+      '<button class="rb" onclick="ppCloseModal()">ยกเลิก</button>' +
+      '<button class="rb ' + (_ppCloseOutcome === 'improved' ? 'improve' : 'terminate') + '" onclick="ppConfirmClose()">ยืนยันปิดเคส</button>';
+  }
+  var _ppCloseOutcome = 'improved';
+
+  function confirmClose() {
+    var summary = (getById('ppclSummary').value || '').trim();
+    if (!summary) { showToast('กรอกสรุปผล', 'error'); return; }
+    google.script.run.withSuccessHandler(function (r) {
+      if (r && r.ok) { closeModal(); showToast('ปิด PIP แล้ว', 'success'); reload(); }
+      else if (r && r.denied) showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error');
+      else showToast('ปิดเคสล้มเหลว · ' + (r && r.error), 'error');
+    }).pipAdminClose(_ppEditId, _ppCloseOutcome, summary);
   }
 
   /* ===== expose fn ที่ inline onclick/markup ต้องเรียก ไปยัง window (prefix pp* กันชน) ===== */
   window.ppReload = reload;
   window.ppSetTab = setTab;
   window.ppRecordCheckpoint = recordCheckpoint;
+  window.ppSaveCheckpoint = saveCheckpoint;
   window.ppCloseCase = closeCase;
+  window.ppConfirmClose = confirmClose;
   window.ppNewPip = newPip;
+  window.ppEditPip = editPip;
+  window.ppSavePip = savePip;
+  window.ppDeletePip = deletePip;
+  window.ppCloseModal = closeModal;
 
   /* ===== Init ===== */
   init();

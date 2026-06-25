@@ -29,6 +29,7 @@
      trainingAdminAutoEnroll(id,{})       → {ok:false,...} stub
    ============================================================ */
 var TR_FN = 'hr_list';
+var TR_WRITE_FN = 'hr_write';   // edge fn กลาง CRUD (add/edit/soft-delete)
 var TR_TYPE = 'training.updated';
 
 function tr2ToArr(v) {
@@ -83,6 +84,8 @@ function tr2FetchEnrollments() {
     var items = tr2ToArr(data.items);
     var seen = {}; var rows = [];
     items.forEach(function (p) {
+      // กรองรายการที่ลบ (soft delete) ทิ้ง
+      if (p && (p._status === 'deleted' || p._deleted === true)) return;
       var id = p.enrollment_id || p.entity_id || '';
       var key = id || (p.employee_id + '|' + (p.course_id || p.course || ''));
       if (seen[key]) return;
@@ -140,6 +143,53 @@ function tr2Compliance(enr) {
   return { ok: true, active: active, overdue: overdue, completed: completed };
 }
 
+function tr2GetSb() {
+  return (typeof window !== 'undefined' && window.sb) ? window.sb : (typeof sb !== 'undefined' ? sb : null);
+}
+// ตรวจ 403/401 จาก res ของ functions.invoke (supabase-js คืน {data,error}; error.context = Response)
+function tr2Is403(res) {
+  if (!res) return false;
+  var err = res.error || res;
+  if (!err) return false;
+  if (err.context && typeof err.context.status === 'number') {
+    if (err.context.status === 403 || err.context.status === 401) return true;
+  }
+  if (typeof err.status === 'number' && (err.status === 403 || err.status === 401)) return true;
+  var msg = String(err.message || err.error || err).toLowerCase();
+  return msg.indexOf('403') >= 0 || msg.indexOf('forbidden') >= 0 ||
+    msg.indexOf('401') >= 0 || msg.indexOf('unauthor') >= 0 || msg.indexOf('not allowed') >= 0;
+}
+// unwrap error body (FunctionsHttpError → error.context เป็น Response) → คืน Promise<string>
+function tr2UnwrapErr(err) {
+  if (err && err.context && typeof err.context.json === 'function') {
+    return err.context.json().then(function (j) {
+      return (j && (j.error || j.message)) || (err.message || 'error');
+    }).catch(function () { return (err && err.message) || 'error'; });
+  }
+  return Promise.resolve((err && err.message) || String(err || 'error'));
+}
+// เขียนกลับผ่าน hr_write — body: { event_type, entity_id?, deleted?, payload } · คืน { ok, denied, error }
+function tr2Write(opts) {
+  opts = opts || {};
+  var sb = tr2GetSb();
+  if (!sb || !sb.functions) return Promise.resolve({ ok: false, denied: false, error: 'no sb' });
+  var body = { event_type: TR_TYPE, payload: opts.payload || {} };
+  if (opts.entity_id) body.entity_id = opts.entity_id;
+  if (opts.deleted) body.deleted = true;
+  return sb.functions.invoke(TR_WRITE_FN, { body: body }).then(function (res) {
+    if (res && res.error) {
+      if (tr2Is403(res)) return { ok: false, denied: true, error: null };
+      return tr2UnwrapErr(res.error).then(function (m) { return { ok: false, denied: false, error: m }; });
+    }
+    var data = (res && res.data) || {};
+    if (!data.ok) return { ok: false, denied: false, error: (data.error || 'save failed') };
+    return { ok: true, denied: false, error: null, entity_id: data.entity_id || opts.entity_id || '' };
+  }).catch(function (e) {
+    if (tr2Is403({ error: e })) return { ok: false, denied: true, error: null };
+    return tr2UnwrapErr(e).then(function (m) { return { ok: false, denied: false, error: m }; });
+  });
+}
+
 var TR_BACKEND = {
   // role gate — dashboard user = admin เต็มสิทธิ์
   trainingAdminWhoAmI: function () {
@@ -161,10 +211,32 @@ var TR_BACKEND = {
       return { enrollments: enr };
     });
   },
-  // upsert course — stub (เขียนกลับยังไม่รองรับบน dashboard)
-  trainingAdminUpsertCourse: function () {
-    tr2NotReady('บันทึก/แก้ไขคอร์ส');
-    return Promise.resolve({ ok: false, error: 'การบันทึกคอร์สยังไม่พร้อมบน dashboard' });
+  // upsert course — เขียนจริงผ่าน hr_write (entity_id ว่าง = เพิ่มใหม่ · มี = แก้ของเดิม)
+  trainingAdminUpsertCourse: function (payload) {
+    payload = payload || {};
+    var entity = payload.course_id || payload.id || '';
+    var p = {
+      title: payload.title || '',
+      course_title: payload.title || '',
+      description: payload.description || '',
+      category: payload.category || 'elective',
+      provider: payload.provider || '',
+      duration_hours: payload.duration_hours || 0,
+      ce_credits: payload.ce_credits || 0,
+      required_for_positions: payload.required_for_positions || '',
+      linked_license_type: payload.linked_license_type || '',
+      renewal_cycle_months: payload.renewal_cycle_months || 0,
+      cost_per_seat: payload.cost_per_seat || 0,
+      attachment_url: payload.attachment_url || '',
+      renewal_required: !!payload.renewal_required,
+    };
+    if (entity) p.course_id = entity;
+    return tr2Write({ entity_id: entity || null, payload: p });
+  },
+  // soft delete — เขียน event ใหม่ status=deleted ทับ entity เดิม
+  trainingAdminDeleteCourse: function (id) {
+    if (!id) return Promise.resolve({ ok: false, error: 'ไม่มี course_id' });
+    return tr2Write({ entity_id: id, deleted: true, payload: { course_id: id } });
   },
   // auto-enroll — stub
   trainingAdminAutoEnroll: function () {
@@ -402,6 +474,7 @@ function TR_RUN_PAGE_JS() {
         '<td><div class="row-act">' +
         '<button class="rb" onclick=\'editCourse(' + JSON.stringify(x.course_id) + ')\'>แก้ไข</button>' +
         '<button class="rb p" onclick=\'autoEnroll(' + JSON.stringify(x.course_id) + ')\'>Auto-enroll</button>' +
+        '<button class="rb" style="color:var(--error);border-color:#FECACA" onclick=\'deleteCourse(' + JSON.stringify(x.course_id) + ')\'>ลบ</button>' +
         '</div></td>' +
         '</tr>';
     }).join('');
@@ -496,10 +569,27 @@ function TR_RUN_PAGE_JS() {
       renewal_required: Number(document.getElementById('fCycle').value) > 0,
     };
     if (!payload.title) { showToast('กรอกชื่อคอร์ส', 'error'); return; }
+    var isEdit = !!payload.course_id;
     google.script.run.withSuccessHandler(function (r) {
-      if (r && r.ok) { trCloseModal(); loadCourses(); }
+      if (r && r.ok) { trCloseModal(); showToast(isEdit ? 'แก้ไขคอร์สแล้ว' : 'เพิ่มคอร์สแล้ว', 'success'); loadCourses(); }
+      else if (r && r.denied) showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error');
       else showToast('บันทึกล้มเหลว · ' + (r && r.error), 'error');
+    }).withFailureHandler(function (e) {
+      showToast('บันทึกล้มเหลว · ' + ((e && e.message) || e), 'error');
     }).trainingAdminUpsertCourse(payload);
+  }
+
+  function deleteCourse(id) {
+    var c = _state.courses.find(function (x) { return x.course_id === id; });
+    var name = c ? c.title : id;
+    if (!confirm('ลบคอร์สนี้?\n' + name + '\n(ลบแบบ soft — กู้คืนได้)')) return;
+    google.script.run.withSuccessHandler(function (r) {
+      if (r && r.ok) { showToast('ลบคอร์สแล้ว', 'success'); loadCourses(); }
+      else if (r && r.denied) showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error');
+      else showToast('ลบล้มเหลว · ' + (r && r.error), 'error');
+    }).withFailureHandler(function (e) {
+      showToast('ลบล้มเหลว · ' + ((e && e.message) || e), 'error');
+    }).trainingAdminDeleteCourse(id);
   }
 
   function autoEnroll(courseId) {
@@ -517,6 +607,7 @@ function TR_RUN_PAGE_JS() {
   // ---- ผูก fn ที่ inline onclick ต้องใช้ ลง window ----
   window.openCourseModal = openCourseModal;
   window.editCourse = editCourse;
+  window.deleteCourse = deleteCourse;
   window.autoEnroll = autoEnroll;
   window.saveCourse = saveCourse;
   window.trCloseModal = trCloseModal;

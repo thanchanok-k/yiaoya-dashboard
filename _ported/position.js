@@ -19,6 +19,7 @@
      mutations           → { ok / error } stub + toast
    ============================================================ */
 var PS_FN = 'hr_list';
+var PS_WRITE_FN = 'hr_write';   // edge fn กลาง CRUD (add/edit/soft-delete)
 var PS_TYPE = 'position.updated';
 
 function ps2ToArr(v) {
@@ -81,25 +82,33 @@ function ps2FetchAll() {
   return window.sb.functions.invoke(PS_FN + '?type=' + encodeURIComponent(PS_TYPE)).then(function (res) {
     var data = (res && res.data) || {};
     var items = ps2ToArr(data.items);
-    var pSeen = {}, dSeen = {};
+    var pSeen = {}, dSeen = {};   // id → index ใน array (เก็บล่าสุด)
     var positions = [], departments = [];
     // derive client-side: แยก row ตาม kind / มี department_name เด่ว → department, ที่เหลือ → position
+    // dedupe เก็บล่าสุดต่อ id (payload เรียงเก่า→ใหม่) · soft-delete (event ล่าสุด=deleted) → ทิ้ง
     items.forEach(function (p) {
+      var isDel = !!(p && (p._status === 'deleted' || p._deleted === true || p.deleted === true));
       var kind = String(p.kind || p.entity_kind || p.type || '').toLowerCase();
       var isDept = kind.indexOf('department') >= 0 || kind.indexOf('dept') >= 0 ||
         (!p.position_id && (p.department_id || p.department_name) && !p.name && !p.level);
       if (isDept) {
         var did = p.department_id || p.entity_id || p.id || '';
-        if (!did || dSeen[did]) return;
-        dSeen[did] = true;
+        if (!did) return;
+        if (dSeen[did] != null) { departments[dSeen[did]] = isDel ? null : ps2MapDept(p); return; }
+        if (isDel) return;
+        dSeen[did] = departments.length;
         departments.push(ps2MapDept(p));
       } else {
         var pid = p.position_id || p.entity_id || p.id || '';
-        if (!pid || pSeen[pid]) return;
-        pSeen[pid] = true;
+        if (!pid) return;
+        if (pSeen[pid] != null) { positions[pSeen[pid]] = isDel ? null : ps2MapPos(p); return; }
+        if (isDel) return;
+        pSeen[pid] = positions.length;
         positions.push(ps2MapPos(p));
       }
     });
+    positions = positions.filter(function (r) { return r; }); // กรองช่องที่ถูก soft-delete ทิ้ง
+    departments = departments.filter(function (r) { return r; });
     // เติม department_name ใน position จาก department list (lookup)
     var dMap = {};
     departments.forEach(function (d) { dMap[d.department_id] = d.department_name; });
@@ -134,32 +143,112 @@ var PS_BACKEND = {
     });
   },
 
-  // ---- mutations: เขียนกลับไม่ได้บน dashboard → stub + toast ----
-  positionAdminAddPosition: function () {
-    ps2NotReady('เพิ่มตำแหน่ง');
-    return Promise.resolve({ error: 'เพิ่มตำแหน่ง ยังไม่พร้อมบน dashboard (read-only)' });
+  // ---- mutations: เขียนจริงผ่าน hr_write (entity_id ว่าง=เพิ่มใหม่ · มี=แก้) ----
+  // position: tag kind ไว้ใน payload ไม่จำเป็น (มี name/level อยู่แล้ว) แต่ใส่กันสับสน
+  positionAdminAddPosition: function (payload) {
+    var p = ps2PosPayload(payload);
+    return ps2Write({ payload: p });
   },
-  positionAdminUpdatePosition: function () {
-    ps2NotReady('แก้ไขตำแหน่ง');
-    return Promise.resolve({ error: 'แก้ไขตำแหน่ง ยังไม่พร้อมบน dashboard (read-only)' });
+  positionAdminUpdatePosition: function (id, payload) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี position_id' });
+    var p = ps2PosPayload(payload); p.position_id = id; p.id = id;
+    return ps2Write({ entity_id: id, payload: p });
   },
-  positionAdminRemovePosition: function () {
-    ps2NotReady('ลบตำแหน่ง');
-    return Promise.resolve({ error: 'ลบตำแหน่ง ยังไม่พร้อมบน dashboard (read-only)' });
+  positionAdminRemovePosition: function (id) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี position_id' });
+    return ps2Write({ entity_id: id, deleted: true, payload: { id: id, position_id: id } });
   },
-  positionAdminAddDepartment: function () {
-    ps2NotReady('เพิ่มแผนก');
-    return Promise.resolve({ error: 'เพิ่มแผนก ยังไม่พร้อมบน dashboard (read-only)' });
+  // department: tag kind:'department' เพื่อให้ฝั่ง read แยกประเภทถูก
+  positionAdminAddDepartment: function (payload) {
+    var p = ps2DeptPayload(payload);
+    return ps2Write({ payload: p });
   },
-  positionAdminUpdateDepartment: function () {
-    ps2NotReady('แก้ไขแผนก');
-    return Promise.resolve({ error: 'แก้ไขแผนก ยังไม่พร้อมบน dashboard (read-only)' });
+  positionAdminUpdateDepartment: function (id, payload) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี department_id' });
+    var p = ps2DeptPayload(payload); p.department_id = id; p.id = id;
+    return ps2Write({ entity_id: id, payload: p });
   },
-  positionAdminRemoveDepartment: function () {
-    ps2NotReady('ลบแผนก');
-    return Promise.resolve({ error: 'ลบแผนก ยังไม่พร้อมบน dashboard (read-only)' });
+  positionAdminRemoveDepartment: function (id) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี department_id' });
+    return ps2Write({ entity_id: id, deleted: true, payload: { id: id, kind: 'department', department_id: id } });
   },
 };
+
+// payload position → คอลัมน์เดิม (ส่งครบ field recruit-block · กัน null = '')
+function ps2PosPayload(payload) {
+  payload = payload || {};
+  return {
+    position_id: payload.position_id || '',
+    name: payload.name || '',
+    department_id: payload.department_id || '',
+    level: payload.level || 'L1',
+    is_management: !!payload.is_management,
+    description: payload.description || '',
+    is_hq: !!payload.is_hq,
+    required_documents: payload.required_documents || '',
+    salary_range: payload.salary_range || '',
+    hourly_rate: payload.hourly_rate || '',
+    df_range: payload.df_range || '',
+    monthly_case_target: payload.monthly_case_target || '',
+    requires_mbti: !!payload.requires_mbti,
+    benefits_list: payload.benefits_list || '',
+    hero_image_url: payload.hero_image_url || '',
+  };
+}
+
+// payload department → คอลัมน์เดิม + tag kind
+function ps2DeptPayload(payload) {
+  payload = payload || {};
+  return {
+    kind: 'department',
+    department_id: payload.department_id || '',
+    department_name: payload.department_name || '',
+    description: payload.description || '',
+  };
+}
+
+// ตรวจ 403/401
+function ps2Is403(err) {
+  if (!err) return false;
+  if (err.context && typeof err.context.status === 'number' &&
+    (err.context.status === 403 || err.context.status === 401)) return true;
+  if (typeof err.status === 'number' && (err.status === 403 || err.status === 401)) return true;
+  var msg = String(err.message || err.error || err).toLowerCase();
+  return msg.indexOf('403') >= 0 || msg.indexOf('forbidden') >= 0 ||
+    msg.indexOf('401') >= 0 || msg.indexOf('unauthor') >= 0 || msg.indexOf('not allowed') >= 0;
+}
+
+// unwrap error body (FunctionsHttpError → context) → Promise<string>
+function ps2ErrMsg(err, data) {
+  if (data && data.ok === false && data.error) return Promise.resolve(String(data.error));
+  if (!err) return Promise.resolve('unknown');
+  if (err.context && typeof err.context.json === 'function') {
+    return err.context.json().then(function (b) {
+      return (b && (b.error || b.message)) ? String(b.error || b.message) : (err.message || String(err));
+    }).catch(function () { return err.message || String(err); });
+  }
+  return Promise.resolve(err.message || String(err));
+}
+
+// เขียนกลับผ่าน hr_write — body: { event_type, entity_id?, deleted?, payload }
+function ps2Write(opts) {
+  opts = opts || {};
+  var body = { event_type: PS_TYPE, payload: opts.payload || {} };
+  if (opts.entity_id) body.entity_id = opts.entity_id;
+  if (opts.deleted) body.deleted = true;
+  return window.sb.functions.invoke(PS_WRITE_FN, { body: body }).then(function (res) {
+    var data = (res && res.data) || null;
+    var err = res && res.error;
+    if (err || (data && data.ok === false)) {
+      if (ps2Is403(err)) return { error: 'ต้องเป็น HR / ล็อกอินก่อน' };
+      return ps2ErrMsg(err, data).then(function (m) { return { error: m }; });
+    }
+    return { ok: true, entity_id: (data && data.entity_id) || opts.entity_id || '' };
+  }).catch(function (e) {
+    if (ps2Is403(e)) return { error: 'ต้องเป็น HR / ล็อกอินก่อน' };
+    return ps2ErrMsg(e, null).then(function (m) { return { error: m }; });
+  });
+}
 
 var _ps2NotReadyShown = {};
 function ps2NotReady(feature) {
@@ -572,7 +661,7 @@ function PS_RUN_PAGE_JS() {
         'ลบ position ไม่ได้ถ้ามีพนักงานใช้ (FK)',
         'ลบ department ไม่ได้ถ้ามี position หรือ employee อ้าง',
         'ID เปลี่ยนไม่ได้หลังสร้าง',
-        'หมายเหตุ: บน dashboard นี้เป็น read-only — การเพิ่ม/แก้/ลบ ยังไม่พร้อม',
+        'การเพิ่ม/แก้/ลบ เขียนกลับ Supabase จริง (ลบแบบ soft) — ตำแหน่ง + แผนกใช้ event เดียวกัน แยกด้วย kind',
       ]},
     ],
   };

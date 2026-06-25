@@ -19,6 +19,7 @@
      critAdminAdd/Update/Remove/SeedDefaults → { ok / error } stub + toast
    ============================================================ */
 var PC_FN = 'hr_list';
+var PC_WRITE_FN = 'hr_write';   // edge fn กลาง CRUD (add/edit/soft-delete)
 var PC_TYPE = 'probation_criteria.updated';
 
 function pc2ToArr(v) {
@@ -63,11 +64,18 @@ function pc2FetchCrits() {
     var seen = {}; var rows = [];
     items.forEach(function (p) {
       var id = p.criteria_id || p.criterion_id || p.entity_id || p.id || '';
+      var isDel = !!(p && (p._status === 'deleted' || p._deleted === true || p.deleted === true));
       // เก็บล่าสุดต่อ id (payload เรียงเก่า→ใหม่ — ตัวหลังทับตัวก่อน)
-      if (id && seen[id] != null) { rows[seen[id]] = pc2MapCrit(p); return; }
+      if (id && seen[id] != null) {
+        if (isDel) { rows[seen[id]] = null; return; } // event ล่าสุด = ลบ → ทิ้ง
+        rows[seen[id]] = pc2MapCrit(p);
+        return;
+      }
+      if (isDel) return; // record ใหม่ที่ลบเลย → ข้าม
       if (id) seen[id] = rows.length;
       rows.push(pc2MapCrit(p));
     });
+    rows = rows.filter(function (r) { return r; }); // กรองช่องที่ถูก soft-delete ทิ้ง
     _pc2Crits = rows;
     return rows;
   }).catch(function (e) {
@@ -78,7 +86,7 @@ function pc2FetchCrits() {
 }
 
 // สร้าง groups (per position · ALL=default) + stats จาก rows
-function pc2BuildPayload(rows) {
+function pc2BuildGroups(rows) {
   var byPos = {};
   rows.forEach(function (c) {
     var pid = c.position_id || 'ALL';
@@ -135,6 +143,64 @@ function pc2BuildPayload(rows) {
   return { stats: stats, groups: groups, availablePositions: availablePositions };
 }
 
+// ตรวจ 403/401 จาก err ของ functions.invoke (supabase-js: error.context = Response)
+function pc2Is403(err) {
+  if (!err) return false;
+  if (err.context && typeof err.context.status === 'number' &&
+    (err.context.status === 403 || err.context.status === 401)) return true;
+  if (typeof err.status === 'number' && (err.status === 403 || err.status === 401)) return true;
+  var msg = String(err.message || err.error || err).toLowerCase();
+  return msg.indexOf('403') >= 0 || msg.indexOf('forbidden') >= 0 ||
+    msg.indexOf('401') >= 0 || msg.indexOf('unauthor') >= 0 || msg.indexOf('not allowed') >= 0;
+}
+
+// unwrap error จาก functions.invoke (FunctionsHttpError → body จริงอยู่ใน context) → Promise<string>
+function pc2ErrMsg(err, data) {
+  if (data && data.ok === false && data.error) return Promise.resolve(String(data.error));
+  if (!err) return Promise.resolve('unknown');
+  if (err.context && typeof err.context.json === 'function') {
+    return err.context.json().then(function (b) {
+      return (b && (b.error || b.message)) ? String(b.error || b.message) : (err.message || String(err));
+    }).catch(function () { return err.message || String(err); });
+  }
+  return Promise.resolve(err.message || String(err));
+}
+
+// เขียนกลับผ่าน hr_write — body: { event_type, entity_id?, deleted?, payload }
+// คืน { ok, entity_id } หรือ { ok:false, error, denied? }
+function pc2Write(opts) {
+  opts = opts || {};
+  var body = { event_type: PC_TYPE, payload: opts.payload || {} };
+  if (opts.entity_id) body.entity_id = opts.entity_id;
+  if (opts.deleted) body.deleted = true;
+  return window.sb.functions.invoke(PC_WRITE_FN, { body: body }).then(function (res) {
+    var data = (res && res.data) || null;
+    var err = res && res.error;
+    if (err || (data && data.ok === false)) {
+      if (pc2Is403(err)) return { ok: false, denied: true, error: 'ต้องเป็น HR / ล็อกอินก่อน' };
+      return pc2ErrMsg(err, data).then(function (m) { return { ok: false, error: m }; });
+    }
+    return { ok: true, entity_id: (data && data.entity_id) || opts.entity_id || '' };
+  }).catch(function (e) {
+    if (pc2Is403(e)) return { ok: false, denied: true, error: 'ต้องเป็น HR / ล็อกอินก่อน' };
+    return pc2ErrMsg(e, null).then(function (m) { return { ok: false, error: m }; });
+  });
+}
+
+// แปลง payload ฟอร์ม → คอลัมน์เดิม (ส่งเฉพาะที่มีค่า กัน null)
+function pc2BuildPayload(payload) {
+  payload = payload || {};
+  var p = {
+    position_id: payload.position_id || 'ALL',
+    criterion_key: payload.criterion_key || '',
+    criterion_name: payload.criterion_name || '',
+    description: payload.description || '',
+    weight: (payload.weight != null ? pc2Num(payload.weight) : 0),
+    active: (payload.active === false ? false : true),
+  };
+  return p;
+}
+
 var PC_BACKEND = {
   // role gate — dashboard user = admin เต็มสิทธิ์
   critAdminWhoAmI: function () {
@@ -144,26 +210,30 @@ var PC_BACKEND = {
   // list — { stats, groups, availablePositions }
   critAdminList: function () {
     return pc2FetchCrits().then(function (rows) {
-      return pc2BuildPayload(rows);
+      return pc2BuildGroups(rows);
     });
   },
 
-  // ---- mutations: เขียนกลับไม่ได้บน dashboard → stub + toast ----
-  critAdminAdd: function () {
-    pc2NotReady('เพิ่ม criterion');
-    return Promise.resolve({ error: 'เพิ่ม criterion ยังไม่พร้อมบน dashboard (read-only)' });
+  // ---- mutations: เขียนจริงผ่าน hr_write ----
+  // add — ไม่ส่ง entity_id = สร้างใหม่
+  critAdminAdd: function (payload) {
+    return pc2Write({ payload: pc2BuildPayload(payload) });
   },
-  critAdminUpdate: function () {
-    pc2NotReady('แก้ไข criterion');
-    return Promise.resolve({ error: 'แก้ไข criterion ยังไม่พร้อมบน dashboard (read-only)' });
+  // update — ส่ง entity_id = id เดิม
+  critAdminUpdate: function (id, payload) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี criteria_id' });
+    var p = pc2BuildPayload(payload); p.id = id;
+    return pc2Write({ entity_id: id, payload: p });
   },
-  critAdminRemove: function () {
-    pc2NotReady('ลบ criterion');
-    return Promise.resolve({ error: 'ลบ criterion ยังไม่พร้อมบน dashboard (read-only)' });
+  // soft delete — เขียน event ใหม่ deleted=true ทับ entity เดิม
+  critAdminRemove: function (id) {
+    if (!id) return Promise.resolve({ error: 'ไม่มี criteria_id' });
+    return pc2Write({ entity_id: id, deleted: true, payload: { id: id } });
   },
+  // seed defaults — ยังไม่รองรับบน dashboard (ต้องใช้ batch ฝั่ง backend)
   critAdminSeedDefaults: function () {
     pc2NotReady('Seed defaults');
-    return Promise.resolve({ error: 'Seed defaults ยังไม่พร้อมบน dashboard (read-only)' });
+    return Promise.resolve({ error: 'Seed defaults ยังไม่พร้อมบน dashboard (ใช้ปุ่ม + เพิ่มทีละข้อ)' });
   },
 };
 
@@ -171,7 +241,7 @@ var _pc2NotReadyShown = {};
 function pc2NotReady(feature) {
   if (_pc2NotReadyShown[feature]) return;
   _pc2NotReadyShown[feature] = true;
-  if (typeof window !== 'undefined' && window.pc2Toast) window.pc2Toast('ฟีเจอร์ "' + feature + '" ยังไม่พร้อมบน dashboard (read-only)', 'error');
+  if (typeof window !== 'undefined' && window.pc2Toast) window.pc2Toast('ฟีเจอร์ "' + feature + '" ยังไม่พร้อมบน dashboard', 'error');
 }
 
 /* ============================================================
@@ -453,7 +523,7 @@ function PC_RUN_PAGE_JS() {
           'ตำแหน่งที่ไม่มี criteria — Probation Manager จะ fallback ใช้เกณฑ์มาตรฐาน 4 ข้อ',
           'แก้ criterion ระหว่างรอบรีวิว → รีวิวเก่ายังเก็บ schema เก่า, รีวิวใหม่ใช้ schema ใหม่',
           'weight รวมไม่ครบ 100 — ระบบจะ normalize ให้อัตโนมัติแต่ผลรวมอาจคลาดเคลื่อน',
-          'หมายเหตุ: บน dashboard นี้เป็น read-only — การเพิ่ม/แก้/ลบ/seed ยังไม่พร้อม',
+          'การเพิ่ม/แก้/ลบ เขียนกลับ Supabase จริง (ลบแบบ soft) · Seed defaults ยังไม่พร้อม (เพิ่มทีละข้อ)',
         ],
       },
     ],
