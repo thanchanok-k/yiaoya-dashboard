@@ -1019,7 +1019,7 @@ function navAudit(){
 }
 
 /* ===== Sidebar accordion (2 ชั้น: โดเมน+sub) + search · รวม role filter ใน updateNav ===== */
-let _navInit=false, _colDom=new Set(), _colSub=new Set(), _navQ='';
+let _navInit=false, _colDom=new Set(), _colSub=new Set(), _colSub2=new Set(), _navQ='';
 function initAccordion(){
  if(_navInit) return; const nav=$('sbnav'); if(!nav) return;
  const deco=(node)=>{ if(!node.querySelector('.chev')) node.insertAdjacentHTML('afterbegin','<i class="ti ti-chevron-down chev"></i>');
@@ -1028,21 +1028,31 @@ function initAccordion(){
    node.onclick=()=>{ const d=node.dataset.dom; _colDom.has(d)?_colDom.delete(d):_colDom.add(d); updateNav(); }; });
  nav.querySelectorAll('.sb-sub').forEach(node=>{ deco(node);
    node.onclick=()=>{ const s=node.dataset.sub; _colSub.has(s)?_colSub.delete(s):_colSub.add(s); updateNav(); }; });
+ nav.querySelectorAll('.sb-sub2').forEach(node=>{ deco(node);
+   node.onclick=()=>{ const s=node.dataset.sub2; _colSub2.has(s)?_colSub2.delete(s):_colSub2.add(s); updateNav(); }; });
  const s=$('sbSearch'); if(s) s.oninput=()=>{ _navQ=s.value.trim().toLowerCase(); updateNav(); };
  _navInit=true;
 }
 function updateNav(){
  initAccordion(); const nav=$('sbnav'); if(!nav) return;
  const allowed=VIEWS_BY_ROLE[currentRole]||ALL_VIEWS;
- const searching=_navQ.length>0; const dStat={}, sStat={};
+ const searching=_navQ.length>0; const dStat={}, sStat={}, s2Stat={};
  nav.querySelectorAll('.sb-item').forEach(it=>{
-  const dom=it.dataset.dom, sub=it.dataset.sub||'';
+  const dom=it.dataset.dom, sub=it.dataset.sub||'', sub2=it.dataset.sub2||'';
   const roleOK=allowed.includes(it.dataset.view);
   const matchOK=!searching || it.textContent.toLowerCase().includes(_navQ);
-  const colHidden=!searching && (_colDom.has(dom) || (sub&&_colSub.has(sub)));
+  const colHidden=!searching && (_colDom.has(dom) || (sub&&_colSub.has(sub)) || (sub2&&_colSub2.has(sub2)));
   it.style.display=(roleOK&&matchOK&&!colHidden)?'':'none';
   dStat[dom]=dStat[dom]||{r:0,m:0}; if(roleOK)dStat[dom].r++; if(roleOK&&matchOK)dStat[dom].m++;
   if(sub){ sStat[sub]=sStat[sub]||{r:0,m:0}; if(roleOK)sStat[sub].r++; if(roleOK&&matchOK)sStat[sub].m++; }
+  if(sub2){ s2Stat[sub2]=s2Stat[sub2]||{r:0,m:0}; if(roleOK)s2Stat[sub2].r++; if(roleOK&&matchOK)s2Stat[sub2].m++; }
+ });
+ nav.querySelectorAll('.sb-sub2').forEach(s2=>{
+  const gi=s2Stat[s2.dataset.sub2]||{r:0,m:0};
+  const up=!searching && (_colDom.has(s2.dataset.dom) || _colSub.has(s2.dataset.sub));
+  s2.style.display=(gi.r>0 && !up && (!searching||gi.m>0))?'':'none';
+  const gc=s2.querySelector('.gcount'); if(gc) gc.textContent=gi.r||'';
+  s2.classList.toggle('col', !searching && _colSub2.has(s2.dataset.sub2));
  });
  nav.querySelectorAll('.sb-sub').forEach(sb=>{
   const gi=sStat[sb.dataset.sub]||{r:0,m:0};
@@ -1061,10 +1071,11 @@ function updateNav(){
 function collapseToActive(){
  initAccordion(); const nav=$('sbnav'); if(!nav) return;
  const active=document.querySelector('.sb-item.active');
- const ad=active?active.dataset.dom:null, as=active?(active.dataset.sub||''):null;
- _colDom=new Set(); _colSub=new Set();
+ const ad=active?active.dataset.dom:null, as=active?(active.dataset.sub||''):null, as2=active?(active.dataset.sub2||''):null;
+ _colDom=new Set(); _colSub=new Set(); _colSub2=new Set();
  nav.querySelectorAll('.sb-label').forEach(lb=>{ if(lb.dataset.dom!==ad) _colDom.add(lb.dataset.dom); });
  nav.querySelectorAll('.sb-sub').forEach(sb=>{ if(sb.dataset.sub!==as) _colSub.add(sb.dataset.sub); });
+ nav.querySelectorAll('.sb-sub2').forEach(s2=>{ if(s2.dataset.sub2!==as2) _colSub2.add(s2.dataset.sub2); });
 }
 function applyRole(role){
  if(!VIEWS_BY_ROLE[role]) role='director';
@@ -3323,7 +3334,7 @@ function mountExpansion(){
    const owned=cat.filter(d=>d.status==='owned'),wish=cat.filter(d=>d.status==='wishlist');
    let ch='<div class="sec" style="margin-top:28px"><span class="sec-bar"></span>แคตตาล็อกเครื่องมือ · มี + ยังไม่มี<span class="sec-c">device_catalog · '+cat.length+' เครื่อง</span></div>';
    ch+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">✓ เครื่องที่มีแล้ว ('+owned.length+')</div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:#64748B;text-align:left;border-bottom:1px solid var(--border,#E2E8F0)"><th style="padding:4px 6px 4px 0">เครื่อง</th><th style="text-align:right">ซื้อจริง</th><th style="text-align:right">list</th><th style="text-align:right">ประกัน/ปี</th><th style="text-align:left;padding-left:10px">ใช้รักษา</th></tr></thead><tbody>';
-   owned.forEach(d=>{const paid=+d.price_paid||0,list=+d.price_list||0;const save=(list>paid&&paid)?' <span style="color:#0F766E;font-size:10px">−'+B(list-paid)+'</span>':'';ch+='<tr style="border-bottom:1px solid #F1F5F9"><td style="padding:6px 6px 6px 0"><b style="color:var(--navy,#0D2F4F)">'+esc(d.name)+'</b><div style="color:#94A3B8;font-size:10px">'+esc(d.model_code||'')+'</div></td><td style="text-align:right;color:#185FA5;font-weight:600">'+(paid?B(paid):'—')+'</td><td style="text-align:right;color:#94A3B8">'+(list?B(list)+save:'—')+'</td><td style="text-align:right;color:#64748B">'+(+d.warranty_yearly?B(d.warranty_yearly):'—')+'</td><td style="padding-left:10px;color:#475569;max-width:280px">'+esc(d.clinical_use||'')+'</td></tr>';});
+   owned.forEach(d=>{const paid=+d.price_paid||0,list=+d.price_list||0;const save=(list>paid&&paid)?' <span style="color:#0F766E;font-size:10px">−'+B(list-paid)+'</span>':'';ch+='<tr style="border-bottom:1px solid #F1F5F9"><td style="padding:6px 6px 6px 0"><b style="color:var(--navy,#0D2F4F)">'+esc(d.name)+'</b><div style="color:#94A3B8;font-size:10px">'+esc(d.model_code||'')+'</div></td><td style="text-align:right;color:#185FA5;font-weight:600">'+(paid?B(paid):'—')+'</td><td style="text-align:right;color:#94A3B8">'+(list?B(list)+save:'—')+'</td><td style="text-align:right;color:#64748B">'+(+d.warranty_yearly?B(d.warranty_yearly):'—')+'</td><td style="padding-left:10px;color:#475569;max-width:300px">'+esc(d.clinical_use||'')+(function(){const sp=J2(d.spec);if(!sp||typeof sp!=='object')return'';const parts=Object.keys(sp).map(k=>esc(k)+': '+esc(String(sp[k]))).join(' · ');return parts?'<div style="color:#94A3B8;font-size:10px;margin-top:2px">'+parts+'</div>':'';})()+'</td></tr>';});
    ch+='</tbody></table></div></div>';
    const grp=(key,label,color)=>{const ws=wish.filter(d=>d.category===key);if(!ws.length)return'';let g='<div class="card" style="padding:16px;margin-bottom:14px;border-left:4px solid '+color+'"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:2px">○ ยังไม่มี — '+label+' ('+ws.length+')</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:10px;margin-top:10px">';ws.forEach(d=>{g+='<div style="border:1px solid var(--border,#E2E8F0);border-radius:10px;padding:11px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px"><b style="color:var(--navy,#0D2F4F);font-size:13px">'+esc(d.name)+'</b><span style="color:'+color+';font-weight:800;white-space:nowrap">'+B(d.price_list)+'</span></div><div style="font-size:11.5px;color:#475569;margin:5px 0;line-height:1.5">'+esc(d.clinical_use||'')+'</div><div style="font-size:10.5px;color:#94A3B8">🎯 '+esc(d.target_patient||'')+'</div></div>';});g+='</div></div>';return g;};
    ch+=grp('robotic','Robotic · หุ่นยนต์ฟื้นฟู','#7C3AED')+grp('highend','High-End','#C2410C');
@@ -3362,31 +3373,63 @@ function mountAiHQ(){
 }
 
 /* ===== ทีมคอนเทนต์ (Content Engine) — UI เปล่า · mock data =====
-   flow: ดราฟต์/AI → รีวิวแพทย์ → รีวิวกฎหมาย → อนุมัติ → คิวโพสต์
-   ปุ่มทั้งหมดเป็น stub (toast) · ยังไม่ผูก Supabase · ดู content-adops-system P5 */
+   อิงระบบงานจริงจาก Trello "YY Content Creator" (board q77EphNh)
+   flow: ไอเดีย→วางแผน→กำลังทำ→รีวิว(ตอง→เซิน→ฟา+fact-check)→ผ่านรีวิว→โพสต์
+   ปุ่มทั้งหมดเป็น stub (toast) · อัปโหลดวิดีโอ = preview ในเครื่อง (ยังไม่เก็บจริง)
+   ยังไม่ผูก Supabase/Trello · ดู content-adops-system P5 */
 const CN_BRAND={Yiaoya:'#3DC5B7',KneeCare:'#185FA5','นางฟ้า':'#D4537E'};
 const CN_PLAT={FB:'ti-brand-facebook',IG:'ti-brand-instagram',TikTok:'ti-brand-tiktok',LINE:'ti-brand-line'};
-const CN_STAGE={draft:{t:'ดราฟต์',c:'#64748B'},ai:{t:'AI ร่างแล้ว',c:'#0F766E'},changes:{t:'ขอแก้',c:'#B45309'},med:{t:'รอแพทย์ตรวจ',c:'#B45309'},legal:{t:'รอกฎหมายตรวจ',c:'#B45309'},approved:{t:'อนุมัติแล้ว',c:'#047857'},scheduled:{t:'ตั้งเวลาแล้ว',c:'#185FA5'},published:{t:'โพสต์แล้ว',c:'#64748B'}};
+const CN_TYPE={EDU:{t:'ความรู้',c:'#0F766E'},TES:{t:'รีวิว/เคส',c:'#185FA5'},BTS:{t:'เบื้องหลัง',c:'#7C3AED'},PRO:{t:'โปรโมชั่น',c:'#D4537E'},DOC:{t:'แบรนด์หมอ',c:'#B45309'},SAL:{t:'ซัพพอร์ตขาย',c:'#0891B2'},ENG:{t:'มีส่วนร่วม',c:'#CA8A04'},EVT:{t:'กิจกรรม',c:'#65A30D'}};
+const CN_COLS=[{k:'idea',t:'ไอเดีย',i:'ti-bulb'},{k:'plan',t:'วางแผน',i:'ti-clipboard-list'},{k:'doing',t:'กำลังทำ',i:'ti-pencil'},{k:'review',t:'รีวิว',i:'ti-checks'},{k:'approved',t:'ผ่านรีวิว',i:'ti-circle-check'},{k:'posted',t:'โพสต์แล้ว',i:'ti-send'}];
+const CN_CREATORS={
+ 'แยม':{c:'#D4537E',clips:4,photos:5,eng:7.2,ontime:100,feedback:95},
+ 'เตย':{c:'#6D28D9',clips:3,photos:4,eng:6.1,ontime:96,feedback:92},
+ 'แฟร์':{c:'#0369A1',clips:4,photos:3,eng:5.4,ontime:100,feedback:90},
+ 'ตอง':{c:'#4D7C0F',clips:3,photos:4,eng:8.0,ontime:92,feedback:97},
+ 'ปายฝน':{c:'#16A34A',clips:5,photos:4,eng:5.0,ontime:100,feedback:88},
+ 'ครีม':{c:'#CA8A04',clips:2,photos:3,eng:4.3,ontime:88,feedback:85},
+ 'ใบตอง':{c:'#DB2777',clips:3,photos:4,eng:6.6,ontime:95,feedback:93},
+ 'แป้ง':{c:'#7C3AED',clips:2,photos:2,eng:4.8,ontime:90,feedback:80}
+};
+const CN_KPI_TARGET={clips:4,photos:4,eng:5,ontime:100,feedback:90};
 const CN_DATA=[
- {id:1,title:'เข่าเสื่อมรักษาได้ ไม่ต้องผ่า',brand:'KneeCare',plat:'IG',date:'2026-06-26',stage:'ai'},
- {id:2,title:'โปรพิลาทิสเดือนกรกฎาคม',brand:'Yiaoya',plat:'FB',date:'2026-06-27',stage:'draft'},
- {id:3,title:'ฉีดเข่า PRP คืออะไร ช่วยอะไรได้บ้าง',brand:'KneeCare',plat:'FB',date:'2026-06-28',stage:'med'},
- {id:4,title:'เลเซอร์ลดปวดเข่า เทคโนโลยีใหม่',brand:'Yiaoya',plat:'TikTok',date:'2026-06-29',stage:'legal'},
- {id:5,title:'รีวิวคนไข้กายภาพบำบัด',brand:'Yiaoya',plat:'IG',date:'2026-06-29',stage:'changes'},
- {id:6,title:'นวดคลายปวดออฟฟิศซินโดรม',brand:'นางฟ้า',plat:'LINE',date:'2026-06-26',stage:'approved'},
- {id:7,title:'ตรวจสุขภาพเข่าฟรี 30 ท่านแรก',brand:'KneeCare',plat:'FB',date:'2026-06-30',stage:'scheduled'},
- {id:8,title:'5 ท่ายืดกล้ามเนื้อก่อนนอน',brand:'Yiaoya',plat:'TikTok',date:'2026-06-24',stage:'published'},
- {id:9,title:'ดูแลข้อเข่าผู้สูงอายุ',brand:'KneeCare',plat:'LINE',date:'2026-07-01',stage:'draft'},
- {id:10,title:'แพ็กเกจกายภาพ 10 ครั้ง',brand:'Yiaoya',plat:'FB',date:'2026-07-02',stage:'med'},
+ {id:1,title:'เข่าเสื่อมรักษาได้ ไม่ต้องผ่า',brand:'KneeCare',plat:'IG',type:'EDU',creator:'แยม',date:'2026-06-26',col:'doing'},
+ {id:2,title:'โปรก้าวแรกสู่การฟื้นฟู 790 บาท',brand:'Yiaoya',plat:'FB',type:'PRO',creator:'ตอง',date:'2026-06-27',col:'plan'},
+ {id:3,title:'ฉีดเข่า PRP คืออะไร ช่วยอะไรได้บ้าง',brand:'KneeCare',plat:'FB',type:'DOC',creator:'แฟร์',date:'2026-06-28',col:'review',rev:'tong'},
+ {id:4,title:'เลเซอร์ลดปวดเข่า เทคโนโลยีใหม่',brand:'Yiaoya',plat:'TikTok',type:'EDU',creator:'เตย',date:'2026-06-29',col:'review',rev:'fa'},
+ {id:5,title:'รีวิวคนไข้กายภาพบำบัด คุณชมพู่',brand:'Yiaoya',plat:'IG',type:'TES',creator:'ใบตอง',date:'2026-06-29',col:'review',rev:'fix'},
+ {id:6,title:'นวดคลายปวดออฟฟิศซินโดรม',brand:'นางฟ้า',plat:'LINE',type:'SAL',creator:'ครีม',date:'2026-06-26',col:'approved'},
+ {id:7,title:'ตรวจสุขภาพเข่าฟรี 30 ท่านแรก',brand:'KneeCare',plat:'FB',type:'ENG',creator:'แยม',date:'2026-06-30',col:'approved'},
+ {id:8,title:'5 ท่ายืดกล้ามเนื้อก่อนนอน',brand:'Yiaoya',plat:'TikTok',type:'EDU',creator:'ปายฝน',date:'2026-06-24',col:'posted',eng:11.2},
+ {id:9,title:'ดูแลข้อเข่าผู้สูงอายุ',brand:'KneeCare',plat:'LINE',type:'EDU',creator:'เตย',date:'2026-07-01',col:'idea'},
+ {id:10,title:'แพ็กเกจกายภาพ 10 ครั้ง',brand:'Yiaoya',plat:'FB',type:'PRO',creator:'ตอง',date:'2026-07-02',col:'review',rev:'zern'},
+ {id:11,title:'เคสโฮมคุณลุงโกวิตต์ สโตรก',brand:'Yiaoya',plat:'FB',type:'TES',creator:'ใบตอง',date:'2026-06-18',col:'posted',eng:14.8},
+ {id:12,title:'ร่างกายจำท่าผิดๆ โดยไม่รู้ตัว',brand:'Yiaoya',plat:'IG',type:'EDU',creator:'ปายฝน',date:'2026-06-23',col:'review',rev:'tong'},
+ {id:13,title:'YY Relife 5 ครั้ง 7,900',brand:'Yiaoya',plat:'FB',type:'PRO',creator:'ตอง',date:'2026-06-20',col:'posted',eng:9.6},
+ {id:14,title:'เบื้องหลังทีมกายภาพออกเคสโฮม',brand:'Yiaoya',plat:'TikTok',type:'BTS',creator:'แยม',date:'2026-06-22',col:'idea'}
 ];
-function _cnToast(m){let t=$('cnToast');if(!t){t=document.createElement('div');t.id='cnToast';t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0D2F4F;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 8px 24px rgba(13,47,79,.3);max-width:90vw;transition:opacity .2s';document.body.appendChild(t);}t.textContent=m;t.style.opacity='1';clearTimeout(t._h);t._h=setTimeout(()=>{t.style.opacity='0';},2200);}
+const CN_CAMPAIGN=[
+ {m:'มิถุนายน 2569',items:[{n:'โปรก้าวแรก 790',brand:'Yiaoya',st:'on'},{n:'YY Relife 5 ครั้ง 7,900',brand:'Yiaoya',st:'on'},{n:'ตรวจเข่าฟรี 30 ท่าน',brand:'KneeCare',st:'plan'}]},
+ {m:'พฤษภาคม 2569',items:[{n:'ทดลองพิลาทิส 699',brand:'Yiaoya',st:'done'},{n:'Lead promotion เข่าเสื่อม',brand:'KneeCare',st:'done'}]}
+];
+const CN_ADS=[
+ {n:'Line ads (กายภาพ)',brand:'Yiaoya',plat:'LINE'},
+ {n:'โปรก้าวแรก 790 บาท',brand:'Yiaoya',plat:'FB'},
+ {n:'อินฟลูรองช้ำคุณชมพู่',brand:'Yiaoya',plat:'FB'},
+ {n:'YY Relife 5 ครั้ง',brand:'Yiaoya',plat:'FB'}
+];
+let _cnDragId=null;
+let CN_UPLOADS=[];
+
+function _cnToast(m){let t=$('cnToast');if(!t){t=document.createElement('div');t.id='cnToast';t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0D2F4F;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 8px 24px rgba(13,47,79,.3);max-width:90vw;transition:opacity .2s';document.body.appendChild(t);}t.textContent=m;t.style.opacity='1';clearTimeout(t._h);t._h=setTimeout(()=>{t.style.opacity='0';},2400);}
 function _cnBrand(b){const c=CN_BRAND[b]||'#64748B';return '<span style="font-size:10px;font-weight:700;color:'+c+';background:'+c+'1a;padding:2px 8px;border-radius:10px">'+esc(b)+'</span>';}
 function _cnPlat(p){return '<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti '+(CN_PLAT[p]||'ti-world')+'"></i> '+esc(p)+'</span>';}
-function _cnStg(s){const x=CN_STAGE[s]||{t:s,c:'#64748B'};return '<span style="font-size:10px;font-weight:700;color:'+x.c+';background:'+x.c+'1a;padding:2px 8px;border-radius:10px">'+esc(x.t)+'</span>';}
-function _cnCard(it,actions){return '<div class="card" style="padding:13px 15px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4">'+esc(it.title)+'</div>'+_cnStg(it.stage)+'</div><div style="display:flex;gap:10px;align-items:center;margin:8px 0;flex-wrap:wrap">'+_cnBrand(it.brand)+_cnPlat(it.plat)+'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-calendar"></i> '+esc(it.date)+'</span></div>'+(actions||'')+'</div>';}
+function _cnType(t){const x=CN_TYPE[t]||{t:t,c:'#64748B'};return '<span title="'+esc(x.t)+'" style="font-size:9px;font-weight:800;color:#fff;background:'+x.c+';padding:1px 6px;border-radius:5px;letter-spacing:.04em">'+esc(t)+'</span>';}
+function _cnWho(name){const c=(CN_CREATORS[name]||{}).c||'#64748B';return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted,#64748B)"><span style="width:8px;height:8px;border-radius:50%;background:'+c+'"></span>'+esc(name)+'</span>';}
 function _cnBtn(label,icon,cls){const col=cls==='ok'?'background:#047857;color:#fff;border:none':cls==='warn'?'background:#fff;color:#B45309;border:1px solid #FCD9A8':cls==='danger'?'background:#fff;color:#B91C1C;border:1px solid #FCA5A5':'background:#fff;color:var(--navy,#0D2F4F);border:1px solid var(--border,#E2E8F0)';return '<button data-cnact="'+esc(label)+'" style="'+col+';border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px"><i class="ti '+icon+'"></i>'+esc(label)+'</button>';}
-function _cnBindBtns(wrap){wrap.querySelectorAll('[data-cnact]').forEach(b=>b.onclick=()=>_cnToast('UI เปล่า (mock) · "'+b.dataset.cnact+'" จะทำงานจริงเมื่อต่อ Supabase content_* edge fn'));}
+function _cnBind(wrap){wrap.querySelectorAll('[data-cnact]').forEach(b=>b.onclick=(e)=>{e.stopPropagation();_cnToast('UI เปล่า (mock) · "'+b.dataset.cnact+'" จะทำงานจริงเมื่อต่อ Supabase/Trello sync');});}
 function _cnSetCt(v,n){const c=$('ct-'+v);if(c)c.textContent=n||'';}
+function _cnCard(it,actions){return '<div class="card" style="padding:13px 15px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4">'+esc(it.title)+'</div>'+_cnType(it.type)+'</div><div style="display:flex;gap:10px;align-items:center;margin:8px 0;flex-wrap:wrap">'+_cnBrand(it.brand)+_cnPlat(it.plat)+_cnWho(it.creator)+'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-calendar"></i> '+esc(it.date)+'</span></div>'+(actions||'')+'</div>';}
 
 function mountCnPlan(){const w=$('cnPlanWrap');if(!w)return;
  const first=new Date(2026,5,1).getDay();const days=new Date(2026,6,0).getDate();
@@ -3394,51 +3437,126 @@ function mountCnPlan(){const w=$('cnPlanWrap');if(!w)return;
  const planned=CN_DATA.length;const gaps=[];for(let d=24;d<=30;d++){const k='2026-06-'+String(d).padStart(2,'0');if(!byDate[k])gaps.push(d);}
  const sc=(v,l,col)=>'<div style="flex:1;min-width:140px;background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:13px;padding:13px 15px"><div style="font-size:24px;font-weight:800;color:'+(col||'var(--navy,#0D2F4F)')+'">'+v+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">'+l+'</div></div>';
  let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">';
- h+=sc(planned,'คอนเทนต์ที่วางแผน');
- h+=sc(gaps.length,'วันที่ยังว่าง (7 วันข้างหน้า)','#B45309');
+ h+=sc(planned,'คอนเทนต์ที่วางแผน');h+=sc(gaps.length,'วันที่ยังว่าง (7 วันข้างหน้า)','#B45309');
  h+='<div style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:center"><button data-cnact="เพิ่มคอนเทนต์ลงปฏิทิน" style="background:#3DC5B7;color:#04342C;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มคอนเทนต์</button></div></div>';
  h+='<div class="card" style="padding:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">มิถุนายน 2026</div>';
  h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;font-size:11px">';
  ['อา','จ','อ','พ','พฤ','ศ','ส'].forEach(d=>h+='<div style="text-align:center;color:var(--text-muted,#64748B);font-weight:600;padding:2px">'+d+'</div>');
  for(let i=0;i<first;i++)h+='<div></div>';
  for(let d=1;d<=days;d++){const k='2026-06-'+String(d).padStart(2,'0');const its=byDate[k]||[];
-  h+='<div style="min-height:58px;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:4px"><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:2px">'+d+'</div>'+its.map(it=>'<div title="'+esc(it.title)+'" style="font-size:10px;color:#fff;background:'+(CN_BRAND[it.brand]||'#64748B')+';border-radius:4px;padding:1px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title)+'</div>').join('')+'</div>';}
+  h+='<div style="min-height:58px;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:4px"><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:2px">'+d+'</div>'+its.map(it=>'<div title="'+esc(it.title)+'" style="font-size:10px;color:#fff;background:'+(CN_BRAND[it.brand]||'#64748B')+';border-radius:4px;padding:1px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.type)+' · '+esc(it.title)+'</div>').join('')+'</div>';}
  h+='</div><div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap">'+Object.keys(CN_BRAND).map(b=>'<span style="font-size:11px;color:var(--text-muted,#64748B)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+CN_BRAND[b]+';margin-right:4px"></span>'+esc(b)+'</span>').join('')+'</div></div>';
- w.innerHTML=h;_cnBindBtns(w);_cnSetCt('cnplan',planned);}
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnplan',planned);}
+
+function mountCnBoard(){const w=$('cnBoardWrap');if(!w)return;
+ let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:9px 13px;background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px"><i class="ti ti-grip-vertical" style="color:#0F766E"></i><span style="font-size:12px;color:#0F766E">ลากการ์ดข้ามคอลัมน์ได้เลย (เหมือน Trello) · สถานะอัปเดตทันที</span><button data-cnact="เพิ่มการ์ดใหม่" style="margin-left:auto;background:#0F766E;color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มการ์ด</button></div>';
+ h+='<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px">';
+ CN_COLS.forEach(col=>{const its=CN_DATA.filter(x=>x.col===col.k);
+  h+='<div class="cnCol" data-col="'+col.k+'" style="flex:0 0 220px;min-width:220px;background:#F1F5F9;border-radius:12px;padding:8px">';
+  h+='<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);padding:4px 6px 8px"><i class="ti '+col.i+'"></i>'+col.t+'<span style="margin-left:auto;font-size:10px;background:#fff;color:var(--text-muted,#64748B);border-radius:8px;padding:1px 7px">'+its.length+'</span></div>';
+  h+='<div class="cnColBody" data-col="'+col.k+'" style="min-height:40px;display:flex;flex-direction:column;gap:7px">';
+  its.forEach(it=>{h+='<div class="cnKan" draggable="true" data-id="'+it.id+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.04)"><div style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start;margin-bottom:6px"><span style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.35">'+esc(it.title)+'</span>'+_cnType(it.type)+'</div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">'+_cnBrand(it.brand)+_cnWho(it.creator)+'</div></div>';});
+  h+='</div></div>';});
+ h+='</div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnboard',CN_DATA.length);
+ w.querySelectorAll('.cnKan').forEach(card=>{
+  card.addEventListener('dragstart',e=>{_cnDragId=+card.dataset.id;card.style.opacity='.45';});
+  card.addEventListener('dragend',e=>{card.style.opacity='';});
+ });
+ w.querySelectorAll('.cnColBody').forEach(body=>{
+  body.addEventListener('dragover',e=>{e.preventDefault();body.parentElement.style.outline='2px dashed #3DC5B7';});
+  body.addEventListener('dragleave',e=>{body.parentElement.style.outline='';});
+  body.addEventListener('drop',e=>{e.preventDefault();body.parentElement.style.outline='';const it=CN_DATA.find(x=>x.id===_cnDragId);if(it&&it.col!==body.dataset.col){const to=CN_COLS.find(c=>c.k===body.dataset.col);it.col=body.dataset.col;_cnToast('ย้าย "'+it.title+'" → '+(to?to.t:body.dataset.col));mountCnBoard();}});
+ });}
 
 function mountCnDraft(){const w=$('cnDraftWrap');if(!w)return;
- const drafts=CN_DATA.filter(it=>['draft','ai','changes'].includes(it.stage));
+ const drafts=CN_DATA.filter(it=>['idea','plan','doing'].includes(it.col));
  let h='<div class="card" style="padding:15px;margin-bottom:14px;border:1px solid #C7E8E3;background:#F0FDFA"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-sparkles" style="color:#0F766E"></i> สร้างคอนเทนต์ใหม่</div>';
  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">';
- h+='<select style="flex:1;min-width:130px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>แบรนด์ —</option>'+Object.keys(CN_BRAND).map(b=>'<option>'+esc(b)+'</option>').join('')+'</select>';
- h+='<select style="flex:1;min-width:130px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>แพลตฟอร์ม —</option>'+Object.keys(CN_PLAT).map(p=>'<option>'+esc(p)+'</option>').join('')+'</select></div>';
+ h+='<select style="flex:1;min-width:120px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>แบรนด์ —</option>'+Object.keys(CN_BRAND).map(b=>'<option>'+esc(b)+'</option>').join('')+'</select>';
+ h+='<select style="flex:1;min-width:120px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>แพลตฟอร์ม —</option>'+Object.keys(CN_PLAT).map(p=>'<option>'+esc(p)+'</option>').join('')+'</select>';
+ h+='<select style="flex:1;min-width:120px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>ประเภท —</option>'+Object.keys(CN_TYPE).map(t=>'<option>'+t+' · '+esc(CN_TYPE[t].t)+'</option>').join('')+'</select></div>';
  h+='<input placeholder="หัวข้อ / ประเด็นที่อยากสื่อ เช่น เข่าเสื่อมในผู้สูงอายุ" style="width:100%;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px;box-sizing:border-box">';
  h+='<button data-cnact="ให้ AI ร่างคอนเทนต์" style="background:#0F766E;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit"><i class="ti ti-wand"></i> ให้ AI ร่างให้</button></div>';
+ h+='<div class="card" style="padding:15px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:4px"><i class="ti ti-upload" style="color:#185FA5"></i> อัปโหลดไฟล์วิดีโอเข้าระบบ</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:10px">ลากไฟล์มาวาง หรือกดเลือกไฟล์ · รองรับ .mp4 .mov (UI · ยังไม่เก็บจริง — เก็บถาวรเมื่อต่อ Supabase Storage)</div>';
+ h+='<label id="cnDrop" style="display:flex;flex-direction:column;align-items:center;gap:6px;border:2px dashed #93C5C0;border-radius:12px;padding:24px;cursor:pointer;background:#F8FEFD"><i class="ti ti-movie" style="font-size:30px;color:#3DC5B7"></i><span style="font-size:13px;color:var(--navy,#0D2F4F);font-weight:600">เลือกไฟล์วิดีโอ</span><span style="font-size:11px;color:var(--text-muted,#64748B)">หรือลากมาวางตรงนี้</span><input id="cnVid" type="file" accept="video/*" multiple style="display:none"></label>';
+ h+='<div id="cnVidList" style="margin-top:12px"></div></div>';
  h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">ดราฟต์ที่กำลังทำ ('+drafts.length+')</div>';
- h+=drafts.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ให้ AI ช่วยปรับ','ti-wand','')+_cnBtn('แก้ไข','ti-edit','')+_cnBtn('ส่งให้แพทย์ตรวจ','ti-send','ok')+'</div>')).join('')||emptyCard('ยังไม่มีดราฟต์');
- w.innerHTML=h;_cnBindBtns(w);_cnSetCt('cndraft',drafts.length);}
+ h+=drafts.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ให้ AI ช่วยปรับ','ti-wand','')+_cnBtn('แนบวิดีโอ','ti-paperclip','')+_cnBtn('ส่งเข้ารีวิว','ti-send','ok')+'</div>')).join('')||emptyCard('ยังไม่มีดราฟต์');
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cndraft',drafts.length);
+ const inp=$('cnVid'),drop=$('cnDrop');
+ const render=()=>{const l=$('cnVidList');if(!l)return;l.innerHTML=CN_UPLOADS.length?CN_UPLOADS.map((u,i)=>'<div class="card" style="padding:10px;margin-bottom:8px;display:flex;gap:10px;align-items:center"><video src="'+u.url+'" style="width:120px;height:74px;border-radius:8px;object-fit:cover;background:#000" muted></video><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--navy,#0D2F4F);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(u.name)+'</div><div style="font-size:11px;color:var(--text-muted,#64748B)">'+u.size+' · '+esc(u.type||'video')+'</div></div><button data-cnrm="'+i+'" style="background:#fff;border:1px solid #FCA5A5;color:#B91C1C;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit"><i class="ti ti-trash"></i></button></div>').join(''):'<div style="font-size:12px;color:var(--text-muted,#64748B)">ยังไม่มีไฟล์อัปโหลด</div>';
+  l.querySelectorAll('[data-cnrm]').forEach(b=>b.onclick=()=>{const u=CN_UPLOADS[+b.dataset.cnrm];if(u&&u.url)URL.revokeObjectURL(u.url);CN_UPLOADS.splice(+b.dataset.cnrm,1);render();});};
+ const add=(files)=>{[...files].forEach(f=>{if(!f.type.startsWith('video/')){_cnToast('รับเฉพาะไฟล์วิดีโอ: '+f.name);return;}CN_UPLOADS.push({name:f.name,size:(f.size/1048576).toFixed(1)+' MB',type:f.type,url:URL.createObjectURL(f)});});_cnToast('อัปโหลด '+files.length+' ไฟล์ (preview ในเครื่อง)');render();};
+ if(inp)inp.onchange=e=>add(e.target.files);
+ if(drop){drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.background='#E1F5EE';});drop.addEventListener('dragleave',e=>{drop.style.background='#F8FEFD';});drop.addEventListener('drop',e=>{e.preventDefault();drop.style.background='#F8FEFD';if(e.dataTransfer&&e.dataTransfer.files)add(e.dataTransfer.files);});}
+ render();}
 
 function mountCnReview(){const w=$('cnReviewWrap');if(!w)return;
- const med=CN_DATA.filter(it=>it.stage==='med');const legal=CN_DATA.filter(it=>it.stage==='legal');const chg=CN_DATA.filter(it=>it.stage==='changes');
- const revActions='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px">'+_cnBtn('อนุมัติ','ti-check','ok')+_cnBtn('ขอแก้','ti-message-circle','warn')+_cnBtn('ตีกลับ','ti-x','danger')+'</div><textarea placeholder="คอมเมนต์ถึงทีมคอนเทนต์ (บันทึกใน audit log)" style="width:100%;padding:8px 10px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;min-height:46px"></textarea>';
- let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFF7ED;border-radius:10px;border:1px solid #FCD9A8"><i class="ti ti-shield-check" style="color:#B45309;font-size:18px"></i><span style="font-size:12px;color:#92400E">ทุกชิ้นต้องผ่าน <b>แพทย์</b> แล้วต่อด้วย <b>กฎหมาย/compliance</b> ก่อนเข้าคิวโพสต์ — บังคับตามกฎหมายโฆษณาสถานพยาบาล · ระบบเก็บ audit ว่าใครอนุมัติ/เมื่อไร</span></div>';
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-stethoscope" style="color:#B45309"></i> ชั้นที่ 1 · รอแพทย์ตรวจ ('+med.length+')</div>';
- h+=med.map(it=>_cnCard(it,revActions)).join('')||emptyCard('ไม่มีงานรอแพทย์');
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:16px 0 10px"><i class="ti ti-scale" style="color:#B45309"></i> ชั้นที่ 2 · รอกฎหมาย/compliance ('+legal.length+')</div>';
- h+=legal.map(it=>_cnCard(it,revActions)).join('')||emptyCard('ไม่มีงานรอกฎหมาย');
- if(chg.length){h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:16px 0 10px"><i class="ti ti-rotate" style="color:#64748B"></i> ส่งกลับให้แก้ ('+chg.length+')</div>';h+=chg.map(it=>_cnCard(it,'')).join('');}
- w.innerHTML=h;_cnBindBtns(w);_cnSetCt('cnreview',med.length+legal.length);}
+ const STAGES=[{k:'tong',t:'ชั้น 1 · พี่ตองตรวจ',i:'ti-user-check',c:'#4D7C0F'},{k:'zern',t:'ชั้น 2 · พี่เซิน double-check',i:'ti-user-star',c:'#185FA5'},{k:'fa',t:'ชั้น 3 · พี่ฟาตรวจ',i:'ti-user-check',c:'#7C3AED'}];
+ const revActions='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px">'+_cnBtn('อนุมัติ · ส่งต่อ','ti-check','ok')+_cnBtn('ขอแก้','ti-message-circle','warn')+_cnBtn('ตีกลับ','ti-x','danger')+'</div><textarea placeholder="คอมเมนต์ถึงทีมคอนเทนต์ (บันทึกใน audit log)" style="width:100%;padding:8px 10px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;min-height:44px"></textarea>';
+ const inReview=CN_DATA.filter(it=>it.col==='review');
+ let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFF7ED;border-radius:10px;border:1px solid #FCD9A8"><i class="ti ti-shield-check" style="color:#B45309;font-size:18px"></i><span style="font-size:12px;color:#92400E">รีวิวหลายชั้นตามจริง: <b>พี่ตอง → พี่เซิน → พี่ฟา</b> · คอนเทนต์การแพทย์เพิ่ม <b>fact-check แพทย์</b> ก่อนเผยแพร่ · ทุกการอนุมัติบันทึก audit (ใคร/เมื่อไร)</span></div>';
+ STAGES.forEach(s=>{const its=inReview.filter(x=>x.rev===s.k);
+  h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti '+s.i+'" style="color:'+s.c+'"></i> '+s.t+' ('+its.length+')</div>';
+  h+=its.map(it=>_cnCard(it,(it.type==='DOC'||it.type==='TES'||it.type==='EDU'?'<div style="font-size:11px;color:#B45309;margin-bottom:7px"><i class="ti ti-stethoscope"></i> คอนเทนต์การแพทย์ — ต้อง fact-check แพทย์</div>':'')+revActions)).join('')||emptyCard('ไม่มีงานในชั้นนี้');});
+ const fix=inReview.filter(x=>x.rev==='fix');
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-rotate" style="color:#64748B"></i> ส่งกลับให้แก้ ('+fix.length+')</div>';
+ h+=fix.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ส่งรีวิวอีกครั้ง','ti-send','ok')+'</div>')).join('')||emptyCard('ไม่มีงานรอแก้');
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnreview',inReview.length);}
 
 function mountCnQueue(){const w=$('cnQueueWrap');if(!w)return;
- const appr=CN_DATA.filter(it=>it.stage==='approved');const sched=CN_DATA.filter(it=>it.stage==='scheduled');const pub=CN_DATA.filter(it=>it.stage==='published');
+ const appr=CN_DATA.filter(it=>it.col==='approved');const pub=CN_DATA.filter(it=>it.col==='posted');
  let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#EFF6FF;border-radius:10px;border:1px solid #BFDBFE"><i class="ti ti-hand-stop" style="color:#1D4ED8;font-size:18px"></i><span style="font-size:12px;color:#1E40AF">Confirm-mode: ไม่มีโพสต์ใดเผยแพร่อัตโนมัติ — ต้องกดยืนยันทุกครั้ง</span></div>';
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-circle-check" style="color:#047857"></i> อนุมัติแล้ว · รอตั้งเวลา ('+appr.length+')</div>';
- h+=appr.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ตั้งเวลาโพสต์','ti-clock','')+_cnBtn('โพสต์เลย','ti-send','ok')+'</div>')).join('')||emptyCard('ยังไม่มีงานอนุมัติ');
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:16px 0 10px"><i class="ti ti-clock-hour-4" style="color:#185FA5"></i> ตั้งเวลาแล้ว ('+sched.length+')</div>';
- h+=sched.map(it=>_cnCard(it,'<div style="font-size:12px;color:#185FA5;margin-bottom:6px"><i class="ti ti-clock"></i> กำหนดโพสต์ '+esc(it.date)+' 09:00</div><div style="display:flex;gap:7px">'+_cnBtn('เลื่อนเวลา','ti-edit','')+_cnBtn('ยกเลิกคิว','ti-x','danger')+'</div>')).join('')||emptyCard('ยังไม่มีงานตั้งเวลา');
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-circle-check" style="color:#047857"></i> ผ่านรีวิวแล้ว · รอตั้งเวลา/โพสต์ ('+appr.length+')</div>';
+ h+=appr.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ตั้งเวลาโพสต์','ti-clock','')+_cnBtn('โพสต์เลย','ti-send','ok')+'</div>')).join('')||emptyCard('ยังไม่มีงานพร้อมโพสต์');
  h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:16px 0 10px"><i class="ti ti-checks" style="color:#64748B"></i> โพสต์แล้ว ('+pub.length+')</div>';
- h+=pub.map(it=>_cnCard(it,'<div style="font-size:12px;color:var(--text-muted,#64748B)"><i class="ti ti-external-link"></i> เผยแพร่แล้ว — ดู performance ที่หน้า "ครีเอทีฟ · คลิป"</div>')).join('')||emptyCard('ยังไม่มีโพสต์');
- w.innerHTML=h;_cnBindBtns(w);_cnSetCt('cnqueue',appr.length+sched.length);}
+ h+=pub.map(it=>_cnCard(it,'<div style="font-size:12px;color:var(--text-muted,#64748B)"><i class="ti ti-chart-line"></i> Engagement '+(it.eng!=null?it.eng+'%':'-')+' · ดูเพิ่มที่หน้า "ครีเอทีฟ·คลิป"</div>')).join('')||emptyCard('ยังไม่มีโพสต์');
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnqueue',appr.length);}
+
+function mountCnCampaign(){const w=$('cnCampaignWrap');if(!w)return;
+ const stPill=(s)=>{const m={on:['ออนแอร์','#047857','#ECFDF5'],plan:['เตรียม','#B45309','#FFF7ED'],done:['จบแล้ว','#64748B','#F1F5F9']}[s]||['','#64748B','#F1F5F9'];return '<span style="font-size:10px;font-weight:700;color:'+m[1]+';background:'+m[2]+';padding:2px 8px;border-radius:10px">'+m[0]+'</span>';};
+ let h='';
+ CN_CAMPAIGN.forEach(g=>{h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:6px 0 10px"><i class="ti ti-discount"></i> โปรโมชั่น · '+esc(g.m)+'</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-bottom:16px">'+g.items.map(it=>'<div class="card" style="padding:13px 15px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><span style="font-size:13px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(it.n)+'</span>'+stPill(it.st)+'</div><div style="margin-top:8px">'+_cnBrand(it.brand)+'</div></div>').join('')+'</div>';});
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:6px 0 10px"><i class="ti ti-broadcast" style="color:#D4537E"></i> Ads on-air · คลิป/ภาพที่กำลังออนแอร์ ('+CN_ADS.length+')</div>';
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px">'+CN_ADS.map(a=>'<div class="card" style="padding:13px 15px"><div style="font-size:13px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:8px">'+esc(a.n)+'</div><div style="display:flex;gap:8px;align-items:center">'+_cnBrand(a.brand)+_cnPlat(a.plat)+'<span style="margin-left:auto;font-size:10px;font-weight:700;color:#047857;background:#ECFDF5;padding:2px 8px;border-radius:10px">LIVE</span></div></div>').join('')+'</div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cncampaign',CN_ADS.length);}
+
+function mountCnKpi(){const w=$('cnKpiWrap');if(!w)return;
+ const bar=(v,target,unit,inv)=>{const pct=Math.min(100,Math.round(v/target*100));const ok=inv?v<=target:v>=target;const col=ok?'#047857':pct>=70?'#B45309':'#B91C1C';return '<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:var(--text-muted,#64748B)">'+unit+'</span><span style="font-weight:700;color:'+col+'">'+v+(unit.indexOf('%')>=0?'%':'')+' / '+target+(unit.indexOf('%')>=0?'%':'')+'</span></div><div style="height:6px;background:#EEF2F6;border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+col+'"></div></div></div>';};
+ const names=Object.keys(CN_CREATORS);
+ const avgEng=(names.reduce((a,n)=>a+CN_CREATORS[n].eng,0)/names.length).toFixed(1);
+ let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">';
+ const sc=(v,l,c)=>'<div style="flex:1;min-width:130px;background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:13px;padding:13px 15px"><div style="font-size:23px;font-weight:800;color:'+(c||'var(--navy,#0D2F4F)')+'">'+v+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">'+l+'</div></div>';
+ h+=sc(names.length,'ครีเอเตอร์ในทีม');h+=sc(avgEng+'%','Engagement เฉลี่ย','#0F766E');h+=sc('≥5%','เป้า Engagement','#185FA5');h+='</div>';
+ h+='<div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:10px">เป้า/สัปดาห์/คน: คลิป ≥'+CN_KPI_TARGET.clips+' · รูป ≥'+CN_KPI_TARGET.photos+' · Engagement ≥'+CN_KPI_TARGET.eng+'% · ลงตรงเวลา 100% · Feedback ใช้จริง ≥'+CN_KPI_TARGET.feedback+'%</div>';
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">';
+ names.forEach(n=>{const k=CN_CREATORS[n];
+  h+='<div class="card" style="padding:14px 16px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="width:30px;height:30px;border-radius:50%;background:'+k.c+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">'+esc(n.charAt(0))+'</span><span style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(n)+'</span></div>';
+  h+=bar(k.clips,CN_KPI_TARGET.clips,'คลิป/สัปดาห์')+bar(k.photos,CN_KPI_TARGET.photos,'รูป/สัปดาห์')+bar(k.eng,CN_KPI_TARGET.eng,'Engagement %')+bar(k.ontime,CN_KPI_TARGET.ontime,'ลงตรงเวลา %')+bar(k.feedback,CN_KPI_TARGET.feedback,'Feedback ใช้จริง %');
+  h+='</div>';});
+ h+='</div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnkpi',names.length);}
+
+function mountCnMonthly(){const w=$('cnMonthlyWrap');if(!w)return;
+ const byType={},byWho={};CN_DATA.forEach(it=>{byType[it.type]=(byType[it.type]||0)+1;byWho[it.creator]=(byWho[it.creator]||0)+1;});
+ const done=CN_DATA.filter(it=>it.col==='posted').length;
+ const maxT=Math.max(1,...Object.values(byType)),maxW=Math.max(1,...Object.values(byWho));
+ let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">';
+ const sc=(v,l,c)=>'<div style="flex:1;min-width:130px;background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:13px;padding:13px 15px"><div style="font-size:23px;font-weight:800;color:'+(c||'var(--navy,#0D2F4F)')+'">'+v+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">'+l+'</div></div>';
+ h+=sc(CN_DATA.length,'งานทั้งหมดเดือนนี้');h+=sc(done,'โพสต์แล้ว','#047857');h+=sc(Object.keys(byType).length,'ประเภทที่ทำ','#185FA5');h+='</div>';
+ h+='<div class="card" style="padding:15px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามประเภทคอนเทนต์</div>'+Object.keys(CN_TYPE).filter(t=>byType[t]).map(t=>{const v=byType[t];return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:var(--navy,#0D2F4F)">'+t+' · '+esc(CN_TYPE[t].t)+'</span><span style="font-weight:700">'+v+'</span></div><div style="height:9px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+Math.round(v/maxT*100)+'%;height:100%;background:'+CN_TYPE[t].c+'"></div></div></div>';}).join('')+'</div>';
+ h+='<div class="card" style="padding:15px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามครีเอเตอร์</div>'+Object.keys(byWho).sort((a,b)=>byWho[b]-byWho[a]).map(n=>{const v=byWho[n];const c=(CN_CREATORS[n]||{}).c||'#64748B';return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:var(--navy,#0D2F4F)">'+esc(n)+'</span><span style="font-weight:700">'+v+' ชิ้น</span></div><div style="height:9px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+Math.round(v/maxW*100)+'%;height:100%;background:'+c+'"></div></div></div>';}).join('')+'</div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnmonthly',CN_DATA.length);}
+
+function mountCnHighlight(){const w=$('cnHighlightWrap');if(!w)return;
+ const hi=CN_DATA.filter(it=>it.eng!=null).sort((a,b)=>b.eng-a.eng);
+ let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFFBEB;border-radius:10px;border:1px solid #FDE68A"><i class="ti ti-star" style="color:#CA8A04;font-size:18px"></i><span style="font-size:12px;color:#854D0E">คอนเทนต์ที่ทำผลงานดี (Engagement ≥10%) คัดเป็น Highlight · ดึง performance จริงจาก Meta ได้ที่หน้า "ครีเอทีฟ·คลิป"</span></div>';
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">';
+ h+=hi.map(it=>{const top=it.eng>=10;return '<div class="card" style="padding:14px 16px;border:'+(top?'1px solid #FDE68A':'1px solid var(--border,#E2E8F0)')+'">'+(top?'<div style="font-size:10px;font-weight:800;color:#CA8A04;margin-bottom:6px"><i class="ti ti-star-filled"></i> HIGHLIGHT</div>':'')+'<div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4;margin-bottom:8px">'+esc(it.title)+'</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'+_cnBrand(it.brand)+_cnPlat(it.plat)+_cnWho(it.creator)+'</div><div style="font-size:22px;font-weight:800;color:'+(top?'#CA8A04':'#0F766E')+'">'+it.eng+'%<span style="font-size:11px;font-weight:600;color:var(--text-muted,#64748B)"> engagement</span></div></div>';}).join('')||emptyCard('ยังไม่มีคอนเทนต์ที่โพสต์/มีผล');
+ h+='</div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnhighlight',hi.filter(x=>x.eng>=10).length);}
 
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
@@ -3474,7 +3592,7 @@ function start(){
  renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
  renderBankTabs(); $('bkPeriod').value=_curMonth(); $('bkGen').onclick=bkGenerate; $('bkCsv').onclick=bkDownloadCsv; loadBankHistory();
  if($('rcDate')&&!$('rcDate').value)$('rcDate').value=new Date().toISOString().slice(0,10); $('rcGen').onclick=rcGenerate;
- mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountPromo();mountDept();mountMkt();mountHub360();mountExpansion();mountAiHQ();mountCnPlan();mountCnDraft();mountCnReview();mountCnQueue();
+ mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountPromo();mountDept();mountMkt();mountHub360();mountExpansion();mountAiHQ();mountCnPlan();mountCnBoard();mountCnDraft();mountCnReview();mountCnQueue();mountCnCampaign();mountCnKpi();mountCnMonthly();mountCnHighlight();
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
