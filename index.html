@@ -2982,31 +2982,103 @@ function mountPromo(){
    +(btns?'<div style="display:flex;gap:7px;margin-top:11px;flex-wrap:wrap">'+btns+'</div>':'')
    +'</div>';
  }
- let busy=false;
+ // ---- helpers แผนลงมือ (strategist) ----
+ const TEAMC=(t)=>{const m={'หน้าบ้าน':'#3DC5B7','ต้อนรับ':'#3DC5B7','ขาย':'#3DC5B7','คลินิก':'#185FA5','แพทย์':'#185FA5','กายภาพ':'#185FA5','การตลาด':'#C2410C','คอนเทนต์':'#C2410C','บัญชี':'#0F766E','การเงิน':'#0F766E','จัดซื้อ':'#7C3AED','สต็อก':'#7C3AED'};for(const k in m)if((t||'').includes(k))return m[k];return '#64748B';};
+ const dOff=(o)=>{o=parseInt(o,10);if(isNaN(o))return '';return o===0?'D-Day':(o>0?'D+'+o:'D'+o);};
+ const dAbs=(launch,o)=>{o=parseInt(o,10);if(!launch||isNaN(o))return dOff(o);const d=new Date(launch+'T00:00:00');d.setDate(d.getDate()+o);return d.toLocaleDateString('th-TH',{day:'2-digit',month:'short'})+' ('+dOff(o)+')';};
+ const hasOff=(o)=>o!=null&&o!==''&&!isNaN(parseInt(o,10));
+ function renderPlan(p){
+  const pl=p.plan;if(!pl)return '';const launch=p.launch_date||'';const s=pl.strategy||{};
+  let h='<div style="margin-top:12px;border-top:1px dashed #CBD5E1;padding-top:12px">';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">'
+   +'<span style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F)"><i class="ti ti-calendar-event"></i> วันเปิดโปรฯ:</span>'
+   +'<input type="date" class="promoLaunch" data-id="'+p.id+'" value="'+esc(launch)+'" style="border:1px solid #E2E8F0;border-radius:7px;padding:5px 9px;font-size:12px">'
+   +'<span style="font-size:11px;color:#94A3B8">'+(launch?'ปฏิทินเป็นวันที่จริง':'ตั้งวันเปิด → ปฏิทินจะคำนวณเป็นวันที่จริง')+'</span>'
+   +'<button class="promoReplan" data-id="'+p.id+'" style="margin-left:auto;cursor:pointer;border:1px solid #E2E8F0;background:#fff;color:#64748B;border-radius:7px;padding:5px 10px;font-size:11.5px;font-weight:700"><i class="ti ti-refresh"></i> วางแผนใหม่</button>'
+   +'</div>';
+  const sline=(lb,v)=>v?'<div style="margin-top:5px;font-size:12px"><b style="color:#64748B;font-weight:600">'+lb+':</b> <span style="color:var(--navy,#0D2F4F)">'+esc(v)+'</span></div>':'';
+  h+='<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:9px;padding:11px 13px;margin-bottom:13px">'
+   +'<div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:12.5px;margin-bottom:3px"><i class="ti ti-chess-king" style="color:#185FA5"></i> กลยุทธ์</div>'
+   +sline('จุดยืน',s.positioning)+sline('ทำไมต้องทำตอนนี้',s.why_now)+sline('กลุ่มเป้าหมาย',s.target_segment)+sline('ตัวชี้วัดสำเร็จ',s.success_metric)+sline('ความเสี่ยง',s.risk)+sline('งบ/ต้นทุน',s.budget_note)+(pl.duration?sline('ระยะเวลา',pl.duration):'')+'</div>';
+  const jr=pl.patient_journey||[];
+  if(jr.length){h+='<div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:12.5px;margin-bottom:7px"><i class="ti ti-route" style="color:#3DC5B7"></i> เส้นทางคนไข้</div><div style="margin-bottom:14px">';
+   jr.forEach((j,i)=>{h+='<div style="display:flex;gap:9px">'
+    +'<div style="flex:none;display:flex;flex-direction:column;align-items:center"><div style="width:22px;height:22px;border-radius:50%;background:#3DC5B7;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</div>'+(i<jr.length-1?'<div style="width:2px;flex:1;background:#CBD5E1;margin:2px 0;min-height:14px"></div>':'')+'</div>'
+    +'<div style="flex:1;padding-bottom:8px"><div style="font-weight:700;color:var(--navy,#0D2F4F);font-size:12.5px">'+esc(j.stage||'')+(j.touchpoint?' <span style="font-weight:500;color:#94A3B8;font-size:11px">· '+esc(j.touchpoint)+'</span>':'')+'</div>'
+    +'<div style="font-size:11.5px;color:#475569;margin-top:1px">'+esc(j.what_happens||'')+'</div>'
+    +((j.owner_team||j.system)?'<div style="font-size:10.5px;margin-top:3px">'+(j.owner_team?'<span style="background:'+TEAMC(j.owner_team)+';color:#fff;border-radius:10px;padding:1px 8px;font-weight:700">'+esc(j.owner_team)+'</span> ':'')+(j.system?'<span style="color:#94A3B8">⚙ '+esc(j.system)+'</span>':'')+'</div>':'')+'</div></div>';});
+   h+='</div>';}
+  const fd=pl.frontdesk||[];
+  if(fd.length){h+='<div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:12.5px;margin-bottom:7px"><i class="ti ti-building-store" style="color:#3DC5B7"></i> 🏪 หน้าบ้านต้องทำ</div><div style="margin-bottom:14px">';
+   fd.forEach(t=>{h+='<div style="display:flex;gap:8px;font-size:12px;margin-bottom:5px;align-items:flex-start"><i class="ti ti-circle-check" style="color:#3DC5B7;margin-top:2px"></i><div style="flex:1"><b style="color:var(--navy,#0D2F4F)">'+esc(t.task||'')+'</b>'+(t.detail?' <span style="color:#475569">— '+esc(t.detail)+'</span>':'')+(hasOff(t.day_offset)?' <span style="color:#94A3B8;font-size:10.5px">('+(launch?dAbs(launch,t.day_offset):dOff(t.day_offset))+')</span>':'')+'</div></div>';});
+   h+='</div>';}
+  const bo=pl.backoffice||[];
+  if(bo.length){h+='<div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:12.5px;margin-bottom:7px"><i class="ti ti-settings-2" style="color:#185FA5"></i> ⚙️ หลังบ้านต้องเตรียม</div><div style="margin-bottom:14px">';
+   const gx={};bo.forEach(t=>{const k=t.team||'อื่นๆ';(gx[k]=gx[k]||[]).push(t);});
+   Object.keys(gx).forEach(tm=>{h+='<div style="margin-bottom:9px"><span style="background:'+TEAMC(tm)+';color:#fff;border-radius:10px;padding:1px 9px;font-size:11px;font-weight:700">'+esc(tm)+'</span>';
+    gx[tm].forEach(t=>{h+='<div style="display:flex;gap:8px;font-size:12px;margin:5px 0 0 4px;align-items:flex-start"><i class="ti ti-point-filled" style="color:'+TEAMC(tm)+';margin-top:1px"></i><div style="flex:1"><b style="color:var(--navy,#0D2F4F)">'+esc(t.task||'')+'</b>'+(t.detail?' <span style="color:#475569">— '+esc(t.detail)+'</span>':'')+(t.lead_time?' <span style="color:#94A3B8;font-size:10.5px">[ใช้เวลา '+esc(t.lead_time)+']</span>':'')+(hasOff(t.day_offset)?' <span style="color:#94A3B8;font-size:10.5px">('+(launch?dAbs(launch,t.day_offset):dOff(t.day_offset))+')</span>':'')+'</div></div>';});
+    h+='</div>';});
+   h+='</div>';}
+  const an=(pl.announcements||[]).slice().sort((a,b)=>(parseInt(a.day_offset,10)||0)-(parseInt(b.day_offset,10)||0));
+  if(an.length){h+='<div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:12.5px;margin-bottom:7px"><i class="ti ti-calendar-stats" style="color:#C2410C"></i> 📅 ปฏิทินประกาศแต่ละทีม</div><div>';
+   an.forEach(a=>{const pub=(a.audience||'').indexOf('public')>=0;
+    h+='<div style="border:1px solid #E2E8F0;border-radius:9px;padding:9px 11px;margin-bottom:7px;border-left:3px solid '+TEAMC(a.team)+'">'
+     +'<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px">'
+     +'<span style="background:'+TEAMC(a.team)+';color:#fff;border-radius:10px;padding:1px 9px;font-size:10.5px;font-weight:700">'+esc(a.team||'')+'</span>'
+     +'<span style="background:'+(pub?'#FEF3C7':'#E0F2FE')+';color:'+(pub?'#92400E':'#075985')+';border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700">'+(pub?'🌐 public · ต้องรีวิวก่อน':'🔒 ภายใน')+'</span>'
+     +(a.channel?'<span style="color:#64748B;font-size:10.5px">'+esc(a.channel)+'</span>':'')
+     +'<span style="margin-left:auto;color:#C2410C;font-size:11px;font-weight:800">'+(launch?dAbs(launch,a.day_offset):dOff(a.day_offset))+'</span></div>'
+     +'<div style="font-weight:700;color:var(--navy,#0D2F4F);font-size:12.5px">'+esc(a.title||'')+'</div>'
+     +(a.draft?'<div style="white-space:pre-wrap;background:#F8FAFC;border-radius:7px;padding:7px 9px;margin-top:5px;font-size:11.5px;color:#334155;line-height:1.55">'+esc(a.draft)+'</div>':'')+'</div>';});
+   h+='</div>';}
+  return h+'</div>';
+ }
+ let busy=false,curMode='confirm',promosCache=[];const openPlan=new Set();
+ function pcard2(p){
+  const hasPlan=!!p.plan,open=openPlan.has(p.id);
+  const planBtn='<button class="promoPlanBtn" data-id="'+p.id+'" style="cursor:pointer;border:1px solid #185FA5;background:'+(hasPlan?'#fff':'#185FA5')+';color:'+(hasPlan?'#185FA5':'#fff')+';border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:700"><i class="ti ti-clipboard-list"></i> '+(hasPlan?(open?'ซ่อนแผน':'ดูแผนลงมือ'):'วางแผนลงมือ')+'</button>';
+  const c=pcard(p).replace(/<\/div>$/,'');
+  return c+'<div style="display:flex;gap:7px;margin-top:9px;flex-wrap:wrap">'+planBtn+'</div>'+((hasPlan&&open)?renderPlan(p):'')+'</div>';
+ }
+ function render(){
+  $('promoBar').innerHTML=bar(curMode,busy);
+  const col=(cat)=>{const items=promosCache.filter(p=>p.category===cat);const h=(CAT[cat]||['',''])[0];
+    return '<div><div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:13.5px;margin-bottom:9px;padding-bottom:6px;border-bottom:2px solid '+(CAT[cat]||['',''])[1]+'">'+h+' <span style="color:#94A3B8;font-weight:600;font-size:11.5px">('+items.length+')</span></div>'
+    +(items.length?items.map(pcard2).join(''):'<div style="font-size:12px;color:#94A3B8;padding:18px 0;text-align:center">ยังไม่มีโปรฯ — กด "ให้ AI คิดโปรโมชั่น"</div>')+'</div>';};
+  $('promoGrid').innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px;align-items:start">'+col('instore')+col('acquisition')+'</div>';
+  const ct=$('ct-promo');if(ct)ct.textContent=promosCache.length||'';
+  bind();
+ }
  function load(){
   $('promoGrid').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลด…</span></div>';
   sb.functions.invoke('promo_design',{body:{action:'list'}}).then(({data})=>{
-   if(!data||!data.ok){$('promoBar').innerHTML=bar('confirm',false);$('promoGrid').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>'+((data&&data.need_key)?'⚠️ ยังไม่ได้ตั้ง GEMINI_API_KEY':'โหลดไม่ได้: '+esc((data&&data.error)||''))+'</span></div>';bind('confirm');return;}
-   const mode=data.mode||'confirm';const promos=(data.promos||[]).filter(p=>p.status!=='archived');
-   $('promoBar').innerHTML=bar(mode,busy);
-   const col=(cat)=>{const items=promos.filter(p=>p.category===cat);const h=(CAT[cat]||['',''])[0];
-     return '<div><div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:13.5px;margin-bottom:9px;padding-bottom:6px;border-bottom:2px solid '+(CAT[cat]||['',''])[1]+'">'+h+' <span style="color:#94A3B8;font-weight:600;font-size:11.5px">('+items.length+')</span></div>'
-     +(items.length?items.map(pcard).join(''):'<div style="font-size:12px;color:#94A3B8;padding:18px 0;text-align:center">ยังไม่มีโปรฯ — กด "ให้ AI คิดโปรโมชั่น"</div>')+'</div>';};
-   $('promoGrid').innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;align-items:start">'+col('instore')+col('acquisition')+'</div>';
-   const ct=$('ct-promo');if(ct)ct.textContent=promos.length||'';
-   bind(mode);
+   if(!data||!data.ok){$('promoBar').innerHTML=bar('confirm',false);$('promoGrid').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>'+((data&&data.need_key)?'⚠️ ยังไม่ได้ตั้ง GEMINI_API_KEY':'โหลดไม่ได้: '+esc((data&&data.error)||''))+'</span></div>';bind();return;}
+   curMode=data.mode||'confirm';promosCache=(data.promos||[]).filter(p=>p.status!=='archived');render();
   }).catch(e=>{console.error('promo',e);$('promoGrid').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
  }
- function bind(mode){
-  const g=$('promoGen');if(g)g.onclick=()=>{busy=true;$('promoBar').innerHTML=bar(mode,true);
+ function bind(){
+  const g=$('promoGen');if(g)g.onclick=()=>{busy=true;$('promoBar').innerHTML=bar(curMode,true);
    sb.functions.invoke('promo_design',{body:{action:'generate'}}).then(({data})=>{busy=false;
     if(!data||!data.ok){alert((data&&data.need_key)?'ยังไม่ได้ตั้ง GEMINI_API_KEY':'AI คิดไม่สำเร็จ: '+((data&&data.error)||''));load();return;}
     load();}).catch(e=>{busy=false;alert('error: '+(e&&e.message||e));load();});};
-  const m=$('promoMode');if(m)m.onclick=()=>{const nm=mode==='auto'?'confirm':'auto';
+  const m=$('promoMode');if(m)m.onclick=()=>{const nm=curMode==='auto'?'confirm':'auto';
    if(nm==='auto'&&!confirm('เปลี่ยนเป็นโหมด "รันอัตโนมัติ"?\nโปรฯ ที่ AI คิดจะ "เปิดใช้ทันที" โดยไม่ผ่านการเคาะของคน'))return;
    sb.functions.invoke('promo_design',{body:{action:'set_mode',mode:nm}}).then(()=>load());};
   document.querySelectorAll('.promoAct').forEach(b=>b.onclick=()=>{
    sb.functions.invoke('promo_design',{body:{action:'decide',id:+b.dataset.id,status:b.dataset.st}}).then(()=>load()).catch(e=>alert('error: '+(e&&e.message||e)));});
+  document.querySelectorAll('.promoPlanBtn').forEach(b=>b.onclick=()=>{const id=+b.dataset.id;const pr=promosCache.find(x=>x.id===id);
+   if(pr&&pr.plan){if(openPlan.has(id))openPlan.delete(id);else openPlan.add(id);render();return;}
+   b.disabled=true;b.innerHTML='<i class="ti ti-loader"></i> AI กำลังวางแผน…';
+   sb.functions.invoke('promo_design',{body:{action:'plan',id:id}}).then(({data})=>{
+    if(!data||!data.ok){alert('วางแผนไม่สำเร็จ: '+((data&&data.error)||''));load();return;}
+    openPlan.add(id);load();}).catch(e=>{alert('error: '+(e&&e.message||e));load();});});
+  document.querySelectorAll('.promoReplan').forEach(b=>b.onclick=()=>{const id=+b.dataset.id;
+   if(!confirm('ให้ AI วางแผนใหม่? แผนเดิมจะถูกแทนที่'))return;
+   b.disabled=true;b.innerHTML='<i class="ti ti-loader"></i> วางแผนใหม่…';
+   const li=document.querySelector('.promoLaunch[data-id="'+id+'"]');const ld=li&&li.value?li.value:null;
+   sb.functions.invoke('promo_design',{body:Object.assign({action:'plan',id:id},ld?{launch_date:ld}:{})}).then(()=>{openPlan.add(id);load();}).catch(e=>{alert('error: '+(e&&e.message||e));load();});});
+  document.querySelectorAll('.promoLaunch').forEach(inp=>inp.onchange=()=>{const id=+inp.dataset.id;if(!inp.value)return;
+   sb.functions.invoke('promo_design',{body:{action:'set_launch',id:id,launch_date:inp.value}}).then(()=>{openPlan.add(id);load();}).catch(e=>alert('error: '+(e&&e.message||e)));});
  }
  load();
 }
