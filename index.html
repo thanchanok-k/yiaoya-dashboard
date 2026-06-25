@@ -936,6 +936,7 @@ const VIEWS_BY_ROLE={
    Today: ROLE_MAP + the view-as switcher demonstrate the behavior. */
 const ROLE_MAP={'admin@yiaoya-hub.com':'director','thanchanok.k@altmedical.info':'director'};
 let currentRole='director';
+let EFFECTIVE_VIEWS=null; /* เฟส D: สิทธิ์จริงจาก DB (role_access ∪ app_access) · null = ใช้ VIEWS_BY_ROLE เดิม (owner/ยังไม่ตั้งสิทธิ์) */
 
 /* ╔══════════════════════════════════════════════════════════════════════════╗
    ║  กฏการเพิ่มเมนูใหม่ (READ ME ก่อนเพิ่มหน้า/เมนู) — ดูเต็มที่ DASHBOARD_เพิ่มเมนูใหม่.md ║
@@ -1089,7 +1090,7 @@ function initAccordion(){
 }
 function updateNav(){
  initAccordion(); const nav=$('sbnav'); if(!nav) return;
- const allowed=VIEWS_BY_ROLE[currentRole]||ALL_VIEWS;
+ const allowed=EFFECTIVE_VIEWS||VIEWS_BY_ROLE[currentRole]||ALL_VIEWS;
  const searching=_navQ.length>0; const dStat={}, sStat={}, s2Stat={};
  nav.querySelectorAll('.sb-item').forEach(it=>{
   const dom=it.dataset.dom, sub=it.dataset.sub||'', sub2=it.dataset.sub2||'';
@@ -1135,13 +1136,36 @@ function applyRole(role){
  if(!VIEWS_BY_ROLE[role]) role='director';
  currentRole=role;
  const chip=$('sbRole'); if(chip) chip.textContent='บทบาท: '+(ROLE_TH[role]||role);
- const allowed=VIEWS_BY_ROLE[role];
+ const allowed=EFFECTIVE_VIEWS||VIEWS_BY_ROLE[role];
  // if current active view not allowed → go to role landing
  const active=document.querySelector('.view.active');
  const cur=active?active.dataset.view:null;
- if(!cur||!allowed.includes(cur)) showView(ROLE_LANDING[role]||'overview');
+ if(!cur||!allowed.includes(cur)) showView((allowed.includes(ROLE_LANDING[role])?ROLE_LANDING[role]:'overview'));
  collapseToActive();
  updateNav();
+}
+/* เฟส D — resolveAccess: คำนวณสิทธิ์เมนูจริงจาก DB ตอน login
+   effective = role_access[บทบาทของพนักงาน] ∪ app_access[employee_id/uid]
+   - owner = เห็นหมด (EFFECTIVE_VIEWS=null + ใช้ view-as ได้)
+   - ยังไม่ตั้งสิทธิ์เลย = fallback VIEWS_BY_ROLE เดิม (กันล็อกเอาท์ช่วงเปลี่ยนผ่าน) */
+async function resolveAccess(){
+ try{
+  if(!window.sb) return;
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user){ EFFECTIVE_VIEWS=null; return; }
+  const { data:st } = await sb.from('app_staff').select('role,employee_id,access_role').eq('uid',user.id).maybeSingle();
+  if(st && st.role==='owner'){ EFFECTIVE_VIEWS=null; applyRole(currentRole); return; }
+  const empId = st && st.employee_id;
+  let accessRole = st && st.access_role;
+  if(empId){ const { data:er } = await sb.from('emp_access_role').select('access_role').eq('employee_id',empId).maybeSingle(); if(er&&er.access_role) accessRole=er.access_role; }
+  const eff=new Set(['overview']);
+  if(accessRole){ const { data:ra } = await sb.from('role_access').select('view_key').eq('role_key',accessRole); (ra||[]).forEach(r=>eff.add(r.view_key)); }
+  const { data:aa } = await sb.from('app_access').select('view_key,employee_id,uid'); (aa||[]).forEach(r=>{ if((empId&&r.employee_id===empId)||r.uid===user.id) eff.add(r.view_key); });
+  if(st && st.role==='hr_director'){ eff.add('accessmgr'); eff.add('employeemgr'); } /* HR director ต้องเข้าหน้าจัดการสิทธิ์ได้ */
+  if(!accessRole && eff.size<=1){ EFFECTIVE_VIEWS=null; } /* ยังไม่ตั้งสิทธิ์ → ใช้ของเดิม */
+  else { EFFECTIVE_VIEWS=[...eff]; }
+  applyRole(currentRole);
+ }catch(e){ console.warn('resolveAccess',e); EFFECTIVE_VIEWS=null; }
 }
 
 const SYSTEMS=[
@@ -3879,6 +3903,7 @@ function start(){
    const role=lineRole||ROLE_MAP[e.toLowerCase()]||'director';
    const sel=$('viewAs'); if(sel) sel.value=role;
    applyRole(role);
+   resolveAccess(); /* เฟส D: override ด้วยสิทธิ์จริงจาก DB (ถ้ามีการตั้งสิทธิ์) */
  });
  document.querySelectorAll('.sb-item').forEach(i=>i.onclick=()=>{showView(i.dataset.view);mountPortedView(i.dataset.view);});
  // AI Approvals badge (global): นับคิว pending — RLS aq_read กรองให้เห็นเฉพาะของ role ตัวเอง + realtime เด้งสดทุกหน้า
