@@ -2036,8 +2036,8 @@ function paDetail(pid){
  if(pf){
   h+='<div style="margin-top:10px;background:#F0FDFA;border-radius:9px;padding:10px 12px">';
   h+='<div style="font-size:11px;font-weight:700;color:var(--teal-ink);margin-bottom:6px"><i class="ti ti-stethoscope"></i> ผลงานจริงจาก JERA ('+esc(pf.period||'')+')</div>';
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">'+metric('เซสชั่น',pf.sessions,'#0D9488')+metric('คนไข้',pf.patients,'#0D9488')+metric('เก็บคนไข้เก่า',pf.retention_pct+'%',pf.retention_pct>=70?'#047857':pf.retention_pct>=50?'#D97706':'#B91C1C')+metric('คนไข้ใหม่',pf.new,'#475569')+metric('No-show',pf.noshow_pct+'%',pf.noshow_pct>=15?'#B45309':'#047857')+'</div>';
-  h+='<div style="font-size:10.5px;color:var(--text-muted);margin-top:6px">เก็บคนไข้เก่า (retention) เทียบเป้าค่ามือสัญญา <b>70%</b> → '+(pf.retention_pct>=70?'<span style="color:#047857;font-weight:600">✓ ถึงเกณฑ์ ได้ค่ามือ 60/เคส</span>':'<span style="color:#B45309;font-weight:600">✗ ยังไม่ถึง (ค่ามือ 30/เคส)</span>')+'</div></div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">'+metric('เซสชั่น',pf.sessions,'#0D9488')+metric('คนไข้',pf.patients,'#0D9488')+metric('กลับมาซ้ำ',pf.retention_pct+'%',pf.retention_pct>=70?'#047857':pf.retention_pct>=50?'#D97706':'#B91C1C')+metric('คนไข้ใหม่',pf.new,'#475569')+metric('No-show',pf.noshow_pct+'%',pf.noshow_pct>=15?'#B45309':'#047857')+'</div>';
+  h+='<div style="font-size:10.5px;color:var(--text-muted);margin-top:6px">คนไข้กลับมาซ้ำ (lifetime) — สัญญาค่ามือใช้เกณฑ์ <b>รายเดือน 70%</b> (คนละนิยาม) · ใช้เทียบ stickiness ระหว่างคนในตำแหน่งเดียวกันได้</div></div>';
  }
  if(p.flags.length)h+='<div style="margin-top:10px;display:flex;flex-direction:column;gap:2px">'+p.flags.map(f=>'<div style="font-size:11.5px"><span style="color:'+SV[f.sev]+';font-weight:700">●</span> '+esc(f.text)+'</div>').join('')+'</div>';
  h+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">';
@@ -3172,12 +3172,13 @@ function mountPromo(){
   return '<div class="card" style="padding:14px 16px;margin-bottom:14px">'
    +'<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">'
    +'<div><div style="font-weight:700;color:var(--navy,#0D2F4F)">AI คิดโปรโมชั่นจากข้อมูลจริง</div>'
-   +'<div style="font-size:11px;color:var(--text-muted,#64748B);margin-top:2px">ดึง รายได้/คนไข้ใหม่รายแผนก · ช่องทาง · ฿/แชทรายแบรนด์ · ยอดขายจริง · เครื่องที่ว่าง</div></div>'
+   +'<div style="font-size:11px;color:var(--text-muted,#64748B);margin-top:2px">ดึงทุกช่องทาง · JERA (ยอด/ราคา/แผนก) + Meta/Facebook + Google + ครีเอทีฟที่ได้ผล</div></div>'
    +'<div style="display:flex;gap:8px;align-items:center">'
    +'<button id="promoMode" style="cursor:pointer;border:1px solid '+(auto?'#0F766E':'#E2E8F0')+';background:'+(auto?'#0F766E':'#fff')+';color:'+(auto?'#fff':'#64748B')+';border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700">'+(auto?'โหมด: รันอัตโนมัติ':'โหมด: ให้คนเคาะ')+'</button>'
    +'<button id="promoGen" '+(busy?'disabled':'')+' style="cursor:pointer;border:none;background:linear-gradient(135deg,#3DC5B7,#185FA5);color:#fff;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700">'+(busy?'AI กำลังคิด…':'ให้ AI คิดโปรโมชั่น')+'</button>'
    +'</div></div>'
-   +'<div style="margin-top:12px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:9px 12px;font-size:11.5px;color:#9A3412"><i class="ti ti-alert-triangle"></i> ทุกโปรฯ เป็น <b>ร่างข้อเสนอ</b> ต้องผ่านการตรวจสอบ <b>โฆษณาสถานพยาบาล</b> ก่อนเผยแพร่จริง · โหมด "รันอัตโนมัติ" = ข้ามขั้นคนเคาะ (เปิดใช้ทันที)</div>'
+   +(function(){var g=curGuard;if(!g)return '';var head='<i class="ti ti-shield-check"></i> <b>กำไรขั้นต่ำ '+Math.round((g.minMargin||0.35)*100)+'%</b>';var body=(g.ratio!=null)?(' · ต้นทุนรวม ≈ '+Math.round(g.ratio*100)+'% · margin ปัจจุบัน ≈ '+Math.round(g.marginNow*100)+'% · <b style="color:#0F766E">ลดได้สูงสุด '+Math.round(g.maxDisc*100)+'%</b>'):' · (ยังคำนวณต้นทุนไม่ได้)';return '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;padding:8px 11px;font-size:11.5px;color:#0F766E">'+head+body+'<button id="promoMargin" style="margin-left:auto;cursor:pointer;border:1px solid #99F6E4;background:#fff;color:#0F766E;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700">ตั้งค่า</button></div>';})()
+   +'<div style="margin-top:10px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:9px 12px;font-size:11.5px;color:#9A3412"><i class="ti ti-alert-triangle"></i> ทุกโปรฯ เป็น <b>ร่างข้อเสนอ</b> ต้องผ่านการตรวจสอบ <b>โฆษณาสถานพยาบาล</b> ก่อนเผยแพร่จริง · โหมด "รันอัตโนมัติ" = ข้ามขั้นคนเคาะ (เปิดใช้ทันที)</div>'
    +'</div>';
  }
  function pcard(p){
@@ -3189,7 +3190,7 @@ function mountPromo(){
    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
    +'<div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:14px;line-height:1.35">'+esc(p.title||'(ไม่มีชื่อ)')+'</div>'
    +'<span style="flex:none;background:'+st[1]+';color:#fff;border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:700">'+st[0]+'</span></div>'
-   +(function(){var pp=+p.promo_price||0,np=+p.normal_price||0;if(!pp)return fld('ti-tag','ราคา',p.price_note);return '<div style="margin-top:9px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-size:21px;font-weight:800;color:#0F766E">'+B(pp)+'</span>'+(np>pp?'<span style="font-size:13px;color:#94A3B8;text-decoration:line-through">'+B(np)+'</span><span style="font-size:11px;font-weight:700;color:#C2410C;background:#FFF7ED;border-radius:8px;padding:1px 7px">ประหยัด '+B(np-pp)+'</span>':'')+'</div>'+(p.price_note?'<div style="font-size:11px;color:#64748B;margin-top:3px">'+esc(p.price_note)+'</div>':'');})()
+   +(function(){var pp=+p.promo_price||0,np=+p.normal_price||0;if(!pp)return fld('ti-tag','ราคา',p.price_note);return '<div style="margin-top:9px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-size:21px;font-weight:800;color:#0F766E">'+B(pp)+'</span>'+(np>pp?'<span style="font-size:13px;color:#94A3B8;text-decoration:line-through">'+B(np)+'</span><span style="font-size:11px;font-weight:700;color:#C2410C;background:#FFF7ED;border-radius:8px;padding:1px 7px">ประหยัด '+B(np-pp)+'</span>':'')+(p.margin_pct!=null?'<span title="กำไรหลังหักต้นทุนรวม" style="font-size:11px;font-weight:700;border-radius:8px;padding:1px 7px;'+(+p.margin_pct>=0.35?'color:#0F766E;background:#ECFDF5':'color:#B91C1C;background:#FEF2F2')+'">margin '+Math.round(+p.margin_pct*100)+'%</span>':'')+'</div>'+(p.price_note?'<div style="font-size:11px;color:#64748B;margin-top:3px">'+esc(p.price_note)+'</div>':'');})()
    +fld('ti-users','กลุ่มเป้าหมาย',p.target)
    +fld('ti-gift','กลไก',p.mechanic)
    +(p.rationale?'<div style="margin-top:8px;background:#F0FDFA;border-radius:7px;padding:8px 10px;font-size:11.5px;color:#0F766E;line-height:1.55"><b>เหตุผล (อิงตัวเลขจริง):</b> '+esc(p.rationale)+'</div>':'')
@@ -3269,7 +3270,7 @@ function mountPromo(){
    h+='</div>';}
   return h+'</div>';
  }
- let busy=false,curMode='confirm',promosCache=[];const openPlan=new Set();
+ let busy=false,curMode='confirm',promosCache=[],curGuard=null;const openPlan=new Set();
  function pcard2(p){
   const hasPlan=!!p.plan,open=openPlan.has(p.id);
   const planBtn='<button class="promoPlanBtn" data-id="'+p.id+'" style="cursor:pointer;border:1px solid #185FA5;background:'+(hasPlan?'#fff':'#185FA5')+';color:'+(hasPlan?'#185FA5':'#fff')+';border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:700"><i class="ti ti-clipboard-list"></i> '+(hasPlan?(open?'ซ่อนแผน':'ดูแผนลงมือ'):'วางแผนลงมือ')+'</button>';
@@ -3289,7 +3290,7 @@ function mountPromo(){
   $('promoGrid').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลด…</span></div>';
   sb.functions.invoke('promo_design',{body:{action:'list'}}).then(({data})=>{
    if(!data||!data.ok){$('promoBar').innerHTML=bar('confirm',false);$('promoGrid').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>'+((data&&data.need_key)?'⚠️ ยังไม่ได้ตั้ง GEMINI_API_KEY':'โหลดไม่ได้: '+esc((data&&data.error)||''))+'</span></div>';bind();return;}
-   curMode=data.mode||'confirm';promosCache=(data.promos||[]).filter(p=>p.status!=='archived');render();
+   curMode=data.mode||'confirm';curGuard=data.guard||null;promosCache=(data.promos||[]).filter(p=>p.status!=='archived');render();
   }).catch(e=>{console.error('promo',e);$('promoGrid').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
  }
  function bind(){
@@ -3300,6 +3301,15 @@ function mountPromo(){
   const m=$('promoMode');if(m)m.onclick=()=>{const nm=curMode==='auto'?'confirm':'auto';
    if(nm==='auto'&&!confirm('เปลี่ยนเป็นโหมด "รันอัตโนมัติ"?\nโปรฯ ที่ AI คิดจะ "เปิดใช้ทันที" โดยไม่ผ่านการเคาะของคน'))return;
    sb.functions.invoke('promo_design',{body:{action:'set_mode',mode:nm}}).then(()=>load());};
+  const mg=$('promoMargin');if(mg)mg.onclick=()=>{
+   const g=curGuard||{};
+   const mmIn=prompt('กำไรขั้นต่ำที่ต้องคง (%) หลังหักต้นทุนทั้งหมด',String(Math.round((g.minMargin||0.35)*100)));
+   if(mmIn===null)return;const mm=Math.max(0,Math.min(90,+String(mmIn).replace(/[^0-9.]/g,'')||0))/100;
+   const curCr=(g.ratio!=null&&g.override)?String(Math.round(g.ratio*100)):'';
+   const crIn=prompt('ต้นทุนรวม (% ของราคา) — เว้นว่าง = ให้ระบบคำนวณจากการเงินจริง (payroll+เช่า+OPEX+แอด ÷ รายได้)',curCr);
+   if(crIn===null)return;const crStr=String(crIn).replace(/[^0-9.]/g,'');
+   const body={action:'set_margin',min_margin:mm};body.cost_ratio=crStr===''?null:(Math.max(0,Math.min(99,+crStr||0))/100);
+   sb.functions.invoke('promo_design',{body}).then(()=>load()).catch(e=>alert('error: '+(e&&e.message||e)));};
   document.querySelectorAll('.promoAct').forEach(b=>b.onclick=()=>{
    sb.functions.invoke('promo_design',{body:{action:'decide',id:+b.dataset.id,status:b.dataset.st}}).then(()=>load()).catch(e=>alert('error: '+(e&&e.message||e)));});
   document.querySelectorAll('.promoPlanBtn').forEach(b=>b.onclick=()=>{const id=+b.dataset.id;const pr=promosCache.find(x=>x.id===id);
