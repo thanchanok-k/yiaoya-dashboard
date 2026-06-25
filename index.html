@@ -3728,7 +3728,7 @@ const CN_DATA_MOCK=[
  {id:17,title:'ป้ายโปรโมชั่นเดือนเมษายน',dept:'Hybrid',fmt:'Photo',topic:'Campaign/Seasonal',who:'ครีม',col:'ผ่านการรีวิว'},
  {id:18,title:'แม่คุณเอมี่ EP.2',dept:'กระดูกและข้อ',fmt:'Video',topic:'influencer',who:'แยม',col:'โพสเรียบร้อย',eng:15.1}
 ];
-const CN_KPI=[
+const CN_KPI_MOCK=[
  {who:'แยม',o:22,w:23,d:18,q:13,p:13},
  {who:'ตอง',o:20,w:22,d:17,q:14,p:13},
  {who:'แฟร์',o:21,w:20,d:19,q:12,p:12},
@@ -3744,7 +3744,7 @@ const CN_PROMO_MOCK=[
  {id:'CRS-PT-YY-0310-P',n:'Yiaoya Relief 10 (YY10)',dept:'กายภาพ',price:13500,tier:'T3',target:23,est:310500,lead:false,st:'อนุมัติแล้ว'},
  {id:'CRS-HYB-PTP-M3',n:'YY5 + PL5 (Hybrid)',dept:'Hybrid',price:15900,tier:'T1',target:10,est:159000,lead:false,st:'รอ CEO'}
 ];
-const CN_INFLU=[
+const CN_INFLU_MOCK=[
  {n:'คุณเอมี่ (แม่)',dept:'กระดูกและข้อ',ch:'TikTok',followers:'128K',rate:8000,quota:2,who:'แยม',st:'โพสต์แล้ว EP.1-2'},
  {n:'คุณมายด์',dept:'กายภาพ',ch:'IG',followers:'56K',rate:5000,quota:1,who:'แยม',st:'กำลังตัดต่อ'},
  {n:'คุณชมพู่',dept:'กายภาพ',ch:'TikTok',followers:'210K',rate:12000,quota:1,who:'ตอง',st:'ออนแอร์'},
@@ -3767,6 +3767,8 @@ function cnNorm(p){ p.col=p.status||p.col; if(p.publish_date)p.date=String(p.pub
 function cnDATA(){ return cnGet('pieces', CN_DATA_MOCK); }
 function cnPROMO(){ var a=CN_LIVE&&CN_LIVE.promo; if(a&&a.length) return a.map(function(p){return {id:p.promo_id,n:p.name,dept:p.dept,price:+p.price||0,tier:p.tier||'',target:+p.target_cases||0,est:+p.est_revenue||0,lead:(p.is_lead===true||p.is_lead==='true'),st:p.approval_status||''};}); return CN_PROMO_MOCK; }
 function cnCHECKIN(){ var a=CN_LIVE&&CN_LIVE.checkin; if(a&&a.length){ var latest=null; a.forEach(function(x){ if(!latest||String(x.log_date)>String(latest))latest=x.log_date; }); return a.filter(function(x){return x.log_date===latest;}).map(function(x){return {who:x.who,inT:(x.checkin_time||'-'),punc:(x.punctuality||''),plan:(x.plan||''),eod:(+x.eod_pct||0)};}); } return CN_CHECKIN_MOCK; }
+function cnKPI(){ var a=CN_LIVE&&CN_LIVE.kpi; if(a&&a.length) return a.map(function(k){return {who:k.who,o:+k.output||0,w:+k.weighted||0,d:+k.discipline||0,q:+k.quality||0,p:+k.platform||0};}); return CN_KPI_MOCK; }
+function cnINFLU(){ var a=CN_LIVE&&CN_LIVE.influencer; if(a&&a.length) return a.map(function(x){return {n:x.name,dept:x.dept||'',ch:x.channel||'',followers:x.followers||'',rate:+x.rate||0,quota:+x.quota||0,who:x.who||'',st:x.status||''};}); return CN_INFLU_MOCK; }
 function cnBRIEF(){ var a=CN_LIVE&&CN_LIVE.brief; if(a&&a.length){ var s2=a.slice().sort(function(x,y){return String(y.brief_date).localeCompare(String(x.brief_date));}); var b=s2[0]; return {date:String(b.brief_date).slice(0,10),lead:(b.lead||'-'),present:(b.present||[]),absent:(b.absent||[]),highlight:(b.highlight||[]),deadline:(b.deadline||[]),remind:(b.remind||[])}; } return CN_BRIEF_MOCK; }
 function cnLoadLive(){ try{ if(typeof sb==='undefined')return; }catch(e){ return; }
   sb.functions.invoke('content_list',{body:{}}).then(function(r){ if(r&&r.data&&!r.error){ CN_LIVE=r.data; if(CN_LIVE.pieces)CN_LIVE.pieces.forEach(cnNorm);
@@ -3870,7 +3872,7 @@ function mountCnCampaign(){const w=$('cnCampaignWrap');if(!w)return;
 
 function mountCnKpi(){const w=$('cnKpiWrap');if(!w)return;
  const grade=(t)=>t>=90?['S','#047857']:t>=80?['A','#0F766E']:t>=70?['B','#185FA5']:t>=60?['C','#B45309']:['D','#B91C1C'];
- const rows=CN_KPI.map(k=>{const tot=k.o+k.w+k.d+k.q+k.p;return {...k,tot,g:grade(tot)};}).sort((a,b)=>b.tot-a.tot);
+ const rows=cnKPI().map(k=>{const tot=k.o+k.w+k.d+k.q+k.p;return {...k,tot,g:grade(tot)};}).sort((a,b)=>b.tot-a.tot);
  const avg=Math.round(rows.reduce((a,r)=>a+r.tot,0)/rows.length);
  const dim=(label,v,max)=>{const pct=Math.round(v/max*100);const col=pct>=80?'#047857':pct>=60?'#B45309':'#B91C1C';return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:var(--text-muted,#64748B)">'+label+'</span><span style="font-weight:700;color:'+col+'">'+v+'/'+max+'</span></div><div style="height:6px;background:#EEF2F6;border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+col+'"></div></div></div>';};
  let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px">'+_cnSc(rows.length,'ครีเอเตอร์')+_cnSc(avg+'%','คะแนนเฉลี่ย','#0F766E')+_cnSc(rows[0].who,'Top performer','#047857')+'</div>';
@@ -3898,9 +3900,9 @@ function mountCnHighlight(){const w=$('cnHighlightWrap');if(!w)return;
  w.innerHTML=h;_cnBind(w);_cnSetCt('cnhighlight',hi.filter(x=>x.eng>=10).length);}
 
 function mountCnInflu(){const w=$('cnInfluWrap');if(!w)return;
- let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(CN_INFLU.length,'อินฟลูที่ดีลอยู่')+_cnSc('฿'+CN_INFLU.reduce((a,x)=>a+x.rate,0).toLocaleString(),'ค่าตัวรวม','#0F766E')+'<div style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:center"><button data-cnact="ลงทะเบียนอินฟลูใหม่" style="background:#3DC5B7;color:#04342C;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มอินฟลู</button></div></div>';
- h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">'+CN_INFLU.map(x=>'<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(x.n)+'</div>'+_cnDept(x.dept)+'</div><div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">'+_cnPlat(x.ch)+'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-users"></i> '+esc(x.followers)+'</span></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted,#64748B);border-top:1px solid var(--border,#E2E8F0);padding-top:8px"><span>ค่าตัว ฿'+x.rate.toLocaleString()+' · โควตา '+x.quota+'</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span style="font-size:11px;color:#0F766E;background:#E1F5EE;padding:2px 8px;border-radius:10px">'+esc(x.st)+'</span>'+_cnWho(x.who)+'</div></div>').join('')+'</div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cninflu',CN_INFLU.length);}
+ let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(cnINFLU().length,'อินฟลูที่ดีลอยู่')+_cnSc('฿'+cnINFLU().reduce((a,x)=>a+x.rate,0).toLocaleString(),'ค่าตัวรวม','#0F766E')+'<div style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:center"><button data-cnact="ลงทะเบียนอินฟลูใหม่" style="background:#3DC5B7;color:#04342C;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มอินฟลู</button></div></div>';
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">'+cnINFLU().map(x=>'<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(x.n)+'</div>'+_cnDept(x.dept)+'</div><div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">'+_cnPlat(x.ch)+'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-users"></i> '+esc(x.followers)+'</span></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted,#64748B);border-top:1px solid var(--border,#E2E8F0);padding-top:8px"><span>ค่าตัว ฿'+x.rate.toLocaleString()+' · โควตา '+x.quota+'</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span style="font-size:11px;color:#0F766E;background:#E1F5EE;padding:2px 8px;border-radius:10px">'+esc(x.st)+'</span>'+_cnWho(x.who)+'</div></div>').join('')+'</div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cninflu',cnINFLU().length);}
 
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
