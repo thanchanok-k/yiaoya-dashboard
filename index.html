@@ -1887,16 +1887,16 @@ async function mountPeopleAi(){
   +'<div class="note"><i class="ti ti-shield-lock ni"></i><div><b>เฉพาะผู้บริหาร</b> · วิเคราะห์ความครบถ้วน/ช่องโหว่สัญญา + red alert + จังหวะขอขึ้นเงินเดือน · <b>PDPA:</b> AI เห็นเป็นรหัส (P01..) ไม่เห็นชื่อ/เงินเดือน</div></div>'
   +'<div style="margin:6px 0 10px"><button id="paRun" style="background:var(--navy);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit"><i class="ti ti-refresh"></i> วิเคราะห์ใหม่</button> <span id="paAt" style="font-size:11px;color:var(--text-muted)"></span></div>'
   +'<div id="paBody"><div style="padding:30px;color:#94A3B8">กดวิเคราะห์…</div></div>';
- $('paRun').onclick=paRun; paRun();
+ $('paRun').onclick=()=>paRun(true); paRun(false);
 }
-async function paRun(){
+async function paRun(fresh){
  const b=$('paBody'); if(!b)return;
- b.innerHTML='<div style="padding:30px;color:#94A3B8"><i class="ti ti-loader"></i> กำลังวิเคราะห์ '+'47 สัญญา…</div>';
+ b.innerHTML='<div style="padding:30px;color:#94A3B8"><i class="ti ti-loader"></i> '+(fresh?'กำลังวิเคราะห์ด้วย AI (ใช้ token)…':'กำลังโหลด…')+'</div>';
  try{
-  const {data,error}=await sb.functions.invoke('hr_people_ai',{body:{}});
+  const {data,error}=await sb.functions.invoke('hr_people_ai',{body:fresh?{action:'refresh'}:{}});
   if(error||!data||!data.ok){b.innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>วิเคราะห์ไม่สำเร็จ</span></div>';return;}
   const s=data.stats||{}, ppl=data.people||[];
-  if($('paAt'))$('paAt').textContent='อัปเดต '+String(data.generated_at||'').slice(0,16).replace('T',' ');
+  if($('paAt'))$('paAt').textContent=data.ai_generated_at?('AI สรุปเมื่อ '+String(data.ai_generated_at).slice(0,16).replace('T',' ')+(data.cached?' · แคช':' · ใหม่')):'';
   let h=statHero([
    {eyebrow:'ครบถ้วนเฉลี่ย',big:s.avg_completeness+'%',unit:'',sub:s.total+' สัญญา',tone:'navy'},
    {eyebrow:'RED ALERT',big:(s.high+s.med),unit:'คน',sub:'HIGH '+s.high+' · MED '+s.med,tone:s.high?'amber':'info'},
@@ -1904,9 +1904,9 @@ async function paRun(){
    {eyebrow:'ไม่ครบ <70%',big:s.incomplete,unit:'คน',sub:'ต่อรอง '+s.negotiated,tone:''},
   ]);
   // AI narrative
-  h+='<div class="card" style="padding:16px;margin-top:12px;border-left:3px solid var(--teal)"><div style="font-weight:700;color:var(--navy);margin-bottom:4px"><i class="ti ti-sparkles" style="color:var(--teal)"></i> สรุปเชิงบริหาร (AI)</div>';
+  h+='<div class="card" style="padding:16px;margin-top:12px;border-left:3px solid var(--teal)"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap"><div style="font-weight:700;color:var(--navy)"><i class="ti ti-sparkles" style="color:var(--teal)"></i> สรุปเชิงบริหาร (AI)</div>'+(data.ai_analysis?'<span style="font-size:10.5px;color:var(--text-muted)">'+(data.cached?'แคช · ':'')+'กด “วิเคราะห์ใหม่” เพื่ออัปเดต</span>':'')+'</div>';
   if(data.ai_analysis)h+=paMd(data.ai_analysis);
-  else h+='<div style="font-size:12px;color:#B45309;background:#FFFBEB;border-radius:8px;padding:10px 12px;line-height:1.6">ยังไม่เปิดสรุป AI — ตั้ง <b>GEMINI_API_KEY</b> ใน Supabase secrets ก่อน ('+esc(data.ai_error||'')+')<br>ระบบยังวิเคราะห์ rule-based (ด้านล่าง) ได้ครบโดยไม่ต้องใช้ AI</div>';
+  else if(data.ai_error)h+='<div style="font-size:12px;color:#B45309;background:#FFFBEB;border-radius:8px;padding:10px 12px;line-height:1.6">เปิดสรุป AI ไม่ได้: '+esc(data.ai_error)+'<br>ระบบยังวิเคราะห์ rule-based (ด้านล่าง) ได้ครบ</div>'; else h+='<div style="font-size:12px;color:var(--text-muted);background:#F8FAFC;border-radius:8px;padding:10px 12px;line-height:1.6">ยังไม่เคยวิเคราะห์ด้วย AI — กด <b>“วิเคราะห์ใหม่”</b> 1 ครั้ง (ใช้ token แล้วเก็บผลไว้ · ครั้งต่อไปไม่เปลือง)</div>';
   h+='</div>';
   // Red alerts
   const alerts=ppl.filter(p=>p.topSev==='HIGH'||p.topSev==='MED').sort((a,b)=>(a.topSev==='HIGH'?0:1)-(b.topSev==='HIGH'?0:1));
