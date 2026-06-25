@@ -295,6 +295,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="puractivity"><i class="ti ti-history"></i>บันทึกกิจกรรม<span class="ct" id="ct-puractivity"></span></div>
       <div class="sb-label">ผู้บริหาร · HQ</div>
       <div class="sb-item" data-view="aihq"><i class="ti ti-brain"></i>AI วิเคราะห์<span class="ct" id="ct-aihq"></span></div>
+      <div class="sb-item" data-view="peopleai"><i class="ti ti-user-search"></i>วิเคราะห์คน · AI<span class="ct" id="ct-peopleai"></span></div>
       <div class="sb-label">ภาพรวม 360°</div>
       <div class="sb-item" data-view="hub360"><i class="ti ti-layers-intersect"></i>ทุกข้อมูลเชื่อมกัน<span class="ct" id="ct-hub360"></span></div>
       <div class="sb-label">คลินิก · แผนก</div>
@@ -736,6 +737,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
     <section class="view" data-view="puritem"><div class="sec"><span class="sec-bar"></span>สินค้า + ประวัติราคา<span class="sec-c">Native Supabase · pur_item</span></div><div id="wrap-puritem"></div></section>
     <section class="view" data-view="purrfq"><div class="sec"><span class="sec-bar"></span>เทียบราคา (RFQ)<span class="sec-c">Native Supabase · pur_rfq</span></div><div id="wrap-purrfq"></div></section>
     <section class="view" data-view="purstock"><div class="sec"><span class="sec-bar"></span>สต็อก (คงเหลือ / รับเข้า / เบิก / โอน / นับ)<span class="sec-c">Native Supabase · pur_stock</span></div><div id="wrap-purstock"></div></section>
+    <section class="view" data-view="peopleai"><div id="paWrap"><div style="padding:30px;color:#94A3B8">กำลังโหลด…</div></div></section>
     <section class="view" data-view="aihq">
       <div class="sec"><span class="sec-bar"></span>AI วิเคราะห์ · HQ<span class="sec-c">เฉพาะผู้บริหาร · ตอบนิ่งจากข้อมูลจริง</span></div>
       <div id="aihqWrap"></div>
@@ -878,7 +880,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',fosales:'ยอดขายหน้าร้าน',roomutil:'การใช้ห้อง & คอร์สค้าง',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',payterms:'สัญญา/ค่าจ้างรายคน',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',promo:'ออกแบบโปรโมชั่น',cnplan:'ปฏิทินคอนเทนต์',cnboard:'กระดานผลิต (Kanban)',cndraft:'สร้าง · ดราฟต์ · อัปโหลด',cnreview:'คิวรีวิว · อนุมัติ',cnqueue:'คิวโพสต์',cncampaign:'แคมเปญ · โปรโมชั่น',cnkpi:'KPI ทีมคอนเทนต์',cnmonthly:'สรุปผลงานรายเดือน',cnhighlight:'คอนเทนต์ Highlight',dept:'รายได้ตามแผนก',aisettings:'AI Settings · ตั้งค่าออโต้',aiapprovals:'AI Approvals · คิวอนุมัติ',equipment:'ยืม-คืนอุปกรณ์',compliance:'Compliance ประจำปี',scorecard:'สกอร์การ์ดหมอ',welfare:'สวัสดิการพนักงาน',dfschedule:'ตาราง DF หมอ',legal:'แฟ้มคดี/กฎหมาย',contracts:'สัญญาจ้าง'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',fosales:'ยอดขายหน้าร้าน',roomutil:'การใช้ห้อง & คอร์สค้าง',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',payterms:'สัญญา/ค่าจ้างรายคน',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',peopleai:'วิเคราะห์คน · AI',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',promo:'ออกแบบโปรโมชั่น',cnplan:'ปฏิทินคอนเทนต์',cnboard:'กระดานผลิต (Kanban)',cndraft:'สร้าง · ดราฟต์ · อัปโหลด',cnreview:'คิวรีวิว · อนุมัติ',cnqueue:'คิวโพสต์',cncampaign:'แคมเปญ · โปรโมชั่น',cnkpi:'KPI ทีมคอนเทนต์',cnmonthly:'สรุปผลงานรายเดือน',cnhighlight:'คอนเทนต์ Highlight',dept:'รายได้ตามแผนก',aisettings:'AI Settings · ตั้งค่าออโต้',aiapprovals:'AI Approvals · คิวอนุมัติ',equipment:'ยืม-คืนอุปกรณ์',compliance:'Compliance ประจำปี',scorecard:'สกอร์การ์ดหมอ',welfare:'สวัสดิการพนักงาน',dfschedule:'ตาราง DF หมอ',legal:'แฟ้มคดี/กฎหมาย',contracts:'สัญญาจ้าง'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -949,7 +951,7 @@ const NAV_TREE=[
      {label:'รีวิวผลงาน', views:['cnkpi','cnmonthly','cnhighlight']},
    ]},
  ]},
- {label:'ผู้บริหาร · HQ', views:['fosales','roomutil','scorecard','aihq','hub360','dept','expansion']},
+ {label:'ผู้บริหาร · HQ', views:['fosales','roomutil','scorecard','aihq','peopleai','hub360','dept','expansion']},
    {label:'ลับ · HQ (เฉพาะผู้บริหาร)', views:['legal','contracts']},
  /* AI Operator — ตั้งค่า toggle/automation + คิวอนุมัติงาน AI (control plane 30_ai_operator.sql) */
  {label:'AI Operator', views:['aisettings','aiapprovals']},
@@ -1864,6 +1866,70 @@ async function ptDownloadLog(){
  const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
  a.download='ประวัติแก้ไขค่าจ้าง_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+}
+
+function paMd(t){
+ return String(t||'').split('\n').map(ln=>{ln=esc(ln.trim()); if(!ln)return'';
+  let m=ln.match(/^\*\*(.+?)\*\*$/); if(m)return'<div style="font-weight:700;color:var(--navy);margin:13px 0 5px;font-size:13px">'+m[1]+'</div>';
+  ln=ln.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+  if(/^[-•*]\s+/.test(ln))return'<div style="display:flex;gap:7px;margin:3px 0;font-size:12.5px;line-height:1.55"><span style="color:var(--teal)">•</span><span>'+ln.replace(/^[-•*]\s+/,'')+'</span></div>';
+  return'<div style="font-size:12.5px;line-height:1.6;margin:2px 0">'+ln+'</div>';
+ }).join('');
+}
+const PA_SEV={HIGH:['#B91C1C','#FEF2F2','เร่งด่วน'],MED:['#B45309','#FFFBEB','เฝ้าระวัง'],INFO:['#475569','#F1F5F9','ข้อสังเกต'],OK:['#047857','#ECFDF5','ปกติ']};
+async function mountPeopleAi(){
+ const w=$('paWrap'); if(!w)return;
+ w.innerHTML='<div class="sec"><span class="sec-bar"></span>วิเคราะห์คน · AI<span class="sec-c">ผู้บริหาร · Edge Function hr_people_ai</span></div>'
+  +'<div class="note"><i class="ti ti-shield-lock ni"></i><div><b>เฉพาะผู้บริหาร</b> · วิเคราะห์ความครบถ้วน/ช่องโหว่สัญญา + red alert + จังหวะขอขึ้นเงินเดือน · <b>PDPA:</b> AI เห็นเป็นรหัส (P01..) ไม่เห็นชื่อ/เงินเดือน</div></div>'
+  +'<div style="margin:6px 0 10px"><button id="paRun" style="background:var(--navy);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit"><i class="ti ti-refresh"></i> วิเคราะห์ใหม่</button> <span id="paAt" style="font-size:11px;color:var(--text-muted)"></span></div>'
+  +'<div id="paBody"><div style="padding:30px;color:#94A3B8">กดวิเคราะห์…</div></div>';
+ $('paRun').onclick=paRun; paRun();
+}
+async function paRun(){
+ const b=$('paBody'); if(!b)return;
+ b.innerHTML='<div style="padding:30px;color:#94A3B8"><i class="ti ti-loader"></i> กำลังวิเคราะห์ '+'47 สัญญา…</div>';
+ try{
+  const {data,error}=await sb.functions.invoke('hr_people_ai',{body:{}});
+  if(error||!data||!data.ok){b.innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>วิเคราะห์ไม่สำเร็จ</span></div>';return;}
+  const s=data.stats||{}, ppl=data.people||[];
+  if($('paAt'))$('paAt').textContent='อัปเดต '+String(data.generated_at||'').slice(0,16).replace('T',' ');
+  let h=statHero([
+   {eyebrow:'ครบถ้วนเฉลี่ย',big:s.avg_completeness+'%',unit:'',sub:s.total+' สัญญา',tone:'navy'},
+   {eyebrow:'RED ALERT',big:(s.high+s.med),unit:'คน',sub:'HIGH '+s.high+' · MED '+s.med,tone:s.high?'amber':'info'},
+   {eyebrow:'สัญญาดิ้นได้',big:s.flex,unit:'คน',sub:'มีช่องโหว่',tone:''},
+   {eyebrow:'ไม่ครบ <70%',big:s.incomplete,unit:'คน',sub:'ต่อรอง '+s.negotiated,tone:''},
+  ]);
+  // AI narrative
+  h+='<div class="card" style="padding:16px;margin-top:12px;border-left:3px solid var(--teal)"><div style="font-weight:700;color:var(--navy);margin-bottom:4px"><i class="ti ti-sparkles" style="color:var(--teal)"></i> สรุปเชิงบริหาร (AI)</div>';
+  if(data.ai_analysis)h+=paMd(data.ai_analysis);
+  else h+='<div style="font-size:12px;color:#B45309;background:#FFFBEB;border-radius:8px;padding:10px 12px;line-height:1.6">ยังไม่เปิดสรุป AI — ตั้ง <b>GEMINI_API_KEY</b> ใน Supabase secrets ก่อน ('+esc(data.ai_error||'')+')<br>ระบบยังวิเคราะห์ rule-based (ด้านล่าง) ได้ครบโดยไม่ต้องใช้ AI</div>';
+  h+='</div>';
+  // Red alerts
+  const alerts=ppl.filter(p=>p.topSev==='HIGH'||p.topSev==='MED').sort((a,b)=>(a.topSev==='HIGH'?0:1)-(b.topSev==='HIGH'?0:1));
+  h+='<div style="font-weight:700;color:var(--navy);font-size:13px;margin:16px 0 8px"><i class="ti ti-alert-triangle" style="color:#B45309"></i> Red Alert ('+alerts.length+')</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px">';
+  alerts.forEach(p=>{const sv=PA_SEV[p.topSev];
+   h+='<div class="card" style="padding:13px;border-left:3px solid '+sv[0]+'">';
+   h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div><div style="font-weight:600;color:var(--navy);font-size:13px">'+esc(p.full_name)+'</div><div style="font-size:11px;color:var(--text-muted)">'+esc(p.position||'')+' · '+esc(p.employment_type)+'</div></div><span style="background:'+sv[1]+';color:'+sv[0]+';font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap">'+sv[2]+'</span></div>';
+   h+='<div style="margin-top:7px;display:flex;flex-direction:column;gap:3px">'+p.flags.map(f=>'<div style="font-size:11.5px"><span style="color:'+PA_SEV[f.sev][0]+';font-weight:700">●</span> '+esc(f.text)+'</div>').join('')+'</div>';
+   if(p.flex.length)h+='<div style="margin-top:6px;font-size:10.5px;color:var(--text-muted);line-height:1.5"><b>ดิ้นได้:</b> '+esc(p.flex.join(' · '))+'</div>';
+   h+='<div style="margin-top:7px;display:flex;align-items:center;gap:7px"><div style="flex:1;height:5px;background:#EEF2F6;border-radius:3px;overflow:hidden"><div style="height:100%;width:'+p.completeness+'%;background:'+(p.completeness>=70?'#0D9488':'#D97706')+'"></div></div><span style="font-size:10.5px;color:var(--text-muted)">ครบ '+p.completeness+'%</span></div>';
+   h+='</div>';
+  });
+  h+='</div>';
+  // Integrity (all, worst first)
+  h+='<div style="font-weight:700;color:var(--navy);font-size:13px;margin:18px 0 8px"><i class="ti ti-file-check" style="color:var(--teal-ink)"></i> ความครบถ้วนสัญญา (เรียงน้อย→มาก)</div>';
+  h+='<div class="card" style="padding:4px 0">';
+  ppl.slice().sort((a,b)=>a.completeness-b.completeness).forEach(p=>{
+   h+='<div style="display:flex;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid var(--border)">';
+   h+='<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.full_name)+(p.negotiated?' <span style="color:#B45309;font-size:9px">★ต่อรอง</span>':'')+'</div><div style="font-size:10.5px;color:var(--text-muted)">'+(p.gaps.length?'ขาด: '+esc(p.gaps.join(', ')):'ครบถ้วน')+(p.flex.length?' · ดิ้น '+p.flex.length:'')+'</div></div>';
+   h+='<div style="width:110px;height:6px;background:#EEF2F6;border-radius:3px;overflow:hidden"><div style="height:100%;width:'+p.completeness+'%;background:'+(p.completeness>=85?'#0D9488':p.completeness>=70?'#3DC5B7':'#D97706')+'"></div></div>';
+   h+='<span style="font-size:11px;font-weight:600;color:var(--text-muted);width:34px;text-align:right">'+p.completeness+'%</span>';
+   h+='</div>';
+  });
+  h+='</div>';
+  b.innerHTML=h;
+ }catch(e){ console.error('peopleai',e); b.innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>เกิดข้อผิดพลาด</span></div>'; }
 }
 
 async function loadPayset(){
@@ -3592,7 +3658,7 @@ function start(){
  renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
  renderBankTabs(); $('bkPeriod').value=_curMonth(); $('bkGen').onclick=bkGenerate; $('bkCsv').onclick=bkDownloadCsv; loadBankHistory();
  if($('rcDate')&&!$('rcDate').value)$('rcDate').value=new Date().toISOString().slice(0,10); $('rcGen').onclick=rcGenerate;
- mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountPromo();mountDept();mountMkt();mountHub360();mountExpansion();mountAiHQ();mountCnPlan();mountCnBoard();mountCnDraft();mountCnReview();mountCnQueue();mountCnCampaign();mountCnKpi();mountCnMonthly();mountCnHighlight();
+ mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountPromo();mountDept();mountMkt();mountHub360();mountExpansion();mountAiHQ();mountPeopleAi();mountCnPlan();mountCnBoard();mountCnDraft();mountCnReview();mountCnQueue();mountCnCampaign();mountCnKpi();mountCnMonthly();mountCnHighlight();
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
