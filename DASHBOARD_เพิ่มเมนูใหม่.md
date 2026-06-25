@@ -21,6 +21,27 @@
 | 8 | `PORTED_WRAP` | `X:'wrap-X'` |
 | + | ใน section ใส่ `<div id="wrap-X"></div>` และไฟล์ `_ported/X.js` ต้องมี `window.mountX=...` |
 
+## ★ จุดที่ 9 (บังคับทุกครั้ง) — อัปเดต "ระบบสิทธิ์" menu_registry
+
+> เพิ่ม/แก้/ลบเมนูในหน้าจอ **ต้องอัปเดต `menu_registry` ตามด้วยเสมอ** ไม่งั้นเมนูใหม่จะหลุดออกนอกการคุมสิทธิ์ (HR director จะมองไม่เห็นให้จัด / กรองสิทธิ์ไม่ได้)
+
+| # | จุด | ทำอะไร |
+|---|---|---|
+| 9 | **menu_registry** (Supabase) | เพิ่ม/แก้/ลบแถวใน `00 Integration Hub/20_Supabase/32_access_control.sql` แล้ว**รันบน Supabase** |
+
+รูปแบบแถว: `('X','ชื่อเมนู','domain',owner_reserved,sensitive,sort_order)`
+- `domain`: `hr` · `acc` · `purchase` · `content` · `exec` · `system` · `ai`
+- `owner_reserved` = `true` ถ้าเป็น **AI / เงิน / คดี / ข้อมูล sensitive** → เฉพาะ owner กำหนดสิทธิ์ได้ (HR director ห้ามแตะ)
+- `sensitive` = `true` ถ้าเป็น **PII / ความลับ** (ขึ้นป้าย PDPA)
+
+วิธีรันบน prod (CLI authed+linked `yiaoya-hub`):
+```bash
+cd "00 Integration Hub/20_Supabase"
+supabase db query --linked -f 32_access_control.sql   # idempotent: on conflict do update
+```
+**ตัวเช็คอัตโนมัติ:** เปิดหน้า (login แล้ว) → Console ต้องขึ้น `[navAudit:สิทธิ์] เมนูครบใน menu_registry ✓` ·
+ถ้าขึ้น **สีแดง** = มีเมนูยังไม่อยู่ใน registry ตามชื่อที่บอก → ไปเติมจุดที่ 9
+
 ## โครงเมนู 3 ชั้น (NAV_TREE)
 - โครง: **โดเมน → (sub-category) → เมนู**
 - โดเมนที่เมนูเยอะ+หลายประเภท (เช่น HR) ใส่ `subs:[{label,views}]` → ได้หมวดย่อยซ้อน (คลิกยุบ/ขยาย 2 ชั้น)

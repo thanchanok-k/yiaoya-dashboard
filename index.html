@@ -949,6 +949,12 @@ let currentRole='director';
    ║ ถ้าเป็น ported page (โหลดจาก _ported/X.js) เพิ่มอีก 3 จุด:                     ║
    ║  6. PORTED_FN.X='mountX'  7. PORTED_SCRIPT.X='_ported/X.js'  8. PORTED_WRAP.X='wrap-X' ║
    ║  + ใน section ใส่ <div id="wrap-X"></div> และไฟล์ _ported/X.js มี window.mountX ║
+   ╠══════════════════════════════════════════════════════════════════════════╣
+   ║ ★ ทุกเมนู เพิ่ม/แก้/ลบ ต้องอัปเดต "ระบบสิทธิ์" (menu_registry) ด้วยเสมอ:        ║
+   ║  9. เพิ่ม/แก้แถวใน 00 Integration Hub/20_Supabase/32_access_control.sql →       ║
+   ║     ('X','ชื่อ','domain',owner_reserved,sensitive,order)  แล้วรันบน Supabase    ║
+   ║     owner_reserved=true ถ้าเป็น AI/เงิน/คดี/ข้อมูล sensitive (HR director ห้ามแตะ)║
+   ║  → navAudit() จะเตือน "สีแดง" ถ้าเมนูยังไม่อยู่ใน menu_registry (เปิด Console ดู)  ║
    ╚══════════════════════════════════════════════════════════════════════════╝
    buildNav() จัดเรียงตาม NAV_GROUPS ตอน runtime (reuse element เดิม คงไอคอน/onclick/count) */
 /* โครง 3 ชั้น: โดเมน → (sub-category) → เมนู · โดเมนที่ไม่มี subs = เมนูตรง 1 ชั้น */
@@ -1042,6 +1048,28 @@ function navAudit(){
   else console.info('%c[navAudit] เมนูครบถ้วนทุกจุด ✓','color:#0F766E;font-weight:700');
   return W;
  }catch(e){ console.error('navAudit error',e); return []; }
+}
+
+/* navAuditRegistry — เช็คว่า "ทุกเมนูในหน้าจอ" มีใน menu_registry (ระบบสิทธิ์ 2 ชั้น) ครบไหม
+   กฏ: เพิ่ม/แก้/ลบเมนู ต้องอัปเดต 32_access_control.sql ด้วย ไม่งั้นเมนูหลุดการคุมสิทธิ์
+   รันตอน start (ถ้า login แล้ว · RLS mr_read อนุญาต authenticated) — เตือนสีแดงถ้า drift */
+async function navAuditRegistry(){
+ try{
+  if(!window.sb) return;
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) return; /* ยังไม่ login → ข้าม (อ่าน menu_registry ไม่ได้) */
+  const { data, error } = await sb.from('menu_registry').select('view_key');
+  if(error) return;
+  const reg=new Set((data||[]).map(r=>r.view_key));
+  const views=Object.keys(VIEW_TITLE);
+  const missing=views.filter(v=>!reg.has(v));
+  const orphan=[...reg].filter(v=>!VIEW_TITLE[v]);
+  if(missing.length){
+   console.warn('%c[navAudit:สิทธิ์] '+missing.length+' เมนูยังไม่อยู่ใน menu_registry → เพิ่มแถวใน 32_access_control.sql (ตั้ง owner_reserved/sensitive) แล้วรันบน Supabase','color:#B91C1C;font-weight:700');
+   console.warn('  ขาด:', missing.join(', '));
+  } else console.info('%c[navAudit:สิทธิ์] เมนูครบใน menu_registry ✓','color:#0F766E;font-weight:700');
+  if(orphan.length) console.info('[navAudit:สิทธิ์] menu_registry มีเมนูที่ไม่อยู่ใน dashboard แล้ว (ลบทิ้งได้):', orphan.join(', '));
+ }catch(e){ /* ไม่ critical — เงียบไว้ */ }
 }
 
 /* ===== Sidebar accordion (2 ชั้น: โดเมน+sub) + search · รวม role filter ใน updateNav ===== */
@@ -3807,7 +3835,7 @@ function mountCnInflu(){const w=$('cnInfluWrap');if(!w)return;
 
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
- buildNav(); navAudit();
+ buildNav(); navAudit(); navAuditRegistry();
  sb.auth.getUser().then(({data})=>{
    const e=(data&&data.user&&data.user.email)||'admin';
    // ลำดับความสำคัญ: ตัวตนจาก LINE (ถ้าล็อกอินผ่าน LINE) → ROLE_MAP อีเมล → director
