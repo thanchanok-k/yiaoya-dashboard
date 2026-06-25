@@ -35,6 +35,14 @@ body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,syste
 .sb-sub .gcount{margin-left:auto;font-size:9px;background:rgba(255,255,255,.10);color:rgba(255,255,255,.55);border-radius:8px;padding:1px 6px;font-weight:600}
 .sb-item.lvl2{padding-left:32px;font-size:12.5px;color:rgba(255,255,255,.68)}
 .sb-item.lvl2.active{color:#fff}
+.sb-sub2{padding:5px 14px 5px 40px;font-size:11px;color:rgba(255,255,255,.46);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-weight:500;position:relative}
+.sb-sub2::before{content:"";position:absolute;left:30px;top:0;bottom:0;width:1px;background:rgba(255,255,255,.10)}
+.sb-sub2:hover{color:rgba(255,255,255,.82)}
+.sb-sub2 .chev{font-size:11px;opacity:.5;transition:transform .15s}
+.sb-sub2.col .chev{transform:rotate(-90deg)}
+.sb-sub2 .gcount{margin-left:auto;font-size:9px;background:rgba(255,255,255,.10);color:rgba(255,255,255,.5);border-radius:8px;padding:1px 6px;font-weight:600}
+.sb-item.lvl3{padding-left:48px;font-size:12px;color:rgba(255,255,255,.62)}
+.sb-item.lvl3.active{color:#fff}
 .sb-search{margin:10px 12px 6px;position:relative}
 .sb-search input{width:100%;padding:7px 10px 7px 30px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:12px;outline:none}
 .sb-search input::placeholder{color:rgba(255,255,255,.45)}
@@ -297,9 +305,14 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="adcreative"><i class="ti ti-movie"></i>ครีเอทีฟ · คลิป<span class="ct" id="ct-adcreative"></span></div>
       <div class="sb-item" data-view="promo"><i class="ti ti-discount-2"></i>ออกแบบโปรโมชั่น<span class="ct" id="ct-promo"></span></div>
       <div class="sb-item" data-view="cnplan"><i class="ti ti-calendar-event"></i>ปฏิทินคอนเทนต์<span class="ct" id="ct-cnplan"></span></div>
-      <div class="sb-item" data-view="cndraft"><i class="ti ti-pencil"></i>ดราฟต์ · AI ช่วย<span class="ct" id="ct-cndraft"></span></div>
-      <div class="sb-item" data-view="cnreview"><i class="ti ti-stethoscope"></i>รีวิวแพทย์/กม.<span class="ct" id="ct-cnreview"></span></div>
+      <div class="sb-item" data-view="cnboard"><i class="ti ti-layout-kanban"></i>กระดานผลิต<span class="ct" id="ct-cnboard"></span></div>
+      <div class="sb-item" data-view="cndraft"><i class="ti ti-pencil-plus"></i>สร้าง · ดราฟต์ · อัปโหลด<span class="ct" id="ct-cndraft"></span></div>
+      <div class="sb-item" data-view="cnreview"><i class="ti ti-checks"></i>คิวรีวิว<span class="ct" id="ct-cnreview"></span></div>
       <div class="sb-item" data-view="cnqueue"><i class="ti ti-send"></i>คิวโพสต์<span class="ct" id="ct-cnqueue"></span></div>
+      <div class="sb-item" data-view="cncampaign"><i class="ti ti-discount"></i>แคมเปญ · โปรโมชั่น<span class="ct" id="ct-cncampaign"></span></div>
+      <div class="sb-item" data-view="cnkpi"><i class="ti ti-trophy"></i>KPI ทีมคอนเทนต์<span class="ct" id="ct-cnkpi"></span></div>
+      <div class="sb-item" data-view="cnmonthly"><i class="ti ti-calendar-stats"></i>สรุปรายเดือน<span class="ct" id="ct-cnmonthly"></span></div>
+      <div class="sb-item" data-view="cnhighlight"><i class="ti ti-star"></i>คอนเทนต์ Highlight<span class="ct" id="ct-cnhighlight"></span></div>
             <div class="sb-label">จัดการ HR · Native</div>
       <div class="sb-item" data-view="employeemgr"><i class="ti ti-users"></i>พนักงาน (จัดการ)<span class="ct" id="ct-employeemgr"></span></div>
       <div class="sb-item" data-view="kpimgr"><i class="ti ti-target-arrow"></i>KPI (จัดการ)<span class="ct" id="ct-kpimgr"></span></div>
@@ -753,20 +766,40 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div id="promoGrid"></div>
     </section>
     <section class="view" data-view="cnplan">
-      <div class="sec"><span class="sec-bar"></span>ปฏิทินคอนเทนต์<span class="sec-c">วางแผนโพสต์ล่วงหน้า · แบรนด์ × แพลตฟอร์ม (UI · mock)</span></div>
+      <div class="sec"><span class="sec-bar"></span>ปฏิทินคอนเทนต์<span class="sec-c">วางแผนโพสต์ล่วงหน้า · แบรนด์ × แพลตฟอร์ม × ประเภท (UI · mock)</span></div>
       <div id="cnPlanWrap"></div>
     </section>
+    <section class="view" data-view="cnboard">
+      <div class="sec"><span class="sec-bar"></span>กระดานผลิต · Kanban<span class="sec-c">ลากการ์ดข้ามคอลัมน์ เหมือน Trello · ไอเดีย→วางแผน→ทำ→รีวิว→โพสต์ (UI · mock)</span></div>
+      <div id="cnBoardWrap"></div>
+    </section>
     <section class="view" data-view="cndraft">
-      <div class="sec"><span class="sec-bar"></span>ดราฟต์ · AI ช่วยเขียน<span class="sec-c">สร้าง+ร่างคอนเทนต์ → ส่งรีวิว (UI · mock)</span></div>
+      <div class="sec"><span class="sec-bar"></span>สร้าง · ดราฟต์ · อัปโหลดวิดีโอ<span class="sec-c">สร้างการ์ด + AI ช่วยร่าง + อัปโหลดไฟล์วิดีโอเข้าระบบ (UI · mock)</span></div>
       <div id="cnDraftWrap"></div>
     </section>
     <section class="view" data-view="cnreview">
-      <div class="sec"><span class="sec-bar"></span>รีวิวแพทย์/กฎหมาย<span class="sec-c">ด่านบังคับ 2 ชั้น · แพทย์ → กฎหมาย · มี audit log (UI · mock)</span></div>
+      <div class="sec"><span class="sec-bar"></span>คิวรีวิว · อนุมัติ<span class="sec-c">รีวิวหลายชั้น พี่ตอง → พี่เซิน → พี่ฟา + fact-check แพทย์ · audit log (UI · mock)</span></div>
       <div id="cnReviewWrap"></div>
     </section>
     <section class="view" data-view="cnqueue">
-      <div class="sec"><span class="sec-bar"></span>คิวโพสต์<span class="sec-c">เฉพาะที่อนุมัติแล้ว · ตั้งเวลา · confirm-mode (UI · mock)</span></div>
+      <div class="sec"><span class="sec-bar"></span>คิวโพสต์<span class="sec-c">เฉพาะที่ผ่านรีวิวแล้ว · ตั้งเวลา · confirm-mode (UI · mock)</span></div>
       <div id="cnQueueWrap"></div>
+    </section>
+    <section class="view" data-view="cncampaign">
+      <div class="sec"><span class="sec-bar"></span>แคมเปญ · โปรโมชั่น · Ads<span class="sec-c">โปรรายเดือน + Ads on-air (คลิป/ภาพที่ออนแอร์อยู่) (UI · mock)</span></div>
+      <div id="cnCampaignWrap"></div>
+    </section>
+    <section class="view" data-view="cnkpi">
+      <div class="sec"><span class="sec-bar"></span>KPI ทีมคอนเทนต์ · รายคน<span class="sec-c">คลิป/รูปต่อสัปดาห์ · Engagement · ลงตรงเวลา · Feedback (UI · mock)</span></div>
+      <div id="cnKpiWrap"></div>
+    </section>
+    <section class="view" data-view="cnmonthly">
+      <div class="sec"><span class="sec-bar"></span>สรุปผลงานรายเดือน<span class="sec-c">งานเสร็จแยกประเภท EDU/TES/BTS/PRO… × รายคน (UI · mock)</span></div>
+      <div id="cnMonthlyWrap"></div>
+    </section>
+    <section class="view" data-view="cnhighlight">
+      <div class="sec"><span class="sec-bar"></span>คอนเทนต์ Highlight<span class="sec-c">ชิ้นที่ Engagement ≥10% · เชื่อมกับ ครีเอทีฟ·คลิป (UI · mock)</span></div>
+      <div id="cnHighlightWrap"></div>
     </section>
     <section class="view" data-view="purscan"><div class="sec"><span class="sec-bar"></span>สแกนรับของเข้าสต็อก<span class="sec-c">กล้อง · html5-qrcode → pur_stock</span></div><div id="wrap-purscan"></div></section>
     <section class="view" data-view="purlookup"><div class="sec"><span class="sec-bar"></span>ค้นหา / ดูรายละเอียด<span class="sec-c">PR/PO/ผู้ขาย/สินค้า/RFQ</span></div><div id="wrap-purlookup"></div></section>
@@ -845,7 +878,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',fosales:'ยอดขายหน้าร้าน',roomutil:'การใช้ห้อง & คอร์สค้าง',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',payterms:'สัญญา/ค่าจ้างรายคน',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',promo:'ออกแบบโปรโมชั่น',cnplan:'ปฏิทินคอนเทนต์',cndraft:'ดราฟต์ · AI ช่วย',cnreview:'รีวิวแพทย์/กฎหมาย',cnqueue:'คิวโพสต์',dept:'รายได้ตามแผนก',aisettings:'AI Settings · ตั้งค่าออโต้',aiapprovals:'AI Approvals · คิวอนุมัติ',equipment:'ยืม-คืนอุปกรณ์',compliance:'Compliance ประจำปี',scorecard:'สกอร์การ์ดหมอ',welfare:'สวัสดิการพนักงาน',dfschedule:'ตาราง DF หมอ',legal:'แฟ้มคดี/กฎหมาย',contracts:'สัญญาจ้าง'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',fosales:'ยอดขายหน้าร้าน',roomutil:'การใช้ห้อง & คอร์สค้าง',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',payterms:'สัญญา/ค่าจ้างรายคน',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',promo:'ออกแบบโปรโมชั่น',cnplan:'ปฏิทินคอนเทนต์',cnboard:'กระดานผลิต (Kanban)',cndraft:'สร้าง · ดราฟต์ · อัปโหลด',cnreview:'คิวรีวิว · อนุมัติ',cnqueue:'คิวโพสต์',cncampaign:'แคมเปญ · โปรโมชั่น',cnkpi:'KPI ทีมคอนเทนต์',cnmonthly:'สรุปผลงานรายเดือน',cnhighlight:'คอนเทนต์ Highlight',dept:'รายได้ตามแผนก',aisettings:'AI Settings · ตั้งค่าออโต้',aiapprovals:'AI Approvals · คิวอนุมัติ',equipment:'ยืม-คืนอุปกรณ์',compliance:'Compliance ประจำปี',scorecard:'สกอร์การ์ดหมอ',welfare:'สวัสดิการพนักงาน',dfschedule:'ตาราง DF หมอ',legal:'แฟ้มคดี/กฎหมาย',contracts:'สัญญาจ้าง'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -908,8 +941,13 @@ const NAV_TREE=[
  {label:'บัญชี · Accountant', views:['accdigest','accexp','accpr','accpetty','accsales','accpayroll','accdf','acctax','accbank','accpayset','accroster']},
  {label:'จัดซื้อ · Purchase', views:['purdash','purpr','purpo','purgr','purvendor','puritem','purrfq','purstock','purscan','purlookup','puractivity']},
  {label:'การตลาด · โฆษณา', subs:[
-   {label:'วิเคราะห์', views:['mkt','adops','adcreative','promo']},
-   {label:'ทีมคอนเทนต์', views:['cnplan','cndraft','cnreview','cnqueue']},
+   {label:'วิเคราะห์โฆษณา', views:['mkt','adops','adcreative','promo']},
+   {label:'ทีมคอนเทนต์', subs:[
+     {label:'วางแผน & ผลิต', views:['cnplan','cnboard','cndraft']},
+     {label:'รีวิว & อนุมัติ', views:['cnreview']},
+     {label:'เผยแพร่', views:['cnqueue','cncampaign']},
+     {label:'รีวิวผลงาน', views:['cnkpi','cnmonthly','cnhighlight']},
+   ]},
  ]},
  {label:'ผู้บริหาร · HQ', views:['fosales','roomutil','scorecard','aihq','hub360','dept','expansion']},
    {label:'ลับ · HQ (เฉพาะผู้บริหาร)', views:['legal','contracts']},
@@ -922,16 +960,28 @@ function buildNav(){
  const nav=$('sbnav'); if(!nav||nav._built) return;
  const items={}; nav.querySelectorAll('.sb-item').forEach(it=>{ items[it.dataset.view]=it; });
  const search=nav.querySelector('.sb-search');
- nav.querySelectorAll('.sb-label,.sb-sub').forEach(l=>l.remove());
+ nav.querySelectorAll('.sb-label,.sb-sub,.sb-sub2').forEach(l=>l.remove());
  const frag=document.createDocumentFragment(); const used=new Set();
- const mk=(views,dk,sk)=>views.filter(v=>items[v]).map(v=>{ const it=items[v]; it.dataset.dom=dk; it.dataset.sub=sk||''; it.classList.toggle('lvl2',!!sk); return it; });
+ const mk=(views,dk,sk)=>views.filter(v=>items[v]).map(v=>{ const it=items[v]; it.dataset.dom=dk; it.dataset.sub=sk||''; it.dataset.sub2=''; it.classList.remove('lvl3'); it.classList.toggle('lvl2',!!sk); return it; });
+ const mk2=(views,dk,sk,sk2)=>views.filter(v=>items[v]).map(v=>{ const it=items[v]; it.dataset.dom=dk; it.dataset.sub=sk; it.dataset.sub2=sk2; it.classList.remove('lvl2'); it.classList.add('lvl3'); return it; });
  NAV_TREE.forEach((dom,di)=>{
   const dk='d'+di;
   if(dom.subs){
    const parts=[];
-   dom.subs.forEach((sub,si)=>{ const sk=dk+'s'+si; const its=mk(sub.views,dk,sk); if(!its.length) return;
-     const sl=document.createElement('div'); sl.className='sb-sub'; sl.dataset.dom=dk; sl.dataset.sub=sk; sl.textContent=sub.label;
-     parts.push(sl,...its); its.forEach(it=>used.add(it.dataset.view)); });
+   dom.subs.forEach((sub,si)=>{ const sk=dk+'s'+si;
+     if(sub.subs){
+      const sub2parts=[];
+      sub.subs.forEach((s2,s2i)=>{ const sk2=sk+'x'+s2i; const its=mk2(s2.views,dk,sk,sk2); if(!its.length) return;
+        const s2l=document.createElement('div'); s2l.className='sb-sub2'; s2l.dataset.dom=dk; s2l.dataset.sub=sk; s2l.dataset.sub2=sk2; s2l.textContent=s2.label;
+        sub2parts.push(s2l,...its); its.forEach(it=>used.add(it.dataset.view)); });
+      if(!sub2parts.length) return;
+      const sl=document.createElement('div'); sl.className='sb-sub'; sl.dataset.dom=dk; sl.dataset.sub=sk; sl.textContent=sub.label;
+      parts.push(sl,...sub2parts);
+     } else {
+      const its=mk(sub.views,dk,sk); if(!its.length) return;
+      const sl=document.createElement('div'); sl.className='sb-sub'; sl.dataset.dom=dk; sl.dataset.sub=sk; sl.textContent=sub.label;
+      parts.push(sl,...its); its.forEach(it=>used.add(it.dataset.view));
+     } });
    if(!parts.length) return;
    const dl=document.createElement('div'); dl.className='sb-label'; dl.dataset.dom=dk; dl.textContent=dom.label; frag.appendChild(dl); parts.forEach(e=>frag.appendChild(e));
   } else {
@@ -940,7 +990,7 @@ function buildNav(){
   }
  });
  const left=Object.keys(items).filter(v=>!used.has(v));
- if(left.length){ const dl=document.createElement('div'); dl.className='sb-label'; dl.dataset.dom='dx'; dl.textContent='อื่น ๆ'; frag.appendChild(dl); left.forEach(v=>{const it=items[v];it.dataset.dom='dx';it.dataset.sub='';it.classList.remove('lvl2');frag.appendChild(it);});
+ if(left.length){ const dl=document.createElement('div'); dl.className='sb-label'; dl.dataset.dom='dx'; dl.textContent='อื่น ๆ'; frag.appendChild(dl); left.forEach(v=>{const it=items[v];it.dataset.dom='dx';it.dataset.sub='';it.dataset.sub2='';it.classList.remove('lvl2');it.classList.remove('lvl3');frag.appendChild(it);});
    console.warn('[buildNav] เมนูยังไม่ถูกจัดกลุ่ม (ตกกอง "อื่น ๆ") → เพิ่มใน NAV_TREE:', left); }
  nav.innerHTML=''; if(search) nav.appendChild(search); nav.appendChild(frag);
  nav._built=true;
@@ -3194,6 +3244,20 @@ function mountExpansion(){
   $('bcSave').onclick=()=>{$('bcMsg').textContent='กำลังบันทึก…';sb.functions.invoke('branch_costs',{body:{action:'put',costs:{setup:gv('bc_setup'),renovation:gv('bc_renovation'),license:gv('bc_license'),rent_monthly:gv('bc_rent'),staff_monthly:gv('bc_staff'),other_monthly:gv('bc_other'),perf_pct:+$('edPerf').value,margin_pct:+$('edMargin').value}}}).then(({data})=>{$('bcMsg').textContent=(data&&data.ok)?'✓ บันทึกแล้ว':'บันทึกไม่สำเร็จ';setTimeout(()=>{$('bcMsg').textContent='';},2500);});};
   recompute();
   const ct=$('ct-expansion');if(ct)ct.textContent=rows.length;
+  // ── แคตตาล็อกเครื่องมือ (มี + ยังไม่มี) + ออดิทการใช้เครื่อง ──
+  sb.functions.invoke('device_catalog').then(({data:dc})=>{
+   if(!dc||!dc.ok)return;
+   const cat=dc.rows||[],audit=dc.audit||[];const J2=x=>{if(typeof x==='string'){try{return JSON.parse(x);}catch(e){return null;}}return x;};
+   const owned=cat.filter(d=>d.status==='owned'),wish=cat.filter(d=>d.status==='wishlist');
+   let ch='<div class="sec" style="margin-top:28px"><span class="sec-bar"></span>แคตตาล็อกเครื่องมือ · มี + ยังไม่มี<span class="sec-c">device_catalog · '+cat.length+' เครื่อง</span></div>';
+   ch+='<div class="card" style="padding:16px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">✓ เครื่องที่มีแล้ว ('+owned.length+')</div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:#64748B;text-align:left;border-bottom:1px solid var(--border,#E2E8F0)"><th style="padding:4px 6px 4px 0">เครื่อง</th><th style="text-align:right">ซื้อจริง</th><th style="text-align:right">list</th><th style="text-align:right">ประกัน/ปี</th><th style="text-align:left;padding-left:10px">ใช้รักษา</th></tr></thead><tbody>';
+   owned.forEach(d=>{const paid=+d.price_paid||0,list=+d.price_list||0;const save=(list>paid&&paid)?' <span style="color:#0F766E;font-size:10px">−'+B(list-paid)+'</span>':'';ch+='<tr style="border-bottom:1px solid #F1F5F9"><td style="padding:6px 6px 6px 0"><b style="color:var(--navy,#0D2F4F)">'+esc(d.name)+'</b><div style="color:#94A3B8;font-size:10px">'+esc(d.model_code||'')+'</div></td><td style="text-align:right;color:#185FA5;font-weight:600">'+(paid?B(paid):'—')+'</td><td style="text-align:right;color:#94A3B8">'+(list?B(list)+save:'—')+'</td><td style="text-align:right;color:#64748B">'+(+d.warranty_yearly?B(d.warranty_yearly):'—')+'</td><td style="padding-left:10px;color:#475569;max-width:280px">'+esc(d.clinical_use||'')+'</td></tr>';});
+   ch+='</tbody></table></div></div>';
+   const grp=(key,label,color)=>{const ws=wish.filter(d=>d.category===key);if(!ws.length)return'';let g='<div class="card" style="padding:16px;margin-bottom:14px;border-left:4px solid '+color+'"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:2px">○ ยังไม่มี — '+label+' ('+ws.length+')</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:10px;margin-top:10px">';ws.forEach(d=>{g+='<div style="border:1px solid var(--border,#E2E8F0);border-radius:10px;padding:11px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px"><b style="color:var(--navy,#0D2F4F);font-size:13px">'+esc(d.name)+'</b><span style="color:'+color+';font-weight:800;white-space:nowrap">'+B(d.price_list)+'</span></div><div style="font-size:11.5px;color:#475569;margin:5px 0;line-height:1.5">'+esc(d.clinical_use||'')+'</div><div style="font-size:10.5px;color:#94A3B8">🎯 '+esc(d.target_patient||'')+'</div></div>';});g+='</div></div>';return g;};
+   ch+=grp('robotic','Robotic · หุ่นยนต์ฟื้นฟู','#7C3AED')+grp('highend','High-End','#C2410C');
+   if(audit&&audit.length){const DEVS=['Shockwave','PMS','High Laser','Traction','US/TENS Combine','Moti Scan','Manual/คอร์สรวม'];ch+='<div class="sec" style="margin-top:28px"><span class="sec-bar"></span>ออดิท · นักกายภาพใช้เครื่องอะไรรักษาคนไข้<span class="sec-c">JERA · 60 วัน</span></div><div class="card" style="padding:16px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:#64748B;border-bottom:1px solid var(--border,#E2E8F0)"><th style="text-align:left;padding:4px 0">นักกายภาพ</th>'+DEVS.map(d=>'<th style="text-align:right;font-size:9.5px;padding:0 3px">'+d+'</th>').join('')+'<th style="text-align:right">รวม</th></tr></thead><tbody>';audit.forEach(a=>{const c=J2(a.counts)||{};ch+='<tr style="border-bottom:1px solid #F1F5F9"><td style="padding:5px 0"><b style="color:var(--navy,#0D2F4F)">'+esc(a.therapist)+'</b></td>'+DEVS.map(d=>'<td style="text-align:right;padding:0 3px;color:'+((c[d]||0)>30?'#0F766E':(c[d]?'#475569':'#CBD5E1'))+';font-weight:'+((c[d]||0)>30?'700':'400')+'">'+(c[d]||0)+'</td>').join('')+'<td style="text-align:right;font-weight:800;color:var(--navy,#0D2F4F)">'+a.total+'</td></tr>';});ch+='</tbody></table><div style="font-size:10.5px;color:#94A3B8;margin-top:8px">นับจาก JERA payment-list (doctor_name × เครื่อง/บริการ) · เลขเขียว = ใช้เยอะ · Manual = พิลาทิส/นวด/คอร์สที่ไม่ผูกเครื่อง</div></div>';}
+   $('expWrap').insertAdjacentHTML('beforeend',ch);
+  }).catch(e=>console.error('catalog',e));
  }).catch(e=>{console.error('expansion',e);$('expWrap').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
 }
 function mountAiHQ(){
