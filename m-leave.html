@@ -47,7 +47,7 @@ async function init(){
   loadBalance(); loadRecent();
 }
 async function loadBalance(){
-  try{ const d=await api('hr_leave_balance'); const me=(d.rows||[]).find(r=>r.employee_id===ID.employee_id);
+  try{ const d=await api('hr_leave_balance?employee_id='+encodeURIComponent(ID.employee_id)); const me=d.row||(d.rows||[]).find(r=>r.employee_id===ID.employee_id);
     if(!me){ $('bal').innerHTML=''; return; }
     $('bal').innerHTML=[['พักร้อน','left_annual'],['ลาป่วย','left_sick'],['ลากิจ','left_personal']]
       .map(([l,k])=>`<div class="c"><div class="n">${me[k]??'–'}</div><div class="l">${l} (วัน)</div></div>`).join('');
