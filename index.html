@@ -314,6 +314,9 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="cnkpi"><i class="ti ti-trophy"></i>KPI ทีมคอนเทนต์<span class="ct" id="ct-cnkpi"></span></div>
       <div class="sb-item" data-view="cnmonthly"><i class="ti ti-calendar-stats"></i>สรุปรายเดือน<span class="ct" id="ct-cnmonthly"></span></div>
       <div class="sb-item" data-view="cnhighlight"><i class="ti ti-star"></i>คอนเทนต์ Highlight<span class="ct" id="ct-cnhighlight"></span></div>
+      <div class="sb-item" data-view="cnbrief"><i class="ti ti-sun"></i>Morning Brief<span class="ct" id="ct-cnbrief"></span></div>
+      <div class="sb-item" data-view="cncheckin"><i class="ti ti-clock-hour-8"></i>Check-in / EOD<span class="ct" id="ct-cncheckin"></span></div>
+      <div class="sb-item" data-view="cninflu"><i class="ti ti-user-star"></i>Influencer DB<span class="ct" id="ct-cninflu"></span></div>
             <div class="sb-label">จัดการ HR · Native</div>
       <div class="sb-item" data-view="employeemgr"><i class="ti ti-users"></i>พนักงาน (จัดการ)<span class="ct" id="ct-employeemgr"></span></div>
       <div class="sb-item" data-view="kpimgr"><i class="ti ti-target-arrow"></i>KPI (จัดการ)<span class="ct" id="ct-kpimgr"></span></div>
@@ -804,6 +807,18 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sec"><span class="sec-bar"></span>คอนเทนต์ Highlight<span class="sec-c">ชิ้นที่ Engagement ≥10% · เชื่อมกับ ครีเอทีฟ·คลิป (UI · mock)</span></div>
       <div id="cnHighlightWrap"></div>
     </section>
+    <section class="view" data-view="cnbrief">
+      <div class="sec"><span class="sec-bar"></span>Morning Brief · สรุปเช้า<span class="sec-c">ประชุมเช้า · ใครมา/ลา · ไฮไลท์ · deadline · ส่ง LINE (UI · mock จาก V3)</span></div>
+      <div id="cnBriefWrap"></div>
+    </section>
+    <section class="view" data-view="cncheckin">
+      <div class="sec"><span class="sec-bar"></span>Check-in / EOD ประจำวัน<span class="sec-c">ลงเวลาเช้า (Punctuality) + สรุปงานเย็น %สำเร็จ (UI · mock จาก V3)</span></div>
+      <div id="cnCheckinWrap"></div>
+    </section>
+    <section class="view" data-view="cninflu">
+      <div class="sec"><span class="sec-bar"></span>Influencer DB<span class="sec-c">ทะเบียนอินฟลู · ช่องทาง/ผู้ติดตาม/ค่าตัว/โควตา + สถานะดราฟต์ (UI · mock จาก V3)</span></div>
+      <div id="cnInfluWrap"></div>
+    </section>
     <section class="view" data-view="purscan"><div class="sec"><span class="sec-bar"></span>สแกนรับของเข้าสต็อก<span class="sec-c">กล้อง · html5-qrcode → pur_stock</span></div><div id="wrap-purscan"></div></section>
     <section class="view" data-view="purlookup"><div class="sec"><span class="sec-bar"></span>ค้นหา / ดูรายละเอียด<span class="sec-c">PR/PO/ผู้ขาย/สินค้า/RFQ</span></div><div id="wrap-purlookup"></div></section>
     <section class="view" data-view="puractivity"><div class="sec"><span class="sec-bar"></span>บันทึกกิจกรรม (ใครทำอะไร)<span class="sec-c">Native Supabase · pur_activity</span></div><div id="wrap-puractivity"></div></section>
@@ -882,7 +897,7 @@ const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jL
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',fosales:'ยอดขายหน้าร้าน',roomutil:'การใช้ห้อง & คอร์สค้าง',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',payterms:'สัญญา/ค่าจ้างรายคน',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',peopleai:'วิเคราะห์คน · AI',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',ptaudit:'ทีมกายภาพ · ใช้เครื่อง',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',promo:'ออกแบบโปรโมชั่น',cnplan:'ปฏิทินคอนเทนต์',cnboard:'กระดานผลิต (Kanban)',cndraft:'สร้าง · ดราฟต์ · อัปโหลด',cnreview:'คิวรีวิว · อนุมัติ',cnqueue:'คิวโพสต์',cncampaign:'แคมเปญ · โปรโมชั่น',cnkpi:'KPI ทีมคอนเทนต์',cnmonthly:'สรุปผลงานรายเดือน',cnhighlight:'คอนเทนต์ Highlight',dept:'รายได้ตามแผนก',aisettings:'AI Settings · ตั้งค่าออโต้',aiapprovals:'AI Approvals · คิวอนุมัติ',equipment:'ยืม-คืนอุปกรณ์',compliance:'Compliance ประจำปี',scorecard:'สกอร์การ์ดหมอ',welfare:'สวัสดิการพนักงาน',dfschedule:'ตาราง DF หมอ',legal:'แฟ้มคดี/กฎหมาย',contracts:'สัญญาจ้าง'};
+const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',fosales:'ยอดขายหน้าร้าน',roomutil:'การใช้ห้อง & คอร์สค้าง',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',payterms:'สัญญา/ค่าจ้างรายคน',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',peopleai:'วิเคราะห์คน · AI',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',ptaudit:'ทีมกายภาพ · ใช้เครื่อง',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',promo:'ออกแบบโปรโมชั่น',cnplan:'ปฏิทินคอนเทนต์',cnboard:'กระดานผลิต (Kanban)',cndraft:'สร้าง · ดราฟต์ · อัปโหลด',cnreview:'คิวรีวิว · อนุมัติ',cnqueue:'คิวโพสต์',cncampaign:'แคมเปญ · โปรโมชั่น',cnkpi:'KPI ทีมคอนเทนต์',cnmonthly:'สรุปผลงานรายเดือน',cnhighlight:'คอนเทนต์ Highlight',cnbrief:'Morning Brief',cncheckin:'Check-in / EOD',cninflu:'Influencer DB',dept:'รายได้ตามแผนก',aisettings:'AI Settings · ตั้งค่าออโต้',aiapprovals:'AI Approvals · คิวอนุมัติ',equipment:'ยืม-คืนอุปกรณ์',compliance:'Compliance ประจำปี',scorecard:'สกอร์การ์ดหมอ',welfare:'สวัสดิการพนักงาน',dfschedule:'ตาราง DF หมอ',legal:'แฟ้มคดี/กฎหมาย',contracts:'สัญญาจ้าง'};
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -949,10 +964,10 @@ const NAV_TREE=[
  {label:'การตลาด · โฆษณา', subs:[
    {label:'วิเคราะห์โฆษณา', views:['mkt','adops','adcreative','promo']},
    {label:'ทีมคอนเทนต์', subs:[
+     {label:'ประจำวัน', views:['cnbrief','cncheckin']},
      {label:'วางแผน & ผลิต', views:['cnplan','cnboard','cndraft']},
-     {label:'รีวิว & อนุมัติ', views:['cnreview']},
-     {label:'เผยแพร่', views:['cnqueue','cncampaign']},
-     {label:'รีวิวผลงาน', views:['cnkpi','cnmonthly','cnhighlight']},
+     {label:'รีวิว & เผยแพร่', views:['cnreview','cnqueue','cncampaign']},
+     {label:'ผลงาน & คลัง', views:['cnkpi','cnmonthly','cnhighlight','cninflu']},
    ]},
  ]},
  {label:'ผู้บริหาร · HQ', views:['fosales','roomutil','scorecard','aihq','peopleai','hub360','dept','expansion','ptaudit']},
@@ -3508,191 +3523,201 @@ function mountAiHQ(){
  }).catch(e=>{$('aihqWrap').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้: '+esc(e&&e.message||e)+'</span></div>';});
 }
 
-/* ===== ทีมคอนเทนต์ (Content Engine) — UI เปล่า · mock data =====
-   อิงระบบงานจริงจาก Trello "YY Content Creator" (board q77EphNh)
-   flow: ไอเดีย→วางแผน→กำลังทำ→รีวิว(ตอง→เซิน→ฟา+fact-check)→ผ่านรีวิว→โพสต์
-   ปุ่มทั้งหมดเป็น stub (toast) · อัปโหลดวิดีโอ = preview ในเครื่อง (ยังไม่เก็บจริง)
-   ยังไม่ผูก Supabase/Trello · ดู content-adops-system P5 */
-const CN_BRAND={Yiaoya:'#3DC5B7',KneeCare:'#185FA5','นางฟ้า':'#D4537E'};
+/* ===== ทีมคอนเทนต์ (Content Engine) — UI · mock จากข้อมูลจริง Content planner V3 =====
+   แหล่งจริงเดียว = Google Sheet "YYCT01 Content planner V3" (12 แท็บ) → dashboard นี้เป็นกระจกสะท้อน (read/exec)
+   ปรับให้ตรง V3: 8 สถานะ · 4 แผนก · 11 หัวข้อ · รีวิว ตอง→เซิน · KPI 5 มิติ + เกรด
+   ปุ่ม = stub (toast) · อัปโหลดวิดีโอ = preview ในเครื่อง · ค้าง sync V3→Supabase (Apps Script รายชม.) */
+const CN_DEPT={'กายภาพ':'#3DC5B7','กระดูกและข้อ':'#185FA5','พิลาทิส':'#D4537E','Hybrid':'#7C3AED'};
 const CN_PLAT={FB:'ti-brand-facebook',IG:'ti-brand-instagram',TikTok:'ti-brand-tiktok',LINE:'ti-brand-line'};
-const CN_TYPE={EDU:{t:'ความรู้',c:'#0F766E'},TES:{t:'รีวิว/เคส',c:'#185FA5'},BTS:{t:'เบื้องหลัง',c:'#7C3AED'},PRO:{t:'โปรโมชั่น',c:'#D4537E'},DOC:{t:'แบรนด์หมอ',c:'#B45309'},SAL:{t:'ซัพพอร์ตขาย',c:'#0891B2'},ENG:{t:'มีส่วนร่วม',c:'#CA8A04'},EVT:{t:'กิจกรรม',c:'#65A30D'}};
-const CN_COLS=[{k:'idea',t:'ไอเดีย',i:'ti-bulb'},{k:'plan',t:'วางแผน',i:'ti-clipboard-list'},{k:'doing',t:'กำลังทำ',i:'ti-pencil'},{k:'review',t:'รีวิว',i:'ti-checks'},{k:'approved',t:'ผ่านรีวิว',i:'ti-circle-check'},{k:'posted',t:'โพสต์แล้ว',i:'ti-send'}];
-const CN_CREATORS={
- 'แยม':{c:'#D4537E',clips:4,photos:5,eng:7.2,ontime:100,feedback:95},
- 'เตย':{c:'#6D28D9',clips:3,photos:4,eng:6.1,ontime:96,feedback:92},
- 'แฟร์':{c:'#0369A1',clips:4,photos:3,eng:5.4,ontime:100,feedback:90},
- 'ตอง':{c:'#4D7C0F',clips:3,photos:4,eng:8.0,ontime:92,feedback:97},
- 'ปายฝน':{c:'#16A34A',clips:5,photos:4,eng:5.0,ontime:100,feedback:88},
- 'ครีม':{c:'#CA8A04',clips:2,photos:3,eng:4.3,ontime:88,feedback:85},
- 'ใบตอง':{c:'#DB2777',clips:3,photos:4,eng:6.6,ontime:95,feedback:93},
- 'แป้ง':{c:'#7C3AED',clips:2,photos:2,eng:4.8,ontime:90,feedback:80}
-};
-const CN_KPI_TARGET={clips:4,photos:4,eng:5,ontime:100,feedback:90};
+const CN_TOPICS=['Engagement/Trend','Educational/Health','FAQ & Q&A','Mini-Test/Self-Check','BTS/Clinic Lifestyle','Demo/Exercise Tips','Prevention/Lifestyle','Campaign/Seasonal','Myth-busting','Reaction','influencer'];
+const CN_FORMATS=['Video (short <1 นาที)','Video (long >=1 นาที)','Photo'];
+const CN_COLS=[{k:'วางแผน',i:'ti-clipboard-list'},{k:'กำลังทำ',i:'ti-pencil'},{k:'ส่งงานแล้ว',i:'ti-upload'},{k:'ตองตรวจ',i:'ti-user-check'},{k:'เซินรีวิว',i:'ti-user-star'},{k:'แก้ไข',i:'ti-rotate'},{k:'ผ่านการรีวิว',i:'ti-circle-check'},{k:'โพสเรียบร้อย',i:'ti-send'}];
+const CN_TEAM=['ตอง','ปาย','แป้ง','แฟร์','แยม','ครีม'];
+const CN_REVIEWERS=['ตอง','เซิน'];
+const CN_WHO_C={'ตอง':'#4D7C0F','ปาย':'#16A34A','ปายฝน':'#16A34A','แป้ง':'#7C3AED','แฟร์':'#0369A1','แยม':'#D4537E','ครีม':'#CA8A04','เซิน':'#185FA5'};
 const CN_DATA=[
- {id:1,title:'เข่าเสื่อมรักษาได้ ไม่ต้องผ่า',brand:'KneeCare',plat:'IG',type:'EDU',creator:'แยม',date:'2026-06-26',col:'doing'},
- {id:2,title:'โปรก้าวแรกสู่การฟื้นฟู 790 บาท',brand:'Yiaoya',plat:'FB',type:'PRO',creator:'ตอง',date:'2026-06-27',col:'plan'},
- {id:3,title:'ฉีดเข่า PRP คืออะไร ช่วยอะไรได้บ้าง',brand:'KneeCare',plat:'FB',type:'DOC',creator:'แฟร์',date:'2026-06-28',col:'review',rev:'tong'},
- {id:4,title:'เลเซอร์ลดปวดเข่า เทคโนโลยีใหม่',brand:'Yiaoya',plat:'TikTok',type:'EDU',creator:'เตย',date:'2026-06-29',col:'review',rev:'fa'},
- {id:5,title:'รีวิวคนไข้กายภาพบำบัด คุณชมพู่',brand:'Yiaoya',plat:'IG',type:'TES',creator:'ใบตอง',date:'2026-06-29',col:'review',rev:'fix'},
- {id:6,title:'นวดคลายปวดออฟฟิศซินโดรม',brand:'นางฟ้า',plat:'LINE',type:'SAL',creator:'ครีม',date:'2026-06-26',col:'approved'},
- {id:7,title:'ตรวจสุขภาพเข่าฟรี 30 ท่านแรก',brand:'KneeCare',plat:'FB',type:'ENG',creator:'แยม',date:'2026-06-30',col:'approved'},
- {id:8,title:'5 ท่ายืดกล้ามเนื้อก่อนนอน',brand:'Yiaoya',plat:'TikTok',type:'EDU',creator:'ปายฝน',date:'2026-06-24',col:'posted',eng:11.2},
- {id:9,title:'ดูแลข้อเข่าผู้สูงอายุ',brand:'KneeCare',plat:'LINE',type:'EDU',creator:'เตย',date:'2026-07-01',col:'idea'},
- {id:10,title:'แพ็กเกจกายภาพ 10 ครั้ง',brand:'Yiaoya',plat:'FB',type:'PRO',creator:'ตอง',date:'2026-07-02',col:'review',rev:'zern'},
- {id:11,title:'เคสโฮมคุณลุงโกวิตต์ สโตรก',brand:'Yiaoya',plat:'FB',type:'TES',creator:'ใบตอง',date:'2026-06-18',col:'posted',eng:14.8},
- {id:12,title:'ร่างกายจำท่าผิดๆ โดยไม่รู้ตัว',brand:'Yiaoya',plat:'IG',type:'EDU',creator:'ปายฝน',date:'2026-06-23',col:'review',rev:'tong'},
- {id:13,title:'YY Relife 5 ครั้ง 7,900',brand:'Yiaoya',plat:'FB',type:'PRO',creator:'ตอง',date:'2026-06-20',col:'posted',eng:9.6},
- {id:14,title:'เบื้องหลังทีมกายภาพออกเคสโฮม',brand:'Yiaoya',plat:'TikTok',type:'BTS',creator:'แยม',date:'2026-06-22',col:'idea'}
+ {id:1,title:'Spy Fall',dept:'กายภาพ',fmt:'Video',topic:'Engagement/Trend',who:'แยม',col:'โพสเรียบร้อย',eng:8.4},
+ {id:2,title:'แม่คุณเอมี่ EP.1',dept:'กระดูกและข้อ',fmt:'Video',topic:'influencer',who:'แยม',col:'ส่งงานแล้ว'},
+ {id:3,title:'รองช้ำคุณมายด์',dept:'กายภาพ',fmt:'Video',topic:'influencer',who:'แยม',col:'กำลังทำ'},
+ {id:4,title:'นักกายภาพรีแอคเคสหัวไหล่อักเสบ',dept:'กายภาพ',fmt:'Video',topic:'Reaction',who:'แยม',col:'โพสเรียบร้อย',eng:12.6},
+ {id:5,title:'5 ประโยชน์พิลาทิสดียังไง',dept:'พิลาทิส',fmt:'Photo',topic:'Educational/Health',who:'แยม',col:'โพสเรียบร้อย',eng:6.1},
+ {id:6,title:'ไม่ฟื้นฟูหลังผ่าตัด ผลที่ตามมาอาจคาดไม่ถึง',dept:'กายภาพ',fmt:'Photo',topic:'Educational/Health',who:'แฟร์',col:'โพสเรียบร้อย',eng:5.5},
+ {id:7,title:'เรื่องเข่าๆที่คุณไม่เคยรู้',dept:'กายภาพ',fmt:'Video',topic:'FAQ & Q&A',who:'แฟร์',col:'โพสเรียบร้อย',eng:9.2},
+ {id:8,title:'check-list อย่าชะล่าใจ คุณอาจเป็นข้อเข่าเสื่อม',dept:'กระดูกและข้อ',fmt:'Photo',topic:'Mini-Test/Self-Check',who:'แฟร์',col:'ผ่านการรีวิว'},
+ {id:9,title:'Focus shockwave เหมาะกับคนไข้ประเภทไหน',dept:'กายภาพ',fmt:'Video',topic:'Educational/Health',who:'ตอง',col:'เซินรีวิว'},
+ {id:10,title:'ท่าพิลาทิสง่ายๆ กับเครื่อง reformer',dept:'พิลาทิส',fmt:'Video',topic:'Mini-Test/Self-Check',who:'ตอง',col:'ตองตรวจ'},
+ {id:11,title:'เข้าใจผิด! ข้อเข่าเสื่อมระยะแรกไม่ต้องทำกายภาพ',dept:'กระดูกและข้อ',fmt:'Video',topic:'Myth-busting',who:'ตอง',col:'แก้ไข'},
+ {id:12,title:'พิลาทิสควรเล่นสัปดาห์ละกี่ครั้ง',dept:'พิลาทิส',fmt:'Video',topic:'Educational/Health',who:'ตอง',col:'โพสเรียบร้อย',eng:7.0},
+ {id:13,title:'กล้ามเนื้อหน้าขา = กุญแจสำคัญของข้อเข่า',dept:'กระดูกและข้อ',fmt:'Video',topic:'Myth-busting',who:'ตอง',col:'กำลังทำ'},
+ {id:14,title:'เทศกาลเจ แต่ละท่าให้อาการปวดอะไรบ้าง',dept:'กายภาพ',fmt:'Video',topic:'Engagement/Trend',who:'แฟร์',col:'วางแผน'},
+ {id:15,title:'PMS แก้ได้ด้วยท่าผ่อนคลายพิลาทิส',dept:'พิลาทิส',fmt:'Video',topic:'Prevention/Lifestyle',who:'แฟร์',col:'ส่งงานแล้ว'},
+ {id:16,title:'Home Program ปวดสะโพก',dept:'กายภาพ',fmt:'Video',topic:'Demo/Exercise Tips',who:'ปาย',col:'กำลังทำ'},
+ {id:17,title:'ป้ายโปรโมชั่นเดือนเมษายน',dept:'Hybrid',fmt:'Photo',topic:'Campaign/Seasonal',who:'ครีม',col:'ผ่านการรีวิว'},
+ {id:18,title:'แม่คุณเอมี่ EP.2',dept:'กระดูกและข้อ',fmt:'Video',topic:'influencer',who:'แยม',col:'โพสเรียบร้อย',eng:15.1}
 ];
-const CN_CAMPAIGN=[
- {m:'มิถุนายน 2569',items:[{n:'โปรก้าวแรก 790',brand:'Yiaoya',st:'on'},{n:'YY Relife 5 ครั้ง 7,900',brand:'Yiaoya',st:'on'},{n:'ตรวจเข่าฟรี 30 ท่าน',brand:'KneeCare',st:'plan'}]},
- {m:'พฤษภาคม 2569',items:[{n:'ทดลองพิลาทิส 699',brand:'Yiaoya',st:'done'},{n:'Lead promotion เข่าเสื่อม',brand:'KneeCare',st:'done'}]}
+const CN_KPI=[
+ {who:'แยม',o:22,w:23,d:18,q:13,p:13},
+ {who:'ตอง',o:20,w:22,d:17,q:14,p:13},
+ {who:'แฟร์',o:21,w:20,d:19,q:12,p:12},
+ {who:'ปาย',o:23,w:19,d:20,q:11,p:10},
+ {who:'ครีม',o:15,w:16,d:16,q:11,p:10},
+ {who:'แป้ง',o:14,w:15,d:17,q:10,p:9}
 ];
-const CN_ADS=[
- {n:'Line ads (กายภาพ)',brand:'Yiaoya',plat:'LINE'},
- {n:'โปรก้าวแรก 790 บาท',brand:'Yiaoya',plat:'FB'},
- {n:'อินฟลูรองช้ำคุณชมพู่',brand:'Yiaoya',plat:'FB'},
- {n:'YY Relife 5 ครั้ง',brand:'Yiaoya',plat:'FB'}
+const CN_PROMO=[
+ {id:'PRO-PT-TRL-05',n:'ก้าวแรกสู่การฟื้นฟู 1 ครั้ง',dept:'กายภาพ',price:790,tier:'TL1',target:10,est:7900,lead:true,st:'รอ Manager'},
+ {id:'PRO-PL-SSN-0130-P',n:'Private Reformer 30 นาที',dept:'พิลาทิส',price:699,tier:'TL',target:10,est:6990,lead:true,st:'รอ Manager'},
+ {id:'PRO-DR-TRL-03',n:'PRP ทดลองเข็มแรก 1 ครั้ง',dept:'กระดูกและข้อ',price:1999,tier:'TL1',target:2,est:3998,lead:true,st:'รอ Manager'},
+ {id:'CRS-PL-PIL-0110-P',n:'Private Pilates 10 ครั้ง',dept:'พิลาทิส',price:13900,tier:'T1',target:9,est:125100,lead:false,st:'อนุมัติแล้ว'},
+ {id:'CRS-PT-YY-0310-P',n:'Yiaoya Relief 10 (YY10)',dept:'กายภาพ',price:13500,tier:'T3',target:23,est:310500,lead:false,st:'อนุมัติแล้ว'},
+ {id:'CRS-HYB-PTP-M3',n:'YY5 + PL5 (Hybrid)',dept:'Hybrid',price:15900,tier:'T1',target:10,est:159000,lead:false,st:'รอ CEO'}
+];
+const CN_INFLU=[
+ {n:'คุณเอมี่ (แม่)',dept:'กระดูกและข้อ',ch:'TikTok',followers:'128K',rate:8000,quota:2,who:'แยม',st:'โพสต์แล้ว EP.1-2'},
+ {n:'คุณมายด์',dept:'กายภาพ',ch:'IG',followers:'56K',rate:5000,quota:1,who:'แยม',st:'กำลังตัดต่อ'},
+ {n:'คุณชมพู่',dept:'กายภาพ',ch:'TikTok',followers:'210K',rate:12000,quota:1,who:'ตอง',st:'ออนแอร์'},
+ {n:'คุณบีม (แม่ลูก 1)',dept:'Hybrid',ch:'IG',followers:'34K',rate:4000,quota:1,who:'แฟร์',st:'รอคิวถ่าย'},
+ {n:'คุณซีม',dept:'กายภาพ',ch:'TikTok',followers:'88K',rate:6000,quota:1,who:'ตอง',st:'ส่งดราฟต์ · รอรีวิว'}
+];
+const CN_BRIEF={date:'2026-06-25',lead:'ตอง',present:['ตอง','แฟร์','ครีม','แยม'],absent:['ปาย (ลา)'],highlight:['#16 Home Program ปวดสะโพก ตัดต่อต่อ','#3 รองช้ำคุณมายด์ ส่งตัดต่อ'],deadline:['#15 PMS พิลาทิส (ส่งงานวันนี้)'],remind:['อย่าลืมอัปลิงก์โพสต์จริงลง planner']};
+const CN_CHECKIN=[
+ {who:'ตอง',inT:'08:54',punc:'เต็ม',plan:'เท้าแบนคืออะไร, อินฟลูคุณซีม',eod:100},
+ {who:'แฟร์',inT:'08:55',punc:'เต็ม',plan:'3 ท่าเบสิคคนเข่าโก่ง, ถ่ายอินฟลู Hybrid',eod:100},
+ {who:'แยม',inT:'09:00',punc:'เต็ม',plan:'คอร์เซ็ต ความสวยที่ต้องแลก, จัด Tier นักกายภาพ EP.2',eod:100},
+ {who:'ครีม',inT:'09:13',punc:'ครึ่ง',plan:'ออกแบบกราฟิก / ถ่าย Home Program',eod:80},
+ {who:'ปาย',inT:'-',punc:'ลา',plan:'-',eod:0}
 ];
 let _cnDragId=null;
 let CN_UPLOADS=[];
 
 function _cnToast(m){let t=$('cnToast');if(!t){t=document.createElement('div');t.id='cnToast';t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0D2F4F;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 8px 24px rgba(13,47,79,.3);max-width:90vw;transition:opacity .2s';document.body.appendChild(t);}t.textContent=m;t.style.opacity='1';clearTimeout(t._h);t._h=setTimeout(()=>{t.style.opacity='0';},2400);}
-function _cnBrand(b){const c=CN_BRAND[b]||'#64748B';return '<span style="font-size:10px;font-weight:700;color:'+c+';background:'+c+'1a;padding:2px 8px;border-radius:10px">'+esc(b)+'</span>';}
+function _cnDept(d){const c=CN_DEPT[d]||'#64748B';return '<span style="font-size:10px;font-weight:700;color:'+c+';background:'+c+'1a;padding:2px 8px;border-radius:10px">'+esc(d)+'</span>';}
 function _cnPlat(p){return '<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti '+(CN_PLAT[p]||'ti-world')+'"></i> '+esc(p)+'</span>';}
-function _cnType(t){const x=CN_TYPE[t]||{t:t,c:'#64748B'};return '<span title="'+esc(x.t)+'" style="font-size:9px;font-weight:800;color:#fff;background:'+x.c+';padding:1px 6px;border-radius:5px;letter-spacing:.04em">'+esc(t)+'</span>';}
-function _cnWho(name){const c=(CN_CREATORS[name]||{}).c||'#64748B';return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted,#64748B)"><span style="width:8px;height:8px;border-radius:50%;background:'+c+'"></span>'+esc(name)+'</span>';}
+function _cnTopic(t){return '<span style="font-size:10px;color:var(--text-muted,#64748B);background:#F1F5F9;padding:1px 7px;border-radius:5px">'+esc(t)+'</span>';}
+function _cnWho(name){const c=CN_WHO_C[name]||'#64748B';return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted,#64748B)"><span style="width:8px;height:8px;border-radius:50%;background:'+c+'"></span>'+esc(name)+'</span>';}
 function _cnBtn(label,icon,cls){const col=cls==='ok'?'background:#047857;color:#fff;border:none':cls==='warn'?'background:#fff;color:#B45309;border:1px solid #FCD9A8':cls==='danger'?'background:#fff;color:#B91C1C;border:1px solid #FCA5A5':'background:#fff;color:var(--navy,#0D2F4F);border:1px solid var(--border,#E2E8F0)';return '<button data-cnact="'+esc(label)+'" style="'+col+';border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px"><i class="ti '+icon+'"></i>'+esc(label)+'</button>';}
-function _cnBind(wrap){wrap.querySelectorAll('[data-cnact]').forEach(b=>b.onclick=(e)=>{e.stopPropagation();_cnToast('UI เปล่า (mock) · "'+b.dataset.cnact+'" จะทำงานจริงเมื่อต่อ Supabase/Trello sync');});}
+function _cnBind(wrap){wrap.querySelectorAll('[data-cnact]').forEach(b=>b.onclick=(e)=>{e.stopPropagation();_cnToast('UI mock · "'+b.dataset.cnact+'" จะทำงานจริงเมื่อ sync V3→Supabase');});}
 function _cnSetCt(v,n){const c=$('ct-'+v);if(c)c.textContent=n||'';}
-function _cnCard(it,actions){return '<div class="card" style="padding:13px 15px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4">'+esc(it.title)+'</div>'+_cnType(it.type)+'</div><div style="display:flex;gap:10px;align-items:center;margin:8px 0;flex-wrap:wrap">'+_cnBrand(it.brand)+_cnPlat(it.plat)+_cnWho(it.creator)+'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-calendar"></i> '+esc(it.date)+'</span></div>'+(actions||'')+'</div>';}
+function _cnSc(v,l,col){return '<div style="flex:1;min-width:130px;background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:13px;padding:13px 15px"><div style="font-size:23px;font-weight:800;color:'+(col||'var(--navy,#0D2F4F)')+'">'+v+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">'+l+'</div></div>';}
+function _cnCard(it,actions){return '<div class="card" style="padding:13px 15px;margin-bottom:10px"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4;margin-bottom:8px">'+esc(it.title)+'</div><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">'+_cnDept(it.dept)+_cnTopic(it.topic)+_cnWho(it.who)+'<span style="font-size:11px;color:var(--text-muted,#64748B)">'+esc(it.fmt)+'</span></div>'+(actions||'')+'</div>';}
+
+function mountCnBrief(){const w=$('cnBriefWrap');if(!w)return;const b=CN_BRIEF;
+ let h='<div class="card" style="padding:18px 20px;margin-bottom:14px;border:1px solid #C7E8E3;background:linear-gradient(135deg,#F0FDFA,#fff)"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px"><div><div style="font-size:11px;letter-spacing:1px;color:#0F766E;font-weight:700">MORNING BRIEF · สรุปเช้า</div><div style="font-size:20px;font-weight:800;color:var(--navy,#0D2F4F)">'+esc(b.date)+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">ผู้นำประชุม: <b>'+esc(b.lead)+'</b></div></div><button data-cnact="ส่ง Brief เข้า LINE กลุ่ม" style="background:#06C755;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-brand-line"></i> ส่งเข้า LINE</button></div></div>';
+ h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">';
+ h+=_cnSc(b.present.length,'เข้าประชุม','#047857')+_cnSc(b.absent.length,'ลา/ไม่มา','#B45309')+_cnSc(b.deadline.length,'Deadline วันนี้','#B91C1C')+'</div>';
+ const box=(t,icon,arr,col)=>'<div class="card" style="padding:14px 16px;margin-bottom:10px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:8px"><i class="ti '+icon+'" style="color:'+col+'"></i> '+t+'</div>'+(arr.length?arr.map(x=>'<div style="font-size:13px;color:var(--text,#0F172A);padding:3px 0">• '+esc(x)+'</div>').join(''):'<div style="font-size:12px;color:var(--text-muted,#64748B)">—</div>')+'</div>';
+ h+='<div class="card" style="padding:14px 16px;margin-bottom:10px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:8px"><i class="ti ti-users" style="color:#0F766E"></i> ทีมวันนี้</div><div style="display:flex;gap:8px;flex-wrap:wrap">'+b.present.map(n=>'<span style="font-size:12px;background:#ECFDF5;color:#047857;padding:3px 10px;border-radius:10px">'+_cnWho(n).replace(/<span style="[^"]*color:var[^>]*>|<\/span>$/,'')+'</span>').join('')+b.absent.map(n=>'<span style="font-size:12px;background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:10px">'+esc(n)+'</span>').join('')+'</div></div>';
+ h+=box('ไฮไลท์วันนี้','ti-star',b.highlight,'#CA8A04')+box('Deadline วันนี้','ti-clock',b.deadline,'#B91C1C')+box('เตือนทีม','ti-bell',b.remind,'#185FA5');
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnbrief',b.deadline.length);}
+
+function mountCnCheckin(){const w=$('cnCheckinWrap');if(!w)return;
+ const onTime=CN_CHECKIN.filter(x=>x.punc==='เต็ม').length;const avg=Math.round(CN_CHECKIN.filter(x=>x.punc!=='ลา').reduce((a,x)=>a+x.eod,0)/Math.max(1,CN_CHECKIN.filter(x=>x.punc!=='ลา').length));
+ const pc={'เต็ม':'#047857','ครึ่ง':'#B45309','0':'#B91C1C','ลา':'#64748B'};
+ let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#EFF6FF;border-radius:10px;border:1px solid #BFDBFE"><i class="ti ti-clock-hour-8" style="color:#1D4ED8"></i><span style="font-size:12px;color:#1E40AF">ตรงเวลา: ก่อน 09:00 = เต็ม · 09:00-09:30 = ครึ่ง · หลัง = 0 (คำนวณอัตโนมัติจาก Check-in)</span></div>';
+ h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(onTime+'/'+CN_CHECKIN.length,'มาตรงเวลา','#047857')+_cnSc(avg+'%','EOD เฉลี่ย','#185FA5')+_cnSc(CN_CHECKIN.filter(x=>x.punc==='ลา').length,'ลาวันนี้','#B45309')+'</div>';
+ h+='<div class="card" style="padding:6px 14px">'+CN_CHECKIN.map(x=>'<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border,#E2E8F0)"><span style="width:30px;height:30px;border-radius:50%;background:'+(CN_WHO_C[x.who]||'#64748B')+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">'+esc(x.who.charAt(0))+'</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(x.who)+' <span style="font-size:11px;font-weight:400;color:var(--text-muted,#64748B)">เข้า '+esc(x.inT)+'</span></div><div style="font-size:11px;color:var(--text-muted,#64748B);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(x.plan)+'</div></div><span style="font-size:10px;font-weight:700;color:'+pc[x.punc]+';background:'+pc[x.punc]+'1a;padding:2px 8px;border-radius:10px;flex-shrink:0">'+esc(x.punc)+'</span><span style="font-size:13px;font-weight:700;color:'+(x.eod>=100?'#047857':x.eod>=80?'#B45309':'#B91C1C')+';width:42px;text-align:right;flex-shrink:0">'+x.eod+'%</span></div>').join('')+'</div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cncheckin',onTime);}
 
 function mountCnPlan(){const w=$('cnPlanWrap');if(!w)return;
  const first=new Date(2026,5,1).getDay();const days=new Date(2026,6,0).getDate();
- const byDate={};CN_DATA.forEach(it=>{(byDate[it.date]=byDate[it.date]||[]).push(it);});
- const planned=CN_DATA.length;const gaps=[];for(let d=24;d<=30;d++){const k='2026-06-'+String(d).padStart(2,'0');if(!byDate[k])gaps.push(d);}
- const sc=(v,l,col)=>'<div style="flex:1;min-width:140px;background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:13px;padding:13px 15px"><div style="font-size:24px;font-weight:800;color:'+(col||'var(--navy,#0D2F4F)')+'">'+v+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">'+l+'</div></div>';
- let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">';
- h+=sc(planned,'คอนเทนต์ที่วางแผน');h+=sc(gaps.length,'วันที่ยังว่าง (7 วันข้างหน้า)','#B45309');
- h+='<div style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:center"><button data-cnact="เพิ่มคอนเทนต์ลงปฏิทิน" style="background:#3DC5B7;color:#04342C;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มคอนเทนต์</button></div></div>';
- h+='<div class="card" style="padding:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">มิถุนายน 2026</div>';
- h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;font-size:11px">';
+ const byDate={};CN_DATA.forEach((it,idx)=>{const d=10+(idx%18);const k='2026-06-'+String(d).padStart(2,'0');(byDate[k]=byDate[k]||[]).push(it);});
+ let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(CN_DATA.length,'คอนเทนต์เดือนนี้')+_cnSc(Object.keys(CN_DEPT).length,'แผนก','#185FA5')+'<div style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:center"><button data-cnact="เพิ่มคอนเทนต์ลงปฏิทิน" style="background:#3DC5B7;color:#04342C;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มคอนเทนต์</button></div></div>';
+ h+='<div class="card" style="padding:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">มิถุนายน 2026</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;font-size:11px">';
  ['อา','จ','อ','พ','พฤ','ศ','ส'].forEach(d=>h+='<div style="text-align:center;color:var(--text-muted,#64748B);font-weight:600;padding:2px">'+d+'</div>');
  for(let i=0;i<first;i++)h+='<div></div>';
- for(let d=1;d<=days;d++){const k='2026-06-'+String(d).padStart(2,'0');const its=byDate[k]||[];
-  h+='<div style="min-height:58px;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:4px"><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:2px">'+d+'</div>'+its.map(it=>'<div title="'+esc(it.title)+'" style="font-size:10px;color:#fff;background:'+(CN_BRAND[it.brand]||'#64748B')+';border-radius:4px;padding:1px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.type)+' · '+esc(it.title)+'</div>').join('')+'</div>';}
- h+='</div><div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap">'+Object.keys(CN_BRAND).map(b=>'<span style="font-size:11px;color:var(--text-muted,#64748B)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+CN_BRAND[b]+';margin-right:4px"></span>'+esc(b)+'</span>').join('')+'</div></div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cnplan',planned);}
+ for(let d=1;d<=days;d++){const k='2026-06-'+String(d).padStart(2,'0');const its=byDate[k]||[];h+='<div style="min-height:58px;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:4px"><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:2px">'+d+'</div>'+its.map(it=>'<div title="'+esc(it.title)+'" style="font-size:10px;color:#fff;background:'+(CN_DEPT[it.dept]||'#64748B')+';border-radius:4px;padding:1px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title)+'</div>').join('')+'</div>';}
+ h+='</div><div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap">'+Object.keys(CN_DEPT).map(b=>'<span style="font-size:11px;color:var(--text-muted,#64748B)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+CN_DEPT[b]+';margin-right:4px"></span>'+esc(b)+'</span>').join('')+'</div></div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnplan',CN_DATA.length);}
 
 function mountCnBoard(){const w=$('cnBoardWrap');if(!w)return;
- let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:9px 13px;background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px"><i class="ti ti-grip-vertical" style="color:#0F766E"></i><span style="font-size:12px;color:#0F766E">ลากการ์ดข้ามคอลัมน์ได้เลย (เหมือน Trello) · สถานะอัปเดตทันที</span><button data-cnact="เพิ่มการ์ดใหม่" style="margin-left:auto;background:#0F766E;color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มการ์ด</button></div>';
+ let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:9px 13px;background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px"><i class="ti ti-grip-vertical" style="color:#0F766E"></i><span style="font-size:12px;color:#0F766E">ลากการ์ดข้ามคอลัมน์ได้เลย · 8 สถานะตรงกับ Content planner V3</span><button data-cnact="เพิ่มการ์ดใหม่" style="margin-left:auto;background:#0F766E;color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มการ์ด</button></div>';
  h+='<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px">';
  CN_COLS.forEach(col=>{const its=CN_DATA.filter(x=>x.col===col.k);
-  h+='<div class="cnCol" data-col="'+col.k+'" style="flex:0 0 220px;min-width:220px;background:#F1F5F9;border-radius:12px;padding:8px">';
-  h+='<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);padding:4px 6px 8px"><i class="ti '+col.i+'"></i>'+col.t+'<span style="margin-left:auto;font-size:10px;background:#fff;color:var(--text-muted,#64748B);border-radius:8px;padding:1px 7px">'+its.length+'</span></div>';
-  h+='<div class="cnColBody" data-col="'+col.k+'" style="min-height:40px;display:flex;flex-direction:column;gap:7px">';
-  its.forEach(it=>{h+='<div class="cnKan" draggable="true" data-id="'+it.id+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.04)"><div style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start;margin-bottom:6px"><span style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.35">'+esc(it.title)+'</span>'+_cnType(it.type)+'</div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">'+_cnBrand(it.brand)+_cnWho(it.creator)+'</div></div>';});
+  h+='<div class="cnCol" style="flex:0 0 210px;min-width:210px;background:#F1F5F9;border-radius:12px;padding:8px">';
+  h+='<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);padding:4px 6px 8px"><i class="ti '+col.i+'"></i>'+esc(col.k)+'<span style="margin-left:auto;font-size:10px;background:#fff;color:var(--text-muted,#64748B);border-radius:8px;padding:1px 7px">'+its.length+'</span></div>';
+  h+='<div class="cnColBody" data-col="'+esc(col.k)+'" style="min-height:40px;display:flex;flex-direction:column;gap:7px">';
+  its.forEach(it=>{h+='<div class="cnKan" draggable="true" data-id="'+it.id+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.04)"><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.35;margin-bottom:6px">'+esc(it.title)+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+_cnDept(it.dept)+_cnWho(it.who)+'</div></div>';});
   h+='</div></div>';});
  h+='</div>';
  w.innerHTML=h;_cnBind(w);_cnSetCt('cnboard',CN_DATA.length);
- w.querySelectorAll('.cnKan').forEach(card=>{
-  card.addEventListener('dragstart',e=>{_cnDragId=+card.dataset.id;card.style.opacity='.45';});
-  card.addEventListener('dragend',e=>{card.style.opacity='';});
- });
- w.querySelectorAll('.cnColBody').forEach(body=>{
-  body.addEventListener('dragover',e=>{e.preventDefault();body.parentElement.style.outline='2px dashed #3DC5B7';});
-  body.addEventListener('dragleave',e=>{body.parentElement.style.outline='';});
-  body.addEventListener('drop',e=>{e.preventDefault();body.parentElement.style.outline='';const it=CN_DATA.find(x=>x.id===_cnDragId);if(it&&it.col!==body.dataset.col){const to=CN_COLS.find(c=>c.k===body.dataset.col);it.col=body.dataset.col;_cnToast('ย้าย "'+it.title+'" → '+(to?to.t:body.dataset.col));mountCnBoard();}});
- });}
+ w.querySelectorAll('.cnKan').forEach(card=>{card.addEventListener('dragstart',()=>{_cnDragId=+card.dataset.id;card.style.opacity='.45';});card.addEventListener('dragend',()=>{card.style.opacity='';});});
+ w.querySelectorAll('.cnColBody').forEach(body=>{body.addEventListener('dragover',e=>{e.preventDefault();body.parentElement.style.outline='2px dashed #3DC5B7';});body.addEventListener('dragleave',()=>{body.parentElement.style.outline='';});body.addEventListener('drop',e=>{e.preventDefault();body.parentElement.style.outline='';const it=CN_DATA.find(x=>x.id===_cnDragId);if(it&&it.col!==body.dataset.col){it.col=body.dataset.col;_cnToast('ย้าย "'+it.title+'" → '+body.dataset.col);mountCnBoard();}});});}
 
 function mountCnDraft(){const w=$('cnDraftWrap');if(!w)return;
- const drafts=CN_DATA.filter(it=>['idea','plan','doing'].includes(it.col));
- let h='<div class="card" style="padding:15px;margin-bottom:14px;border:1px solid #C7E8E3;background:#F0FDFA"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-sparkles" style="color:#0F766E"></i> สร้างคอนเทนต์ใหม่</div>';
- h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">';
- h+='<select style="flex:1;min-width:120px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>แบรนด์ —</option>'+Object.keys(CN_BRAND).map(b=>'<option>'+esc(b)+'</option>').join('')+'</select>';
- h+='<select style="flex:1;min-width:120px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>แพลตฟอร์ม —</option>'+Object.keys(CN_PLAT).map(p=>'<option>'+esc(p)+'</option>').join('')+'</select>';
- h+='<select style="flex:1;min-width:120px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>ประเภท —</option>'+Object.keys(CN_TYPE).map(t=>'<option>'+t+' · '+esc(CN_TYPE[t].t)+'</option>').join('')+'</select></div>';
- h+='<input placeholder="หัวข้อ / ประเด็นที่อยากสื่อ เช่น เข่าเสื่อมในผู้สูงอายุ" style="width:100%;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px;box-sizing:border-box">';
- h+='<button data-cnact="ให้ AI ร่างคอนเทนต์" style="background:#0F766E;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit"><i class="ti ti-wand"></i> ให้ AI ร่างให้</button></div>';
- h+='<div class="card" style="padding:15px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:4px"><i class="ti ti-upload" style="color:#185FA5"></i> อัปโหลดไฟล์วิดีโอเข้าระบบ</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:10px">ลากไฟล์มาวาง หรือกดเลือกไฟล์ · รองรับ .mp4 .mov (UI · ยังไม่เก็บจริง — เก็บถาวรเมื่อต่อ Supabase Storage)</div>';
- h+='<label id="cnDrop" style="display:flex;flex-direction:column;align-items:center;gap:6px;border:2px dashed #93C5C0;border-radius:12px;padding:24px;cursor:pointer;background:#F8FEFD"><i class="ti ti-movie" style="font-size:30px;color:#3DC5B7"></i><span style="font-size:13px;color:var(--navy,#0D2F4F);font-weight:600">เลือกไฟล์วิดีโอ</span><span style="font-size:11px;color:var(--text-muted,#64748B)">หรือลากมาวางตรงนี้</span><input id="cnVid" type="file" accept="video/*" multiple style="display:none"></label>';
- h+='<div id="cnVidList" style="margin-top:12px"></div></div>';
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">ดราฟต์ที่กำลังทำ ('+drafts.length+')</div>';
- h+=drafts.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ให้ AI ช่วยปรับ','ti-wand','')+_cnBtn('แนบวิดีโอ','ti-paperclip','')+_cnBtn('ส่งเข้ารีวิว','ti-send','ok')+'</div>')).join('')||emptyCard('ยังไม่มีดราฟต์');
+ const drafts=CN_DATA.filter(it=>['วางแผน','กำลังทำ','ส่งงานแล้ว','แก้ไข'].includes(it.col));
+ let h='<div class="card" style="padding:15px;margin-bottom:14px;border:1px solid #C7E8E3;background:#F0FDFA"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-sparkles" style="color:#0F766E"></i> สร้างคอนเทนต์ใหม่</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">';
+ h+='<select style="flex:1;min-width:120px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>แผนก —</option>'+Object.keys(CN_DEPT).map(b=>'<option>'+esc(b)+'</option>').join('')+'</select>';
+ h+='<select style="flex:1;min-width:120px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>รูปแบบ —</option>'+CN_FORMATS.map(f=>'<option>'+esc(f)+'</option>').join('')+'</select>';
+ h+='<select style="flex:1;min-width:120px;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit"><option>หัวข้อ —</option>'+CN_TOPICS.map(t=>'<option>'+esc(t)+'</option>').join('')+'</select></div>';
+ h+='<input placeholder="ชื่อเรื่อง เช่น 3 ท่ายืดกล้ามเนื้อก่อนนอน" style="width:100%;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px;box-sizing:border-box"><button data-cnact="ให้ AI ร่าง Caption" style="background:#0F766E;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit"><i class="ti ti-wand"></i> ให้ AI ร่าง Caption</button></div>';
+ h+='<div class="card" style="padding:15px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:4px"><i class="ti ti-upload" style="color:#185FA5"></i> อัปโหลดไฟล์วิดีโอเข้าระบบ</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:10px">ลากไฟล์มาวาง หรือกดเลือก · .mp4 .mov (preview ในเครื่อง · เก็บถาวรเมื่อต่อ Supabase Storage)</div><label id="cnDrop" style="display:flex;flex-direction:column;align-items:center;gap:6px;border:2px dashed #93C5C0;border-radius:12px;padding:24px;cursor:pointer;background:#F8FEFD"><i class="ti ti-movie" style="font-size:30px;color:#3DC5B7"></i><span style="font-size:13px;color:var(--navy,#0D2F4F);font-weight:600">เลือกไฟล์วิดีโอ</span><span style="font-size:11px;color:var(--text-muted,#64748B)">หรือลากมาวางตรงนี้</span><input id="cnVid" type="file" accept="video/*" multiple style="display:none"></label><div id="cnVidList" style="margin-top:12px"></div></div>';
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">งานที่กำลังทำ ('+drafts.length+')</div>'+drafts.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ให้ AI ช่วยปรับ','ti-wand','')+_cnBtn('แนบวิดีโอ','ti-paperclip','')+_cnBtn('ส่งงาน','ti-send','ok')+'</div>')).join('')||emptyCard('ยังไม่มีงาน');
  w.innerHTML=h;_cnBind(w);_cnSetCt('cndraft',drafts.length);
  const inp=$('cnVid'),drop=$('cnDrop');
- const render=()=>{const l=$('cnVidList');if(!l)return;l.innerHTML=CN_UPLOADS.length?CN_UPLOADS.map((u,i)=>'<div class="card" style="padding:10px;margin-bottom:8px;display:flex;gap:10px;align-items:center"><video src="'+u.url+'" style="width:120px;height:74px;border-radius:8px;object-fit:cover;background:#000" muted></video><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--navy,#0D2F4F);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(u.name)+'</div><div style="font-size:11px;color:var(--text-muted,#64748B)">'+u.size+' · '+esc(u.type||'video')+'</div></div><button data-cnrm="'+i+'" style="background:#fff;border:1px solid #FCA5A5;color:#B91C1C;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit"><i class="ti ti-trash"></i></button></div>').join(''):'<div style="font-size:12px;color:var(--text-muted,#64748B)">ยังไม่มีไฟล์อัปโหลด</div>';
-  l.querySelectorAll('[data-cnrm]').forEach(b=>b.onclick=()=>{const u=CN_UPLOADS[+b.dataset.cnrm];if(u&&u.url)URL.revokeObjectURL(u.url);CN_UPLOADS.splice(+b.dataset.cnrm,1);render();});};
- const add=(files)=>{[...files].forEach(f=>{if(!f.type.startsWith('video/')){_cnToast('รับเฉพาะไฟล์วิดีโอ: '+f.name);return;}CN_UPLOADS.push({name:f.name,size:(f.size/1048576).toFixed(1)+' MB',type:f.type,url:URL.createObjectURL(f)});});_cnToast('อัปโหลด '+files.length+' ไฟล์ (preview ในเครื่อง)');render();};
+ const render=()=>{const l=$('cnVidList');if(!l)return;l.innerHTML=CN_UPLOADS.length?CN_UPLOADS.map((u,i)=>'<div class="card" style="padding:10px;margin-bottom:8px;display:flex;gap:10px;align-items:center"><video src="'+u.url+'" style="width:120px;height:74px;border-radius:8px;object-fit:cover;background:#000" muted></video><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--navy,#0D2F4F);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(u.name)+'</div><div style="font-size:11px;color:var(--text-muted,#64748B)">'+u.size+'</div></div><button data-cnrm="'+i+'" style="background:#fff;border:1px solid #FCA5A5;color:#B91C1C;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit"><i class="ti ti-trash"></i></button></div>').join(''):'<div style="font-size:12px;color:var(--text-muted,#64748B)">ยังไม่มีไฟล์อัปโหลด</div>';l.querySelectorAll('[data-cnrm]').forEach(b=>b.onclick=()=>{const u=CN_UPLOADS[+b.dataset.cnrm];if(u&&u.url)URL.revokeObjectURL(u.url);CN_UPLOADS.splice(+b.dataset.cnrm,1);render();});};
+ const add=(files)=>{[...files].forEach(f=>{if(!f.type.startsWith('video/')){_cnToast('รับเฉพาะวิดีโอ: '+f.name);return;}CN_UPLOADS.push({name:f.name,size:(f.size/1048576).toFixed(1)+' MB',url:URL.createObjectURL(f)});});_cnToast('อัปโหลด '+files.length+' ไฟล์ (preview)');render();};
  if(inp)inp.onchange=e=>add(e.target.files);
- if(drop){drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.background='#E1F5EE';});drop.addEventListener('dragleave',e=>{drop.style.background='#F8FEFD';});drop.addEventListener('drop',e=>{e.preventDefault();drop.style.background='#F8FEFD';if(e.dataTransfer&&e.dataTransfer.files)add(e.dataTransfer.files);});}
+ if(drop){drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.background='#E1F5EE';});drop.addEventListener('dragleave',()=>{drop.style.background='#F8FEFD';});drop.addEventListener('drop',e=>{e.preventDefault();drop.style.background='#F8FEFD';if(e.dataTransfer&&e.dataTransfer.files)add(e.dataTransfer.files);});}
  render();}
 
 function mountCnReview(){const w=$('cnReviewWrap');if(!w)return;
- const STAGES=[{k:'tong',t:'ชั้น 1 · พี่ตองตรวจ',i:'ti-user-check',c:'#4D7C0F'},{k:'zern',t:'ชั้น 2 · พี่เซิน double-check',i:'ti-user-star',c:'#185FA5'},{k:'fa',t:'ชั้น 3 · พี่ฟาตรวจ',i:'ti-user-check',c:'#7C3AED'}];
- const revActions='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px">'+_cnBtn('อนุมัติ · ส่งต่อ','ti-check','ok')+_cnBtn('ขอแก้','ti-message-circle','warn')+_cnBtn('ตีกลับ','ti-x','danger')+'</div><textarea placeholder="คอมเมนต์ถึงทีมคอนเทนต์ (บันทึกใน audit log)" style="width:100%;padding:8px 10px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;min-height:44px"></textarea>';
- const inReview=CN_DATA.filter(it=>it.col==='review');
- let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFF7ED;border-radius:10px;border:1px solid #FCD9A8"><i class="ti ti-shield-check" style="color:#B45309;font-size:18px"></i><span style="font-size:12px;color:#92400E">รีวิวหลายชั้นตามจริง: <b>พี่ตอง → พี่เซิน → พี่ฟา</b> · คอนเทนต์การแพทย์เพิ่ม <b>fact-check แพทย์</b> ก่อนเผยแพร่ · ทุกการอนุมัติบันทึก audit (ใคร/เมื่อไร)</span></div>';
- STAGES.forEach(s=>{const its=inReview.filter(x=>x.rev===s.k);
-  h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti '+s.i+'" style="color:'+s.c+'"></i> '+s.t+' ('+its.length+')</div>';
-  h+=its.map(it=>_cnCard(it,(it.type==='DOC'||it.type==='TES'||it.type==='EDU'?'<div style="font-size:11px;color:#B45309;margin-bottom:7px"><i class="ti ti-stethoscope"></i> คอนเทนต์การแพทย์ — ต้อง fact-check แพทย์</div>':'')+revActions)).join('')||emptyCard('ไม่มีงานในชั้นนี้');});
- const fix=inReview.filter(x=>x.rev==='fix');
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-rotate" style="color:#64748B"></i> ส่งกลับให้แก้ ('+fix.length+')</div>';
- h+=fix.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ส่งรีวิวอีกครั้ง','ti-send','ok')+'</div>')).join('')||emptyCard('ไม่มีงานรอแก้');
- w.innerHTML=h;_cnBind(w);_cnSetCt('cnreview',inReview.length);}
+ const revActions='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px">'+_cnBtn('อนุมัติ · ส่งต่อ','ti-check','ok')+_cnBtn('ขอแก้','ti-message-circle','warn')+_cnBtn('ตีกลับ','ti-x','danger')+'</div><textarea placeholder="คอมเมนต์ (บันทึก audit)" style="width:100%;padding:8px 10px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;min-height:42px"></textarea>';
+ const tong=CN_DATA.filter(x=>x.col==='ตองตรวจ');const zern=CN_DATA.filter(x=>x.col==='เซินรีวิว');const fix=CN_DATA.filter(x=>x.col==='แก้ไข');const sent=CN_DATA.filter(x=>x.col==='ส่งงานแล้ว');
+ let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFF7ED;border-radius:10px;border:1px solid #FCD9A8"><i class="ti ti-shield-check" style="color:#B45309;font-size:18px"></i><span style="font-size:12px;color:#92400E">รีวิวตามจริง 2 ชั้น: <b>ตองตรวจ → เซินรีวิว</b> · งานการแพทย์เพิ่ม fact-check แพทย์ · ทุกการอนุมัติบันทึก audit</span></div>';
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:6px 0 10px"><i class="ti ti-inbox" style="color:#64748B"></i> ส่งงานแล้ว · รอเข้ารีวิว ('+sent.length+')</div>'+sent.map(it=>_cnCard(it,_cnBtn('รับเข้ารีวิว (ตอง)','ti-arrow-right','ok'))).join('')||'';
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-user-check" style="color:#4D7C0F"></i> ชั้น 1 · ตองตรวจ ('+tong.length+')</div>'+(tong.map(it=>_cnCard(it,revActions)).join('')||emptyCard('ไม่มีงาน'));
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-user-star" style="color:#185FA5"></i> ชั้น 2 · เซินรีวิว ('+zern.length+')</div>'+(zern.map(it=>_cnCard(it,revActions)).join('')||emptyCard('ไม่มีงาน'));
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-rotate" style="color:#64748B"></i> แก้ไข ('+fix.length+')</div>'+(fix.map(it=>_cnCard(it,_cnBtn('ส่งรีวิวอีกครั้ง','ti-send','ok'))).join('')||emptyCard('ไม่มีงานรอแก้'));
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnreview',tong.length+zern.length);}
 
 function mountCnQueue(){const w=$('cnQueueWrap');if(!w)return;
- const appr=CN_DATA.filter(it=>it.col==='approved');const pub=CN_DATA.filter(it=>it.col==='posted');
- let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#EFF6FF;border-radius:10px;border:1px solid #BFDBFE"><i class="ti ti-hand-stop" style="color:#1D4ED8;font-size:18px"></i><span style="font-size:12px;color:#1E40AF">Confirm-mode: ไม่มีโพสต์ใดเผยแพร่อัตโนมัติ — ต้องกดยืนยันทุกครั้ง</span></div>';
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-circle-check" style="color:#047857"></i> ผ่านรีวิวแล้ว · รอตั้งเวลา/โพสต์ ('+appr.length+')</div>';
- h+=appr.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ตั้งเวลาโพสต์','ti-clock','')+_cnBtn('โพสต์เลย','ti-send','ok')+'</div>')).join('')||emptyCard('ยังไม่มีงานพร้อมโพสต์');
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:16px 0 10px"><i class="ti ti-checks" style="color:#64748B"></i> โพสต์แล้ว ('+pub.length+')</div>';
- h+=pub.map(it=>_cnCard(it,'<div style="font-size:12px;color:var(--text-muted,#64748B)"><i class="ti ti-chart-line"></i> Engagement '+(it.eng!=null?it.eng+'%':'-')+' · ดูเพิ่มที่หน้า "ครีเอทีฟ·คลิป"</div>')).join('')||emptyCard('ยังไม่มีโพสต์');
+ const appr=CN_DATA.filter(it=>it.col==='ผ่านการรีวิว');const pub=CN_DATA.filter(it=>it.col==='โพสเรียบร้อย');
+ let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#EFF6FF;border-radius:10px;border:1px solid #BFDBFE"><i class="ti ti-hand-stop" style="color:#1D4ED8"></i><span style="font-size:12px;color:#1E40AF">Confirm-mode: โพสต์ต้องกดยืนยันทุกครั้ง · อย่าลืมอัปลิงก์โพสต์จริงกลับ planner (FB/IG/TT/LINE)</span></div>';
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-circle-check" style="color:#047857"></i> ผ่านการรีวิว · รอโพสต์ ('+appr.length+')</div>'+(appr.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ตั้งเวลาโพสต์','ti-clock','')+_cnBtn('โพสต์เลย','ti-send','ok')+'</div>')).join('')||emptyCard('ยังไม่มีงานพร้อมโพสต์'));
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:16px 0 10px"><i class="ti ti-checks" style="color:#64748B"></i> โพสเรียบร้อย ('+pub.length+')</div>'+(pub.map(it=>_cnCard(it,'<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">'+Object.keys(CN_PLAT).map(p=>'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti '+CN_PLAT[p]+'"></i></span>').join('')+'<span style="font-size:12px;color:var(--text-muted,#64748B)">Engagement '+(it.eng!=null?it.eng+'%':'-')+'</span></div>')).join('')||emptyCard('ยังไม่มีโพสต์'));
  w.innerHTML=h;_cnBind(w);_cnSetCt('cnqueue',appr.length);}
 
 function mountCnCampaign(){const w=$('cnCampaignWrap');if(!w)return;
- const stPill=(s)=>{const m={on:['ออนแอร์','#047857','#ECFDF5'],plan:['เตรียม','#B45309','#FFF7ED'],done:['จบแล้ว','#64748B','#F1F5F9']}[s]||['','#64748B','#F1F5F9'];return '<span style="font-size:10px;font-weight:700;color:'+m[1]+';background:'+m[2]+';padding:2px 8px;border-radius:10px">'+m[0]+'</span>';};
- let h='';
- CN_CAMPAIGN.forEach(g=>{h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:6px 0 10px"><i class="ti ti-discount"></i> โปรโมชั่น · '+esc(g.m)+'</div>';
-  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-bottom:16px">'+g.items.map(it=>'<div class="card" style="padding:13px 15px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><span style="font-size:13px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(it.n)+'</span>'+stPill(it.st)+'</div><div style="margin-top:8px">'+_cnBrand(it.brand)+'</div></div>').join('')+'</div>';});
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:6px 0 10px"><i class="ti ti-broadcast" style="color:#D4537E"></i> Ads on-air · คลิป/ภาพที่กำลังออนแอร์ ('+CN_ADS.length+')</div>';
- h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px">'+CN_ADS.map(a=>'<div class="card" style="padding:13px 15px"><div style="font-size:13px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:8px">'+esc(a.n)+'</div><div style="display:flex;gap:8px;align-items:center">'+_cnBrand(a.brand)+_cnPlat(a.plat)+'<span style="margin-left:auto;font-size:10px;font-weight:700;color:#047857;background:#ECFDF5;padding:2px 8px;border-radius:10px">LIVE</span></div></div>').join('')+'</div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cncampaign',CN_ADS.length);}
+ const stP=(s)=>{const m={'อนุมัติแล้ว':['#047857','#ECFDF5'],'รอ Manager':['#B45309','#FFF7ED'],'รอ CEO':['#1D4ED8','#EFF6FF']}[s]||['#64748B','#F1F5F9'];return '<span style="font-size:10px;font-weight:700;color:'+m[0]+';background:'+m[1]+';padding:2px 8px;border-radius:10px">'+esc(s)+'</span>';};
+ const tierP=(t)=>{const c=t.indexOf('3')>=0?'#B91C1C':t.indexOf('2')>=0?'#B45309':'#047857';return '<span style="font-size:9px;font-weight:800;color:#fff;background:'+c+';padding:1px 6px;border-radius:5px">'+esc(t)+'</span>';};
+ const estTot=CN_PROMO.reduce((a,p)=>a+p.est,0);
+ let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(CN_PROMO.length,'โปรเดือนนี้')+_cnSc('฿'+estTot.toLocaleString(),'Est. Revenue รวม','#0F766E')+_cnSc(CN_PROMO.filter(p=>p.st!=='อนุมัติแล้ว').length,'รออนุมัติ','#B45309')+'</div>';
+ h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:9px 13px;background:#F8FAFC;border:1px solid var(--border,#E2E8F0);border-radius:10px"><i class="ti ti-route" style="color:#185FA5"></i><span style="font-size:12px;color:var(--text-muted,#64748B)">Flow อนุมัติ: เลือกโปร → Manager → CEO · Promo_ID format CRS-XX-YYY-0000-P · Tier T1=Safe T2=Growth T3=Aggressive</span></div>';
+ h+='<div class="card" style="padding:4px 0">'+CN_PROMO.map(p=>'<div style="padding:12px 16px;border-bottom:1px solid var(--border,#E2E8F0)"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(p.n)+(p.lead?' <span style="font-size:9px;color:#CA8A04;background:#FEF9C3;padding:1px 6px;border-radius:5px">LEAD</span>':'')+'</div><div style="font-size:11px;color:var(--text-muted,#64748B);font-family:monospace">'+esc(p.id)+'</div></div>'+stP(p.st)+'</div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px">'+_cnDept(p.dept)+tierP(p.tier)+'<span style="font-size:12px;color:var(--navy,#0D2F4F);font-weight:700">฿'+p.price.toLocaleString()+'</span><span style="font-size:11px;color:var(--text-muted,#64748B)">เป้า '+p.target+' เคส · Est. ฿'+p.est.toLocaleString()+'</span></div></div>').join('')+'</div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cncampaign',CN_PROMO.length);}
 
 function mountCnKpi(){const w=$('cnKpiWrap');if(!w)return;
- const bar=(v,target,unit,inv)=>{const pct=Math.min(100,Math.round(v/target*100));const ok=inv?v<=target:v>=target;const col=ok?'#047857':pct>=70?'#B45309':'#B91C1C';return '<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:var(--text-muted,#64748B)">'+unit+'</span><span style="font-weight:700;color:'+col+'">'+v+(unit.indexOf('%')>=0?'%':'')+' / '+target+(unit.indexOf('%')>=0?'%':'')+'</span></div><div style="height:6px;background:#EEF2F6;border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+col+'"></div></div></div>';};
- const names=Object.keys(CN_CREATORS);
- const avgEng=(names.reduce((a,n)=>a+CN_CREATORS[n].eng,0)/names.length).toFixed(1);
- let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">';
- const sc=(v,l,c)=>'<div style="flex:1;min-width:130px;background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:13px;padding:13px 15px"><div style="font-size:23px;font-weight:800;color:'+(c||'var(--navy,#0D2F4F)')+'">'+v+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">'+l+'</div></div>';
- h+=sc(names.length,'ครีเอเตอร์ในทีม');h+=sc(avgEng+'%','Engagement เฉลี่ย','#0F766E');h+=sc('≥5%','เป้า Engagement','#185FA5');h+='</div>';
- h+='<div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:10px">เป้า/สัปดาห์/คน: คลิป ≥'+CN_KPI_TARGET.clips+' · รูป ≥'+CN_KPI_TARGET.photos+' · Engagement ≥'+CN_KPI_TARGET.eng+'% · ลงตรงเวลา 100% · Feedback ใช้จริง ≥'+CN_KPI_TARGET.feedback+'%</div>';
- h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">';
- names.forEach(n=>{const k=CN_CREATORS[n];
-  h+='<div class="card" style="padding:14px 16px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="width:30px;height:30px;border-radius:50%;background:'+k.c+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">'+esc(n.charAt(0))+'</span><span style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(n)+'</span></div>';
-  h+=bar(k.clips,CN_KPI_TARGET.clips,'คลิป/สัปดาห์')+bar(k.photos,CN_KPI_TARGET.photos,'รูป/สัปดาห์')+bar(k.eng,CN_KPI_TARGET.eng,'Engagement %')+bar(k.ontime,CN_KPI_TARGET.ontime,'ลงตรงเวลา %')+bar(k.feedback,CN_KPI_TARGET.feedback,'Feedback ใช้จริง %');
-  h+='</div>';});
+ const grade=(t)=>t>=90?['S','#047857']:t>=80?['A','#0F766E']:t>=70?['B','#185FA5']:t>=60?['C','#B45309']:['D','#B91C1C'];
+ const rows=CN_KPI.map(k=>{const tot=k.o+k.w+k.d+k.q+k.p;return {...k,tot,g:grade(tot)};}).sort((a,b)=>b.tot-a.tot);
+ const avg=Math.round(rows.reduce((a,r)=>a+r.tot,0)/rows.length);
+ const dim=(label,v,max)=>{const pct=Math.round(v/max*100);const col=pct>=80?'#047857':pct>=60?'#B45309':'#B91C1C';return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:var(--text-muted,#64748B)">'+label+'</span><span style="font-weight:700;color:'+col+'">'+v+'/'+max+'</span></div><div style="height:6px;background:#EEF2F6;border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+col+'"></div></div></div>';};
+ let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px">'+_cnSc(rows.length,'ครีเอเตอร์')+_cnSc(avg+'%','คะแนนเฉลี่ย','#0F766E')+_cnSc(rows[0].who,'Top performer','#047857')+'</div>';
+ h+='<div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:12px">5 มิติ (เต็ม 100): Output /25 · Weighted /25 · Discipline /20 · Quality /15 · Platform /15 · เกรด S(90+) A(80+) B(70+) C(60+) D(&lt;60) — คำนวณอัตโนมัติจาก DAILY_LOG + MONTHLY_PLANNER</div>';
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px">';
+ rows.forEach(r=>{h+='<div class="card" style="padding:15px 16px"><div style="display:flex;align-items:center;gap:9px;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:50%;background:'+(CN_WHO_C[r.who]||'#64748B')+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">'+esc(r.who.charAt(0))+'</span><span style="font-size:15px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(r.who)+'</span><span style="margin-left:auto;display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:800;color:var(--navy,#0D2F4F)">'+r.tot+'%</span><span style="font-size:14px;font-weight:800;color:#fff;background:'+r.g[1]+';width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center">'+r.g[0]+'</span></span></div>'+dim('Output',r.o,25)+dim('Weighted',r.w,25)+dim('Discipline',r.d,20)+dim('Quality',r.q,15)+dim('Platform',r.p,15)+'</div>';});
  h+='</div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cnkpi',names.length);}
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnkpi',rows.length);}
 
 function mountCnMonthly(){const w=$('cnMonthlyWrap');if(!w)return;
- const byType={},byWho={};CN_DATA.forEach(it=>{byType[it.type]=(byType[it.type]||0)+1;byWho[it.creator]=(byWho[it.creator]||0)+1;});
- const done=CN_DATA.filter(it=>it.col==='posted').length;
- const maxT=Math.max(1,...Object.values(byType)),maxW=Math.max(1,...Object.values(byWho));
- let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">';
- const sc=(v,l,c)=>'<div style="flex:1;min-width:130px;background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:13px;padding:13px 15px"><div style="font-size:23px;font-weight:800;color:'+(c||'var(--navy,#0D2F4F)')+'">'+v+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">'+l+'</div></div>';
- h+=sc(CN_DATA.length,'งานทั้งหมดเดือนนี้');h+=sc(done,'โพสต์แล้ว','#047857');h+=sc(Object.keys(byType).length,'ประเภทที่ทำ','#185FA5');h+='</div>';
- h+='<div class="card" style="padding:15px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามประเภทคอนเทนต์</div>'+Object.keys(CN_TYPE).filter(t=>byType[t]).map(t=>{const v=byType[t];return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:var(--navy,#0D2F4F)">'+t+' · '+esc(CN_TYPE[t].t)+'</span><span style="font-weight:700">'+v+'</span></div><div style="height:9px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+Math.round(v/maxT*100)+'%;height:100%;background:'+CN_TYPE[t].c+'"></div></div></div>';}).join('')+'</div>';
- h+='<div class="card" style="padding:15px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามครีเอเตอร์</div>'+Object.keys(byWho).sort((a,b)=>byWho[b]-byWho[a]).map(n=>{const v=byWho[n];const c=(CN_CREATORS[n]||{}).c||'#64748B';return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:var(--navy,#0D2F4F)">'+esc(n)+'</span><span style="font-weight:700">'+v+' ชิ้น</span></div><div style="height:9px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+Math.round(v/maxW*100)+'%;height:100%;background:'+c+'"></div></div></div>';}).join('')+'</div>';
+ const byDept={},byWho={},byTopic={};CN_DATA.forEach(it=>{byDept[it.dept]=(byDept[it.dept]||0)+1;byWho[it.who]=(byWho[it.who]||0)+1;byTopic[it.topic]=(byTopic[it.topic]||0)+1;});
+ const done=CN_DATA.filter(it=>it.col==='โพสเรียบร้อย').length;
+ const bars=(obj,colf)=>{const mx=Math.max(1,...Object.values(obj));return Object.keys(obj).sort((a,b)=>obj[b]-obj[a]).map(k=>'<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:var(--navy,#0D2F4F)">'+esc(k)+'</span><span style="font-weight:700">'+obj[k]+'</span></div><div style="height:9px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+Math.round(obj[k]/mx*100)+'%;height:100%;background:'+colf(k)+'"></div></div></div>').join('');};
+ let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(CN_DATA.length,'งานเดือนนี้')+_cnSc(done,'โพสเรียบร้อย','#047857')+_cnSc(Object.keys(byTopic).length,'หัวข้อที่ทำ','#185FA5')+'</div>';
+ h+='<div class="card" style="padding:15px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามแผนก</div>'+bars(byDept,k=>CN_DEPT[k]||'#64748B')+'</div>';
+ h+='<div class="card" style="padding:15px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามครีเอเตอร์</div>'+bars(byWho,k=>CN_WHO_C[k]||'#64748B')+'</div>';
+ h+='<div class="card" style="padding:15px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามหัวข้อ</div>'+bars(byTopic,()=>'#3DC5B7')+'</div>';
  w.innerHTML=h;_cnBind(w);_cnSetCt('cnmonthly',CN_DATA.length);}
 
 function mountCnHighlight(){const w=$('cnHighlightWrap');if(!w)return;
  const hi=CN_DATA.filter(it=>it.eng!=null).sort((a,b)=>b.eng-a.eng);
- let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFFBEB;border-radius:10px;border:1px solid #FDE68A"><i class="ti ti-star" style="color:#CA8A04;font-size:18px"></i><span style="font-size:12px;color:#854D0E">คอนเทนต์ที่ทำผลงานดี (Engagement ≥10%) คัดเป็น Highlight · ดึง performance จริงจาก Meta ได้ที่หน้า "ครีเอทีฟ·คลิป"</span></div>';
- h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">';
- h+=hi.map(it=>{const top=it.eng>=10;return '<div class="card" style="padding:14px 16px;border:'+(top?'1px solid #FDE68A':'1px solid var(--border,#E2E8F0)')+'">'+(top?'<div style="font-size:10px;font-weight:800;color:#CA8A04;margin-bottom:6px"><i class="ti ti-star-filled"></i> HIGHLIGHT</div>':'')+'<div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4;margin-bottom:8px">'+esc(it.title)+'</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'+_cnBrand(it.brand)+_cnPlat(it.plat)+_cnWho(it.creator)+'</div><div style="font-size:22px;font-weight:800;color:'+(top?'#CA8A04':'#0F766E')+'">'+it.eng+'%<span style="font-size:11px;font-weight:600;color:var(--text-muted,#64748B)"> engagement</span></div></div>';}).join('')||emptyCard('ยังไม่มีคอนเทนต์ที่โพสต์/มีผล');
+ let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFFBEB;border-radius:10px;border:1px solid #FDE68A"><i class="ti ti-star" style="color:#CA8A04;font-size:18px"></i><span style="font-size:12px;color:#854D0E">คอนเทนต์ Engagement ≥10% = Highlight · ยอดจริงดึงจาก PLATFORM_ANALYTICS / หน้า ครีเอทีฟ·คลิป (Meta)</span></div>';
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">'+hi.map(it=>{const top=it.eng>=10;return '<div class="card" style="padding:14px 16px;border:'+(top?'1px solid #FDE68A':'1px solid var(--border,#E2E8F0)')+'">'+(top?'<div style="font-size:10px;font-weight:800;color:#CA8A04;margin-bottom:6px"><i class="ti ti-star"></i> HIGHLIGHT</div>':'')+'<div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4;margin-bottom:8px">'+esc(it.title)+'</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'+_cnDept(it.dept)+_cnWho(it.who)+'</div><div style="font-size:22px;font-weight:800;color:'+(top?'#CA8A04':'#0F766E')+'">'+it.eng+'%<span style="font-size:11px;font-weight:600;color:var(--text-muted,#64748B)"> engagement</span></div></div>';}).join('')||emptyCard('ยังไม่มีข้อมูลผล')+'</div>';
  h+='</div>';
  w.innerHTML=h;_cnBind(w);_cnSetCt('cnhighlight',hi.filter(x=>x.eng>=10).length);}
+
+function mountCnInflu(){const w=$('cnInfluWrap');if(!w)return;
+ let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(CN_INFLU.length,'อินฟลูที่ดีลอยู่')+_cnSc('฿'+CN_INFLU.reduce((a,x)=>a+x.rate,0).toLocaleString(),'ค่าตัวรวม','#0F766E')+'<div style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:center"><button data-cnact="ลงทะเบียนอินฟลูใหม่" style="background:#3DC5B7;color:#04342C;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มอินฟลู</button></div></div>';
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">'+CN_INFLU.map(x=>'<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(x.n)+'</div>'+_cnDept(x.dept)+'</div><div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">'+_cnPlat(x.ch)+'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-users"></i> '+esc(x.followers)+'</span></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted,#64748B);border-top:1px solid var(--border,#E2E8F0);padding-top:8px"><span>ค่าตัว ฿'+x.rate.toLocaleString()+' · โควตา '+x.quota+'</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span style="font-size:11px;color:#0F766E;background:#E1F5EE;padding:2px 8px;border-radius:10px">'+esc(x.st)+'</span>'+_cnWho(x.who)+'</div></div>').join('')+'</div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cninflu',CN_INFLU.length);}
 
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
@@ -3728,7 +3753,7 @@ function start(){
  renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
  renderBankTabs(); $('bkPeriod').value=_curMonth(); $('bkGen').onclick=bkGenerate; $('bkCsv').onclick=bkDownloadCsv; loadBankHistory();
  if($('rcDate')&&!$('rcDate').value)$('rcDate').value=new Date().toISOString().slice(0,10); $('rcGen').onclick=rcGenerate;
- mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountPromo();mountDept();mountMkt();mountHub360();mountExpansion();mountPtAudit();mountAiHQ();mountPeopleAi();mountCnPlan();mountCnBoard();mountCnDraft();mountCnReview();mountCnQueue();mountCnCampaign();mountCnKpi();mountCnMonthly();mountCnHighlight();
+ mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountPromo();mountDept();mountMkt();mountHub360();mountExpansion();mountPtAudit();mountAiHQ();mountPeopleAi();mountCnPlan();mountCnBoard();mountCnDraft();mountCnReview();mountCnQueue();mountCnCampaign();mountCnKpi();mountCnMonthly();mountCnHighlight();mountCnBrief();mountCnCheckin();mountCnInflu();
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
