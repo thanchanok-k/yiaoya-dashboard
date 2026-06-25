@@ -8,37 +8,34 @@
                               automation_level, max_level, approver_role, enabled, sort_order) */
 (function () {
   const sb = window.sb, esc = window.esc, $ = window.$;
+  const ic = (name) => `<i class="ti ${name}" aria-hidden="true"></i>`;
 
-  // โดเมน + ป้ายหัวข้อ + จำนวนคนปัจจุบัน→เป้า (ตามแผน AI Operator ลด 6→2)
+  // โดเมน + ไอคอน + ป้ายหัวข้อ + จำนวนคนปัจจุบัน→เป้า (ตามแผน AI Operator ลด 6→2)
   const MODULES = [
-    ['content', '🎨 Content · คอนเทนต์', 'ปัจจุบัน 4 คน → เป้า 1'],
-    ['finance', '💰 Finance · บัญชี/จัดซื้อ', 'ปัจจุบัน 1 คน'],
-    ['hr', '👥 HR · บุคคล', 'ปัจจุบัน 1 คน'],
+    ['content', 'ti-palette', 'Content · คอนเทนต์', 'ปัจจุบัน 4 คน → เป้า 1'],
+    ['finance', 'ti-cash', 'Finance · บัญชี/จัดซื้อ', 'ปัจจุบัน 1 คน'],
+    ['hr', 'ti-users', 'HR · บุคคล', 'ปัจจุบัน 1 คน'],
   ];
-  // ป้าย/ไอคอนรายตำแหน่ง (display เฉย ๆ — ความจริงอยู่ที่ position_label ใน DB)
-  // 🔴 = ตำแหน่งมีงานแตะข้อมูลอ่อนไหว/เงิน ควรคงคนคุม
+  // ป้าย/ไอคอน (Tabler line) รายตำแหน่ง · note (sv) = มีงานแตะข้อมูลอ่อนไหว/เงิน
   const POS_META = {
-    // 🎨 Content / Marketing
-    content_strategist: { icon: '🧭', note: 'วางแผน/กลยุทธ์คอนเทนต์' },
-    content_copywriter: { icon: '✍️', note: 'เขียน+SEO+พิสูจน์อักษร' },
-    content_designer:   { icon: '🎨', note: 'กราฟิก/ภาพ/อินโฟ' },
-    video_editor:      { icon: '🎬', note: 'สคริปต์+ตัดต่อคลิป' },
-    social_admin:      { icon: '📣', note: 'ลงโพสต์ + ดูแลเพจ 🔴แชท' },
-    ad_optimizer:      { icon: '🎯', note: 'ยิงแอด 🔴คุมงบ' },
-    lead_followup:     { icon: '🤝', note: 'ดูแล lead 🔴ข้อมูลลูกค้า' },
-    // 💰 Finance
-    accountant_ar:  { icon: '🧾', note: 'บัญชีรายรับ' },
-    accountant_ap:  { icon: '💸', note: 'บัญชีรายจ่าย 🔴จ่ายเงินล็อก' },
-    accountant_tax: { icon: '📊', note: 'ภาษี/ปิดงบ/ไฟล์โอน' },
-    cashier_petty:  { icon: '🪙', note: 'การเงิน/เงินสดย่อย' },
-    purchaser:      { icon: '🛒', note: 'จัดซื้อ/ผู้ขาย' },
-    inventory_keeper:{ icon: '📦', note: 'สต็อก/คลังยา 🔴หมดอายุ' },
-    // 👥 HR
-    hr_recruiter:  { icon: '🧑‍💼', note: 'สรรหา/สัมภาษณ์' },
-    hr_operations: { icon: '📋', note: 'บุคคลทั่วไป/เอกสาร' },
-    hr_time:       { icon: '⏰', note: 'เวลา/ลา/OT/เวร' },
-    hr_payroll:    { icon: '💵', note: 'เงินเดือน 🔴จ่ายล็อก' },
-    hr_engagement: { icon: '🌱', note: 'survey/KPI/อบรม' },
+    content_strategist: { icon: 'ti-bulb', note: 'วางแผน/กลยุทธ์คอนเทนต์' },
+    content_copywriter: { icon: 'ti-pencil', note: 'เขียน+SEO+พิสูจน์อักษร' },
+    content_designer:   { icon: 'ti-palette', note: 'กราฟิก/ภาพ/อินโฟ' },
+    video_editor:      { icon: 'ti-video', note: 'สคริปต์+ตัดต่อคลิป' },
+    social_admin:      { icon: 'ti-speakerphone', note: 'ลงโพสต์ + ดูแลเพจ (แชท sensitive)' },
+    ad_optimizer:      { icon: 'ti-target', note: 'ยิงแอด (คุมงบ sensitive)' },
+    lead_followup:     { icon: 'ti-users-group', note: 'ดูแล lead (ข้อมูลลูกค้า)' },
+    accountant_ar:  { icon: 'ti-receipt', note: 'บัญชีรายรับ' },
+    accountant_ap:  { icon: 'ti-cash', note: 'บัญชีรายจ่าย (จ่ายเงินล็อก)' },
+    accountant_tax: { icon: 'ti-report-money', note: 'ภาษี/ปิดงบ/ไฟล์โอน' },
+    cashier_petty:  { icon: 'ti-coin', note: 'การเงิน/เงินสดย่อย' },
+    purchaser:      { icon: 'ti-shopping-cart', note: 'จัดซื้อ/ผู้ขาย' },
+    inventory_keeper:{ icon: 'ti-package', note: 'สต็อก/คลังยา (หมดอายุ)' },
+    hr_recruiter:  { icon: 'ti-user-plus', note: 'สรรหา/สัมภาษณ์' },
+    hr_operations: { icon: 'ti-clipboard-text', note: 'บุคคลทั่วไป/เอกสาร' },
+    hr_time:       { icon: 'ti-clock', note: 'เวลา/ลา/OT/เวร' },
+    hr_payroll:    { icon: 'ti-wallet', note: 'เงินเดือน (จ่ายล็อก)' },
+    hr_engagement: { icon: 'ti-seedling', note: 'survey/KPI/อบรม' },
   };
   // คำอธิบาย automation_level (0..3)
   const LEVELS = [
@@ -107,7 +104,7 @@
 
   // การ์ด 1 ตำแหน่ง = หัวตำแหน่ง (+ master toggle) + งานย่อยทั้งหมด
   function positionCard(posKey, posLabel, rows) {
-    const meta = POS_META[posKey] || { icon: '🧩', note: '' };
+    const meta = POS_META[posKey] || { icon: 'ti-puzzle', note: '' };
     const onCount = rows.filter(r => r.enabled === true).length;
     const masterOn = onCount === rows.length && rows.length > 0;
     const someOn = onCount > 0 && !masterOn;
@@ -122,7 +119,7 @@
     return `<div class="card" style="margin-bottom:12px;overflow:hidden">
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;background:var(--bg-soft,#F8FAFC);border-bottom:1px solid var(--border,#EEF2F6)">
         <div style="flex:1;min-width:200px">
-          <div style="font-weight:700;color:var(--navy,#0D2F4F);font-size:14px">${meta.icon} ${esc(posLabel || posKey)}</div>
+          <div style="font-weight:700;color:var(--navy,#0D2F4F);font-size:14px">${ic(meta.icon)} ${esc(posLabel || posKey)}</div>
           <div style="font-size:11px;color:#94A3B8;margin-top:1px">${esc(meta.note)}</div>
         </div>
         ${badge}
@@ -133,7 +130,7 @@
   }
 
   // 1 โดเมน = หัวโดเมน + การ์ดทุกตำแหน่งในโดเมนนั้น (เรียงตาม sort_order)
-  function domainBlock(modKey, label, headcount, rows) {
+  function domainBlock(modKey, icon, label, headcount, rows) {
     if (!rows.length) return '';
     // จัดกลุ่มตาม position_key คงลำดับการพบ (rows มาเรียง sort_order แล้ว)
     const order = [];
@@ -145,7 +142,7 @@
     });
     const cards = order.map(pk => positionCard(pk, byPos[pk][0].position_label, byPos[pk])).join('');
     return `<div class="sec" style="margin:20px 2px 10px">
-        <span class="sec-bar"></span>${esc(label)}
+        <span class="sec-bar"></span>${ic(icon)} ${esc(label)}
         <span class="sec-c">${esc(headcount)} · ${rows.length} งาน</span></div>
       ${cards}`;
   }
@@ -163,8 +160,8 @@
       const { error } = await sb.from('feature_settings').update(patch).eq('feature_key', key);
       if (error) throw new Error(error.message);
       if (msg) {
-        msg.style.color = '#0F766E'; msg.textContent = '✓ บันทึก';
-        setTimeout(() => { if (msg.textContent === '✓ บันทึก') msg.textContent = ''; }, 1800);
+        msg.style.color = '#0F766E'; msg.textContent = 'บันทึกแล้ว';
+        setTimeout(() => { if (msg.textContent === 'บันทึกแล้ว') msg.textContent = ''; }, 1800);
       }
       return true;
     } catch (e) {
@@ -248,20 +245,20 @@
       const totalOn = rows.filter(r => r.enabled === true).length;
       const banner = CAN_WRITE
         ? `<div style="font-size:12px;color:#0F766E;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:10px;padding:9px 13px;margin-bottom:6px">
-            ✓ สิทธิ์ <b>${esc(role)}</b> · ปรับ toggle และระดับอัตโนมัติได้ · เปิดให้ AI แทนอยู่ <b>${totalOn}/${rows.length}</b> งาน</div>`
+            ${ic('ti-check')} สิทธิ์ <b>${esc(role)}</b> · ปรับ toggle และระดับอัตโนมัติได้ · เปิดให้ AI แทนอยู่ <b>${totalOn}/${rows.length}</b> งาน</div>`
         : `<div style="font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:9px 13px;margin-bottom:6px">
-            👁 สิทธิ์ <b>${esc(role)}</b> · อ่านอย่างเดียว — เฉพาะ owner/controller แก้ได้</div>`;
+            ${ic('ti-eye')} สิทธิ์ <b>${esc(role)}</b> · อ่านอย่างเดียว — เฉพาะ owner/controller แก้ได้</div>`;
       const legend = `<div style="font-size:11px;color:#94A3B8;margin:0 2px 8px;line-height:1.6">
         ระดับ: <b>0</b> ปิด · <b>1</b> AI ร่างให้คนตรวจ · <b>2</b> AI ทำ+รออนุมัติ · <b>3</b> AI ทำเองอัตโนมัติ ·
         <span style="color:#B45309">เพดาน ≤n</span> = งานเสี่ยง ล็อกไม่ให้ดันเกิน (จ่ายเงิน/เผยแพร่)</div>`;
 
       let html = banner + legend;
-      MODULES.forEach(([mk, lbl, hc]) => {
-        html += domainBlock(mk, lbl, hc, rows.filter(r => r.module === mk));
+      MODULES.forEach(([mk, mic, lbl, hc]) => {
+        html += domainBlock(mk, mic, lbl, hc, rows.filter(r => r.module === mk));
       });
       const known = MODULES.map(m => m[0]);
       const other = rows.filter(r => !known.includes(r.module));
-      if (other.length) html += domainBlock('other', '🧩 อื่น ๆ', '', other);
+      if (other.length) html += domainBlock('other', 'ti-puzzle', 'อื่น ๆ', '', other);
 
       wrap.innerHTML = html || '<div style="padding:24px;color:#94A3B8">— ยังไม่มี feature ในระบบ —</div>';
       bind(wrap);

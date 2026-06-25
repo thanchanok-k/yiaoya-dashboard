@@ -969,7 +969,7 @@ const NAV_TREE=[
    {label:'สรรหา', views:['recruit','hiring','openpos','offerletter','interviewbank','internship','internaljob','recruittpl']},
    {label:'คำขอ/อนุมัติ', views:['leavereq','otreq','pinfo','expense','accreq']},
    {label:'บันทึก/ประเมิน', views:['announce','incident','oneonone','probreview','survey','reward','pip','probcriteria','pulse','surveyexit']},
-   {label:'ทะเบียนพนักงาน', views:['employeemgr','emp360','onboard','offboard','position','training','disciplinary','license','insurance','document','doctorshift','calendar','equipment','welfare','dfschedule']},
+   {label:'ทะเบียนพนักงาน', views:['employeemgr','accessmgr','emp360','onboard','offboard','position','training','disciplinary','license','insurance','document','doctorshift','calendar','equipment','welfare','dfschedule']},
    {label:'เงินเดือน/KPI', views:['payrollmgr','payterms','kpimgr','raise']},
    {label:'ความรู้/ตั้งค่า', views:['sop','tasks','tag']},
  ]},
@@ -987,7 +987,7 @@ const NAV_TREE=[
  {label:'ผู้บริหาร · HQ', views:['fosales','roomutil','scorecard','aihq','peopleai','hub360','dept','expansion','ptaudit']},
    {label:'ลับ · HQ (เฉพาะผู้บริหาร)', views:['legal','contracts']},
  /* AI Operator — ตั้งค่า toggle/automation + คิวอนุมัติงาน AI (control plane 30_ai_operator.sql) */
- {label:'AI Operator', views:['aisettings','aiapprovals','accessmgr']},
+ {label:'AI Operator', views:['aisettings','aiapprovals']}, /* accessmgr ย้ายไปกลุ่มทะเบียนพนักงาน — HR ไม่เห็นเครื่องมือ AI */
  {label:'ระบบ', views:['events','ecosystem']},
 ];
 function navAllViews(){ const a=[]; NAV_TREE.forEach(d=>{ if(d.subs)d.subs.forEach(s=>a.push(...s.views)); else a.push(...(d.views||[])); }); return a; }
@@ -1169,6 +1169,12 @@ async function resolveAccess(){
   applyRole(currentRole);
  }catch(e){ console.warn('resolveAccess',e); EFFECTIVE_VIEWS=null; }
 }
+/* เปิดแผงตั้งสิทธิ์จากหน้าทะเบียนพนักงาน (ปุ่ม shield ต่อแถว) — โหลด accessmgr.js ก่อนถ้ายังไม่โหลด */
+function openEmpAccess(empId){
+ if(window.openAccessPanel){ window.openAccessPanel(empId); return; }
+ try{ Promise.resolve(_loadPorted('_ported/accessmgr.js')).then(()=>{ window.openAccessPanel&&window.openAccessPanel(empId); }).catch(e=>console.error('load accessmgr',e)); }catch(e){ console.error(e); }
+}
+window.openEmpAccess=openEmpAccess;
 
 const SYSTEMS=[
  {k:'hr',lb:'HR',ic:'ti-users-group'},{k:'fo',lb:'Front Office',ic:'ti-calendar-event'},

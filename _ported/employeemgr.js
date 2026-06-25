@@ -946,6 +946,7 @@ function EM2_RUN_PAGE_JS() {
           '<td><span class="pill status-' + e.status + '">' + e.status + '</span></td>',
           '<td onclick="event.stopPropagation()">',
             '<div style="display:flex;gap:4px;justify-content:flex-end">',
+              '<button class="btn btn-icon" onclick="window.openEmpAccess&&window.openEmpAccess(\'' + escapeAttr(e.employee_id) + '\')" title="ตั้งสิทธิ์เข้าระบบ"><i class="ti ti-shield-lock"></i></button>',
               '<button class="btn btn-icon" onclick="openEdit(\'' + escapeAttr(e.employee_id) + '\')" title="ดูรายละเอียด 360">' + ICONS.edit + '</button>',
             '</div>',
           '</td>',
