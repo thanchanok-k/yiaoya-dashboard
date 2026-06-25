@@ -1,0 +1,109 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>สวัสดิการ & ประกันของฉัน · Yiaoya</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
+*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 40px;max-width:480px;margin:0 auto}
+.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
+.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
+.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
+.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+.badge{padding:4px 10px;border-radius:99px;font-size:11.5px;font-weight:700;background:#E6F7F5;color:#0F766E}
+.badge.co{background:var(--navy);color:#9FE1CB}
+.ins{font-size:15.5px;font-weight:700;color:var(--navy);margin-bottom:3px}
+.cov{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:11px}
+.amt{font-size:20px;font-weight:800;color:#0F766E;margin-bottom:11px}
+.amt small{font-size:12px;font-weight:600;color:var(--muted)}
+.grid{display:flex;flex-direction:column;gap:9px;border-top:1px solid var(--border);padding-top:11px}
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:13px}
+.kv .k{color:var(--muted);flex-shrink:0}
+.kv .v{font-weight:600;text-align:right}
+.contrib{display:flex;gap:9px;margin:11px 0}
+.contrib>div{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:9px 11px}
+.contrib .cl{font-size:11px;color:var(--muted);margin-bottom:3px}
+.contrib .cv{font-size:14.5px;font-weight:700;color:var(--navy)}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700}
+.pill.active{background:#E6F7F5;color:#0F766E}
+.pill.pending{background:#FEF3C7;color:#92400e}
+.pill.expired{background:#FEE2E2;color:#b91c1c}
+.pill.gray{background:#F1F5F9;color:#475569}
+.rrow{display:flex;justify-content:space-between;align-items:center;margin-top:11px}
+.rrow .rl{font-size:12px;color:var(--muted)}
+.empty{text-align:center;color:var(--muted);font-size:13.5px;padding:40px 16px;line-height:1.6}
+.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
+a.lk{color:var(--teal);font-weight:700;text-decoration:none}
+.loading{text-align:center;color:var(--faint);font-size:13px;padding:34px 0}
+</style></head>
+<body>
+<div class="head"><div class="eb">YIAOYA · HR</div><h1>สวัสดิการ &amp; ประกันของฉัน</h1><div class="who" id="who">—</div></div>
+<div id="app" style="display:none">
+  <div class="note">ข้อมูลสวัสดิการและประกันของคุณ · ดูอย่างเดียว · หากข้อมูลไม่ถูกต้องแจ้งฝ่ายบุคคล</div>
+  <div id="list"></div>
+</div>
+<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+const sb=createClient(SB_URL,ANON);
+const $=(id)=>document.getElementById(id);
+let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
+const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
+async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
+async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
+const esc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TYPE_TH={welfare_fund:'กองทุนสวัสดิการ',professional_insurance:'ประกันวิชาชีพ',malpractice:'ประกันความรับผิด'};
+function baht(v){if(v==null||v===''||isNaN(Number(v)))return null;return '฿'+Number(v).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:2});}
+function fdate(d){if(!d)return '—';const x=new Date(d);if(isNaN(x))return esc(d);return x.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});}
+function freqTh(f){const m={monthly:'ต่อเดือน',yearly:'ต่อปี',annual:'ต่อปี',quarterly:'ต่อไตรมาส','one_time':'ครั้งเดียว'};return m[f]||(f?esc(f):'');}
+function renewPill(s){
+  const m={active:['active','ใช้งานอยู่ ✓'],renewed:['active','ต่ออายุแล้ว ✓'],pending:['pending','รอต่ออายุ'],expiring:['pending','ใกล้หมดอายุ'],expired:['expired','หมดอายุ'],cancelled:['gray','ยกเลิก']};
+  const x=m[s]||['gray',s?esc(s):'—'];return `<span class="pill ${x[0]}">${x[1]}</span>`;
+}
+function card(rec){
+  const p=rec.payload||rec;
+  const isCo=String(rec.employee_id||p.employee_id||'').toUpperCase()==='ALL';
+  const typeTh=TYPE_TH[p.record_type]||esc(p.record_type||'สวัสดิการ');
+  const cov=baht(p.coverage_amount);
+  const prem=baht(p.premium_amount), freq=freqTh(p.premium_frequency);
+  const emp=baht(p.employee_contribution), er=baht(p.employer_contribution);
+  let h='<div class="card">';
+  h+='<div class="badges"><span class="badge">'+esc(typeTh)+'</span>'+(isCo?'<span class="badge co">ทั้งบริษัท</span>':'')+'</div>';
+  if(p.insurer_name)h+='<div class="ins">'+esc(p.insurer_name)+'</div>';
+  if(p.coverage_th)h+='<div class="cov">'+esc(p.coverage_th)+'</div>';
+  if(cov)h+='<div class="amt">'+cov+' <small>วงเงินคุ้มครอง</small></div>';
+  if(emp||er){
+    h+='<div class="contrib">';
+    h+='<div><div class="cl">คุณจ่าย</div><div class="cv">'+(emp||'—')+'</div></div>';
+    h+='<div><div class="cl">บริษัทจ่าย</div><div class="cv">'+(er||'—')+'</div></div>';
+    h+='</div>';
+  }
+  h+='<div class="grid">';
+  if(prem)h+='<div class="kv"><span class="k">เบี้ยประกัน</span><span class="v">'+prem+(freq?' '+freq:'')+'</span></div>';
+  h+='<div class="kv"><span class="k">วันเริ่มคุ้มครอง</span><span class="v">'+fdate(p.effective_date)+'</span></div>';
+  h+='<div class="kv"><span class="k">วันสิ้นสุด</span><span class="v">'+fdate(p.expiry_date)+'</span></div>';
+  if(p.beneficiary)h+='<div class="kv"><span class="k">ผู้รับผลประโยชน์</span><span class="v">'+esc(p.beneficiary)+'</span></div>';
+  h+='</div>';
+  h+='<div class="rrow"><span class="rl">สถานะต่ออายุ</span>'+renewPill(p.renewal_status)+'</div>';
+  if(p.notes)h+='<div class="note" style="margin:11px 0 0">'+esc(p.notes)+'</div>';
+  h+='</div>';
+  return h;
+}
+async function init(){
+  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
+  $('who').textContent=(ID.employee_name||ID.display_name)+' · '+ID.employee_id;
+  let {data:s}=await sb.auth.getSession();
+  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
+  $('app').style.display='block';
+  $('list').innerHTML='<div class="loading">กำลังโหลด…</div>';
+  const r=await api('hr_insurance?employee_id='+encodeURIComponent(ID.employee_id));
+  if(!r||r.ok===false||r.error){$('list').innerHTML='<div class="warn">โหลดข้อมูลไม่สำเร็จ'+(r&&r.error?': '+esc(r.error):'')+'</div>';return;}
+  const recs=(r.records||[]);
+  if(!recs.length){$('list').innerHTML='<div class="empty">ยังไม่มีข้อมูลสวัสดิการ</div>';return;}
+  $('list').innerHTML=recs.map(card).join('');
+}
+init();
+</script></body></html>
