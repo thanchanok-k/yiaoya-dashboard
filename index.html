@@ -1971,7 +1971,7 @@ function paRenderList(){
  let list=_paPeople.filter(p=>(!f.et||p.employment_type===f.et)&&(!f.cat||p.category===f.cat)&&(!f.br||p.branch===f.br)&&(!f.st||p.status===f.st)&&(!f.q||(p.full_name+' '+(p.position||'')).toLowerCase().includes(f.q)));
  const rk={HIGH:0,MED:1,INFO:2,OK:3};
  list.sort((a,b)=>(rk[a.topSev]-rk[b.topSev])||(a.data_health-b.data_health));
- const sig=p=>{const o=[]; const a=p.attendance; if(a&&a.late_minutes>=40)o.push('<span style="color:#B45309">สาย '+a.late_minutes+'น.</span>'); if(a&&a.absent_days>=1)o.push('<span style="color:#B91C1C">ขาด '+a.absent_days+'</span>'); if(p.kpi)o.push('KPI '+p.kpi.score); if(p.leave&&p.leave.count>=3)o.push('ลา '+p.leave.count); return o.join(' · ');};
+ const sig=p=>{const o=[]; const a=p.attendance; if(a&&a.late_minutes>=40)o.push('<span style="color:#B45309">สาย '+a.late_minutes+'น.</span>'); if(a&&a.absent_days>=1)o.push('<span style="color:#B91C1C">ขาด '+a.absent_days+'</span>'); if(p.kpi)o.push('KPI '+p.kpi.score); if(p.performance&&p.performance.patients>=10)o.push('<span style="color:'+(p.performance.retention_pct>=70?'#047857':'#B45309')+'">เก็บเก่า '+p.performance.retention_pct+'%</span>'); if(p.leave&&p.leave.count>=3)o.push('ลา '+p.leave.count); return o.join(' · ');};
  let h='<div style="font-size:11px;color:var(--text-muted);margin:8px 0 6px">พบ '+list.length+' คน</div>';
  if(!list.length){w.innerHTML=h+'<div style="font-size:12px;color:var(--text-muted);padding:10px">ไม่พบพนักงานตามตัวกรอง</div>';return;}
  h+='<div class="card" style="padding:2px 0">'+list.map(p=>{const dh=p.data_health;
@@ -2004,6 +2004,13 @@ function paDetail(pid){
  h+='</div>';
  if(a)h+='<div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">เข้างานเดือน '+esc(a.period||'')+' · ทำงาน '+(a.work_days||0)+' วัน</div>';
  if(l&&l.types&&Object.keys(l.types).length)h+='<div style="font-size:11px;color:var(--text-muted);margin-top:4px">ประเภทลา: '+esc(Object.entries(l.types).map(t=>t[0]+' '+t[1]).join(', '))+' (รวม '+l.days+' วัน)</div>';
+ const pf=p.performance;
+ if(pf){
+  h+='<div style="margin-top:10px;background:#F0FDFA;border-radius:9px;padding:10px 12px">';
+  h+='<div style="font-size:11px;font-weight:700;color:var(--teal-ink);margin-bottom:6px"><i class="ti ti-stethoscope"></i> ผลงานจริงจาก JERA ('+esc(pf.period||'')+')</div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">'+metric('เซสชั่น',pf.sessions,'#0D9488')+metric('คนไข้',pf.patients,'#0D9488')+metric('เก็บคนไข้เก่า',pf.retention_pct+'%',pf.retention_pct>=70?'#047857':pf.retention_pct>=50?'#D97706':'#B91C1C')+metric('คนไข้ใหม่',pf.new,'#475569')+metric('No-show',pf.noshow_pct+'%',pf.noshow_pct>=15?'#B45309':'#047857')+'</div>';
+  h+='<div style="font-size:10.5px;color:var(--text-muted);margin-top:6px">เก็บคนไข้เก่า (retention) เทียบเป้าค่ามือสัญญา <b>70%</b> → '+(pf.retention_pct>=70?'<span style="color:#047857;font-weight:600">✓ ถึงเกณฑ์ ได้ค่ามือ 60/เคส</span>':'<span style="color:#B45309;font-weight:600">✗ ยังไม่ถึง (ค่ามือ 30/เคส)</span>')+'</div></div>';
+ }
  if(p.flags.length)h+='<div style="margin-top:10px;display:flex;flex-direction:column;gap:2px">'+p.flags.map(f=>'<div style="font-size:11.5px"><span style="color:'+SV[f.sev]+';font-weight:700">●</span> '+esc(f.text)+'</div>').join('')+'</div>';
  h+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">';
  if(p.term_key){
@@ -3154,9 +3161,9 @@ function mountPromo(){
    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
    +'<div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:14px;line-height:1.35">'+esc(p.title||'(ไม่มีชื่อ)')+'</div>'
    +'<span style="flex:none;background:'+st[1]+';color:#fff;border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:700">'+st[0]+'</span></div>'
+   +(function(){var pp=+p.promo_price||0,np=+p.normal_price||0;if(!pp)return fld('ti-tag','ราคา',p.price_note);return '<div style="margin-top:9px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-size:21px;font-weight:800;color:#0F766E">'+B(pp)+'</span>'+(np>pp?'<span style="font-size:13px;color:#94A3B8;text-decoration:line-through">'+B(np)+'</span><span style="font-size:11px;font-weight:700;color:#C2410C;background:#FFF7ED;border-radius:8px;padding:1px 7px">ประหยัด '+B(np-pp)+'</span>':'')+'</div>'+(p.price_note?'<div style="font-size:11px;color:#64748B;margin-top:3px">'+esc(p.price_note)+'</div>':'');})()
    +fld('ti-users','กลุ่มเป้าหมาย',p.target)
    +fld('ti-gift','กลไก',p.mechanic)
-   +fld('ti-tag','แนวราคา/มูลค่า',p.price_note)
    +(p.rationale?'<div style="margin-top:8px;background:#F0FDFA;border-radius:7px;padding:8px 10px;font-size:11.5px;color:#0F766E;line-height:1.55"><b>เหตุผล (อิงตัวเลขจริง):</b> '+esc(p.rationale)+'</div>':'')
    +fld('ti-send','ช่องทางยิง',p.channel)
    +fld('ti-target','KPI ที่ต้องดู',p.kpi)
@@ -3563,7 +3570,7 @@ function mountAiHQ(){
  const TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
  const mLab=m=>{const p=(m||'').split('-');return (TH[(+p[1]||1)-1]||m)+' '+(+p[0]+543);};
  const MODE=[['describe','เล่าสถานการณ์ (อ่านอดีต)'],['forecast','พยากรณ์เดือนหน้า'],['whatif','จำลอง What-if (ถ้า…แล้ว…)']];
- const FOCUS=[['overview','ภาพรวมทั้งธุรกิจ'],['marketing','การตลาด / โฆษณา'],['dept','รายได้รายแผนก'],['patients','คนไข้ใหม่ + funnel'],['channel','ประสิทธิภาพช่องทาง'],['budget','จัดสรรงบประมาณ'],['anomaly','ความผิดปกติ / หลุดเทรนด์'],['expansion','ขยายสาขา (ROI)']];
+ const FOCUS=[['overview','ภาพรวมทั้งธุรกิจ'],['profit','กำไร-ขาดทุน / จุดคุ้มทุน'],['marketing','การตลาด / โฆษณา'],['dept','รายได้รายแผนก'],['patients','คนไข้ใหม่ + funnel'],['channel','ประสิทธิภาพช่องทาง'],['budget','จัดสรรงบประมาณ'],['anomaly','ความผิดปกติ / หลุดเทรนด์'],['expansion','ขยายสาขา (ROI)']];
  const DEPTS=['กระดูกและข้อ','กายภาพ','พิลาทิส','นวด'];
  const PH={describe:'เช่น: เดือนไหน ROAS ดีสุด เพราะอะไร / แผนกไหนกำลังตก',forecast:'เช่น: คนไข้ใหม่เดือนหน้าน่าจะกี่คน ถ้างบเท่าเดิม',whatif:'เช่น: ถ้าเพิ่มงบแอด 20% รายได้ขยับเท่าไหร่ / ถ้าเปิดสาขาใหม่ซื้อเครื่องไหนคุ้มสุด'};
  const ip='padding:9px 12px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit;color:var(--navy,#0D2F4F)';
