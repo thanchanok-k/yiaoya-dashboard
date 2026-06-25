@@ -10,16 +10,43 @@
 // backend (edge fn hr_list?type=equipment.updated → {items}) :
 //   list   → derive loans/stats/employees client-side จาก payload ล่าสุดต่อ loan
 //            (ตอนนี้ list อาจว่าง = 0 loan → render ได้ ไม่ error · empty state สวย)
-//   issue/confirm/sendReturn/remove → เขียนกลับ/ส่ง LINE ไม่ได้ → stub + toast แจ้งยังไม่พร้อม
+//            กรองทิ้ง item ที่ _status==='deleted' / _deleted===true (soft delete)
+//   save/confirm/remove → เขียนกลับ Supabase ผ่าน edge fn กลาง hr_write (CRUD เต็ม)
+//   sendReturn → ส่ง LINE ยังไม่พร้อมบน dashboard (ต้อง backend)
 
 /* ============================================================
    EQ_BACKEND — map google.script.run → Supabase edge fn hr_list (type=equipment.updated)
    คืน shape เดียวกับที่ JS เดิมคาดหวัง:
      equipmentLoanList(opts)       → { items, stats, employees }
-     equipmentLoanIssue/Confirm/SendReturn/Remove → { ok / error } stub + toast
+     equipmentLoanSave/Confirm/Remove → เขียน hr_write → { ok, entity_id? }
+     equipmentLoanSendReturn → { error } (LINE ยังไม่พร้อม)
    ============================================================ */
 var EQ_FN = 'hr_list';
+var EQ_WRITE_FN = 'hr_write';
 var EQ_TYPE = 'equipment.updated';
+
+// invoke hr_write · unwrap error เหมือน accessreq.js (error.context?.json())
+function eq2Write(body) {
+  return sb.functions.invoke(EQ_WRITE_FN, { body: body }).then(function (res) {
+    var err = res && res.error;
+    if (err) {
+      var msg = err.message || 'เขียนข้อมูลล้มเหลว';
+      var ctx = err.context;
+      var done = function (m) { var e = new Error(m); e._handled = true; return e; };
+      if (ctx && typeof ctx.json === 'function') {
+        return ctx.json().then(function (j) {
+          if (j && j.error) msg = j.error + (j.need ? ' (ต้องเป็น ' + j.need + ')' : '');
+          throw done(msg);
+        }, function () { throw done(msg); });
+      }
+      throw done(msg);
+    }
+    var data = (res && res.data) || {};
+    if (data.error) throw new Error(data.error + (data.need ? ' (ต้องเป็น ' + data.need + ')' : ''));
+    if (!data.ok) throw new Error('บันทึกไม่สำเร็จ');
+    return data;
+  });
+}
 
 function eq2ToArr(v) {
   if (!v) return [];
@@ -57,6 +84,7 @@ function eq2MapLoan(p) {
   }
   return {
     loan_id: p.loan_id || p.entity_id || p.id || '',
+    id: p.id || p.entity_id || p.loan_id || '',
     employee_id: p.employee_id || '',
     employee_name: p.employee_name || p.name || '—',
     item_type: p.item_type || 'other',
@@ -92,6 +120,8 @@ function eq2FetchLoans() {
     items.forEach(function (p) {
       var id = p.loan_id || p.entity_id || p.id || '';
       if (!id || seen[id]) return;
+      // กรองทิ้ง soft-deleted
+      if (p && (p._status === 'deleted' || p._deleted === true || eq2Bool(p.deleted))) { seen[id] = true; return; }
       seen[id] = true;
       _eq2Raw[id] = p;
       rows.push(eq2MapLoan(p));
@@ -165,31 +195,52 @@ var EQ_BACKEND = {
     });
   },
 
-  // ---- mutations: เขียนกลับ/ส่ง LINE ไม่ได้บน dashboard → stub + toast ----
-  equipmentLoanIssue: function () {
-    eq2NotReady('ออกของ (issue loan)');
-    return Promise.resolve({ error: 'ออกของยังไม่พร้อมบน dashboard (read-only)' });
+  // ---- mutations: เขียน Supabase ผ่าน edge fn กลาง hr_write ----
+  // เพิ่ม/แก้ของยืม — ไม่ส่ง entity_id = สร้างใหม่ · ส่ง entity_id = แก้
+  equipmentLoanSave: function (empId, opts, entityId) {
+    opts = opts || {};
+    var payload = {
+      employee_id: empId || '',
+      employee_name: opts.employee_name || '',
+      item_type: opts.item_type || 'other',
+      item_name: opts.item_name || '',
+      serial: opts.serial || '',
+      expected_return: opts.expected_return || '',
+      notes: opts.notes || '',
+    };
+    if (opts.status) payload.status = opts.status;
+    var body = { event_type: EQ_TYPE, payload: payload };
+    if (entityId) body.entity_id = entityId;
+    return eq2Write(body).then(function (data) {
+      return { ok: true, entity_id: data.entity_id || entityId || '' };
+    });
   },
-  equipmentLoanConfirm: function () {
-    eq2NotReady('ยืนยันรับคืน');
-    return Promise.resolve({ error: 'ยืนยันคืนยังไม่พร้อมบน dashboard (read-only)' });
+  // ยืนยันรับคืน — แก้ record เดิม (entity_id) ตั้ง status=returned
+  equipmentLoanConfirm: function (entityId, opts) {
+    opts = opts || {};
+    if (!entityId) return Promise.reject(new Error('ไม่พบรายการ'));
+    var payload = {
+      status: 'returned',
+      condition: opts.condition || 'good',
+      deduction_amount: eq2Num(opts.deduction_amount),
+      evidence_url: opts.evidence_url || '',
+      notes: opts.notes || '',
+      returned_at: opts.returned_at || new Date().toISOString(),
+    };
+    return eq2Write({ event_type: EQ_TYPE, entity_id: entityId, payload: payload })
+      .then(function () { return { ok: true }; });
   },
+  // ลบ (soft delete)
+  equipmentLoanRemove: function (entityId) {
+    if (!entityId) return Promise.reject(new Error('ไม่พบรายการ'));
+    return eq2Write({ event_type: EQ_TYPE, entity_id: entityId, deleted: true })
+      .then(function () { return { ok: true }; });
+  },
+  // ส่ง LINE ขอคืน — ยังไม่รองรับบน dashboard (ต้อง backend ส่ง LINE)
   equipmentLoanSendReturn: function () {
-    eq2NotReady('ส่ง LINE ขอคืน');
     return Promise.resolve({ error: 'ส่ง LINE ยังไม่พร้อมบน dashboard' });
   },
-  equipmentLoanRemove: function () {
-    eq2NotReady('ลบรายการยืม');
-    return Promise.resolve({ error: 'ลบยังไม่พร้อมบน dashboard (read-only)' });
-  },
 };
-
-var _eq2NotReadyShown = {};
-function eq2NotReady(feature) {
-  if (_eq2NotReadyShown[feature]) return;
-  _eq2NotReadyShown[feature] = true;
-  if (typeof window !== 'undefined' && window.eq2Toast) window.eq2Toast('ฟีเจอร์ "' + feature + '" ยังไม่พร้อมบน dashboard (read-only)', 'error');
-}
 
 /* ============================================================
    mountEquipment — set innerHTML (CSS+markup) แล้วรัน JS หน้าเดิม
@@ -479,6 +530,7 @@ function EQ_RUN_PAGE_JS() {
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
     bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
     trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>',
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="5" y1="12" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
   };
 
@@ -516,6 +568,7 @@ function EQ_RUN_PAGE_JS() {
   let currentTab = 'active';
   let allData = null;
   let currentLoanId = null;
+  let _eqEditId = null;       // entity_id ที่กำลังแก้ (null = เพิ่มใหม่)
   let _searchDebounce = null;
 
   const HELP = {
@@ -545,7 +598,7 @@ function EQ_RUN_PAGE_JS() {
         'ออกของหลายชิ้นพร้อมกัน: open modal เลือก พนง. → save → modal เปิดใหม่อัตโนมัติ (ใส่ของชิ้นต่อไป)',
         'ลบ loan ได้เฉพาะก่อนคืน (ถ้าใส่ผิด)',
         'ถ้าของหายไม่ทันคืนตอนลาออก → mark "lost" + deduction จะหักจาก final pay',
-        'หมายเหตุ: บน dashboard นี้เป็น read-only — การส่ง LINE / ออกของ / confirm ยังไม่พร้อม',
+        'ออกของ / แก้ไข / confirm คืน / ลบ ใช้ได้บน dashboard แล้ว (เขียนกลับ Supabase) — เฉพาะการส่ง LINE ขอคืนที่ยังไม่พร้อม',
       ]},
     ],
   };
@@ -665,34 +718,68 @@ function EQ_RUN_PAGE_JS() {
   }
 
   function renderActions(l) {
+    var eid = l.id || l.loan_id;
     if (l.status === 'returned' || l.status === 'written_off') {
       return l.evidence_url ? '<a href="' + escapeAttr(l.evidence_url) + '" target="_blank" class="btn btn-sm">รูป</a>' : '-';
     }
     let actions = '';
+    actions += '<button class="btn btn-sm" onclick="openEdit(\'' + escapeAttr(eid) + '\')" title="แก้ไข">' + ICONS.edit + '</button> ';
     if (l.status === 'active') {
       actions += '<button class="btn btn-sm" onclick="sendLineReturn(\'' + escapeAttr(l.employee_id) + '\', [\'' + escapeAttr(l.loan_id) + '\'])" ' +
         (l.line_linked ? '' : 'disabled title="พนักงานยังไม่ link LINE"') + '>' + ICONS.bell + ' LINE</button> ';
     }
-    actions += '<button class="btn btn-sm btn-primary" onclick="openConfirm(\'' + escapeAttr(l.loan_id) + '\', \'' + escapeAttr(l.item_name) + '\')">Confirm</button> ';
+    actions += '<button class="btn btn-sm btn-primary" onclick="openConfirm(\'' + escapeAttr(eid) + '\', \'' + escapeAttr(l.item_name) + '\')">Confirm</button> ';
     if (l.status === 'active') {
-      actions += '<button class="btn btn-sm" onclick="removeLoan(\'' + escapeAttr(l.loan_id) + '\')">' + ICONS.trash + '</button>';
+      actions += '<button class="btn btn-sm" onclick="removeLoan(\'' + escapeAttr(eid) + '\')">' + ICONS.trash + '</button>';
     }
     return actions;
   }
 
-  // ====== Issue ======
+  // ====== Issue / Edit (ฟอร์มเดียวกัน) ======
+  function _eqSetIssueTitle(t) {
+    const h = getById('issue-bg').querySelector('.modal-header h2');
+    if (h) h.textContent = t;
+  }
   function openIssue() {
+    _eqEditId = null;
+    _eqSetIssueTitle('ออกของให้พนักงาน');
+    getById('i-save-btn').innerHTML = ICONS.save + ' บันทึก';
     getById('issue-bg').classList.add('active');
     ['i-name', 'i-serial', 'i-expected', 'i-notes'].forEach(id => getById(id).value = '');
     getById('i-emp').value = '';
     getById('i-type').value = 'laptop';
   }
-  function closeIssue() { getById('issue-bg').classList.remove('active'); }
+  function openEdit(entityId) {
+    const l = (allData && allData.items || []).find(x => (x.id || x.loan_id) === entityId);
+    if (!l) return showToast('ไม่พบรายการ', 'error');
+    _eqEditId = entityId;
+    _eqSetIssueTitle('แก้ไขรายการยืม');
+    getById('i-save-btn').innerHTML = ICONS.save + ' บันทึกการแก้ไข';
+    getById('issue-bg').classList.add('active');
+    // prefill — กัน null
+    const emp = getById('i-emp');
+    // เผื่อ employee ไม่อยู่ใน dropdown (มาจากของยืมที่ไม่มีใน list) → เพิ่ม option ชั่วคราว
+    if (l.employee_id && !Array.prototype.some.call(emp.options, o => o.value === l.employee_id)) {
+      const o = document.createElement('option');
+      o.value = l.employee_id; o.textContent = l.employee_name || l.employee_id;
+      emp.appendChild(o);
+    }
+    emp.value = l.employee_id || '';
+    getById('i-type').value = l.item_type || 'other';
+    getById('i-name').value = l.item_name && l.item_name !== '—' ? l.item_name : '';
+    getById('i-serial').value = l.serial || '';
+    getById('i-expected').value = l.expected_return || '';
+    getById('i-notes').value = l.notes || '';
+  }
+  function closeIssue() { getById('issue-bg').classList.remove('active'); _eqEditId = null; }
   function saveIssue() {
     const empId = getById('i-emp').value;
+    const empSel = getById('i-emp');
+    const empName = empSel.value ? (empSel.options[empSel.selectedIndex] || {}).text || '' : '';
     const opts = {
+      employee_name: empName,
       item_type: getById('i-type').value,
-      item_name: getById('i-name').value || '',
+      item_name: (getById('i-name').value || '').trim(),
       serial: getById('i-serial').value || '',
       expected_return: getById('i-expected').value || '',
       notes: getById('i-notes').value || '',
@@ -700,19 +787,20 @@ function EQ_RUN_PAGE_JS() {
     if (!empId) return showToast('เลือกพนักงานก่อน', 'error');
     if (!opts.item_name) return showToast('ใส่ชื่อ item ก่อน', 'error');
     getById('i-save-btn').disabled = true;
+    const editId = _eqEditId;
     google.script.run
       .withSuccessHandler(res => {
         getById('i-save-btn').disabled = false;
         if (res && res.error) return showToast(res.error, 'error');
-        showToast('บันทึกแล้ว', 'success');
+        showToast(editId ? 'แก้ไขแล้ว' : 'บันทึกแล้ว', 'success');
         closeIssue();
         loadList();
       })
       .withFailureHandler(err => {
         getById('i-save-btn').disabled = false;
-        showToast(err.message, 'error');
+        showToast((err && err.message) || 'ต้องเป็น HR / ล็อกอินก่อน', 'error');
       })
-      .equipmentLoanIssue(empId, opts);
+      .equipmentLoanSave(empId, opts, editId);
   }
 
   // ====== Send LINE ======
@@ -758,7 +846,7 @@ function EQ_RUN_PAGE_JS() {
       })
       .withFailureHandler(err => {
         getById('cf-save-btn').disabled = false;
-        showToast(err.message, 'error');
+        showToast((err && err.message) || 'ต้องเป็น HR / ล็อกอินก่อน', 'error');
       })
       .equipmentLoanConfirm(currentLoanId, opts);
   }
@@ -772,19 +860,28 @@ function EQ_RUN_PAGE_JS() {
         showToast('ลบแล้ว', 'success');
         loadList();
       })
-      .withFailureHandler(err => showToast(err.message, 'error'))
+      .withFailureHandler(err => showToast((err && err.message) || 'ต้องเป็น HR / ล็อกอินก่อน', 'error'))
       .equipmentLoanRemove(loanId);
   }
 
   /* ===== expose fn ที่ inline onclick/markup ต้องเรียก ไปยัง window ===== */
   const _exp = {
     showHelp, HELP, loadList, loadDebounced, setTab,
-    openIssue, closeIssue, saveIssue,
+    openIssue, openEdit, closeIssue, saveIssue,
     sendLineReturn,
     openConfirm, closeConfirm, saveConfirm,
     removeLoan,
   };
   Object.keys(_exp).forEach(k => { window[k] = _exp[k]; });
+
+  /* ===== Esc-safe: ปิด modal ที่เปิดอยู่ด้วย Esc ===== */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!_eqRoot || !document.body.contains(_eqRoot)) return; // หน้าถูก unmount แล้ว
+    const iss = getById('issue-bg'), cf = getById('confirm-bg');
+    if (cf && cf.classList.contains('active')) closeConfirm();
+    else if (iss && iss.classList.contains('active')) closeIssue();
+  });
 
   /* ===== Init ===== */
   setTab('active');

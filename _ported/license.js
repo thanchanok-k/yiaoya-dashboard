@@ -27,6 +27,7 @@
      licenseAdminUpsert(payload)   → { ok }                   (stub)
    ============================================================ */
 var LC_FN = 'hr_list';
+var LC_WRITE_FN = 'hr_write';   // edge fn กลาง CRUD (add/edit/soft-delete)
 var LC_TYPE = 'license.updated';
 
 // license type catalog (mirror หน้าเดิม license_types · key/th/en/category)
@@ -157,9 +158,48 @@ function lc2FetchRows() {
   return sb.functions.invoke(LC_FN + '?type=' + encodeURIComponent(LC_TYPE)).then(function (res) {
     var data = (res && res.data) || {};
     var items = data.items || data.rows || [];
-    var rows = items.map(lc2MapRow);
+    // กรองทิ้ง record ที่ถูก soft-delete (latest event = deleted)
+    var live = items.filter(function (p) {
+      return !(p && (p._status === 'deleted' || p._deleted === true || lc2ToBool(p._deleted)));
+    });
+    var rows = live.map(lc2MapRow);
     _lc2RowsCache = rows;
     return rows;
+  });
+}
+
+// unwrap error จาก supabase functions.invoke (FunctionsHttpError → body จริงอยู่ใน context)
+function lc2ErrMsg(err, data) {
+  if (data && data.ok === false && data.error) return String(data.error);
+  if (!err) return 'unknown';
+  return Promise.resolve().then(function () {
+    if (err.context && typeof err.context.json === 'function') {
+      return err.context.json().then(function (b) {
+        return (b && (b.error || b.message)) ? String(b.error || b.message) : (err.message || String(err));
+      }).catch(function () { return err.message || String(err); });
+    }
+    return err.message || String(err);
+  });
+}
+
+// เขียนกลับผ่าน hr_write — body: { event_type, entity_id?, deleted?, payload }
+// คืน { ok, entity_id, ... } หรือ { ok:false, error } (unwrap 403/error จาก context)
+function lc2Write(opts) {
+  opts = opts || {};
+  var body = { event_type: LC_TYPE, payload: opts.payload || {} };
+  if (opts.entity_id) body.entity_id = opts.entity_id;
+  if (opts.deleted) body.deleted = true;
+  return sb.functions.invoke(LC_WRITE_FN, { body: body }).then(function (res) {
+    var data = (res && res.data) || null;
+    var err = res && res.error;
+    if (err || (data && data.ok === false)) {
+      return Promise.resolve(lc2ErrMsg(err, data)).then(function (m) {
+        return { ok: false, error: m };
+      });
+    }
+    return { ok: true, entity_id: (data && data.entity_id) || opts.entity_id || '' };
+  }).catch(function (e) {
+    return Promise.resolve(lc2ErrMsg(e, null)).then(function (m) { return { ok: false, error: m }; });
   });
 }
 
@@ -207,10 +247,28 @@ var LC_BACKEND = {
     lc2NotReady('ส่ง LINE reminder (bulk)');
     return Promise.resolve({ ok: false, sent: 0, failed: (ids || []).length, error: 'ส่ง LINE reminder ยังไม่พร้อมบน dashboard' });
   },
-  // upsert (add/edit) — stub (backend เขียนกลับยังไม่พร้อม)
-  licenseAdminUpsert: function () {
-    lc2NotReady('บันทึกใบรับรอง');
-    return Promise.resolve({ ok: false, error: 'บันทึก/เพิ่มใบรับรองยังไม่พร้อมบน dashboard (read-only)' });
+  // upsert (add/edit) — เขียนจริงผ่าน hr_write (entity_id ว่าง = เพิ่มใหม่ · มี = แก้ของเดิม)
+  licenseAdminUpsert: function (payload) {
+    payload = payload || {};
+    var entity = payload.license_id || payload.id || '';
+    var p = {
+      employee_id: payload.employee_id || '',
+      license_type: payload.license_type || '',
+      license_number: payload.license_number || '',
+      issuing_authority: payload.issuing_authority || '',
+      issue_date: payload.issue_date || '',
+      expiry_date: payload.expiry_date || '',
+      attachment_url: payload.attachment_url || '',
+      notes: payload.notes || '',
+      status: payload.status || 'active',
+    };
+    if (entity) p.id = entity;
+    return lc2Write({ entity_id: entity || null, payload: p });
+  },
+  // soft delete — เขียน event ใหม่ status=deleted ทับ entity เดิม
+  licenseAdminDelete: function (id) {
+    if (!id) return Promise.resolve({ ok: false, error: 'ไม่มี license_id' });
+    return lc2Write({ entity_id: id, deleted: true, payload: { id: id } });
   },
 };
 
@@ -492,6 +550,7 @@ function LC_RUN_PAGE_JS() {
         + '<td><div class="row-actions">'
         + (r.status !== 'archived' ? '<button class="btn-row send" onclick="sendReminder(\'' + esc(r.license_id) + '\')">เตือน</button>' : '')
         + '<button class="btn-row" onclick="openEdit(\'' + esc(r.license_id) + '\')">แก้ไข</button>'
+        + '<button class="btn-row" onclick="deleteLicense(\'' + esc(r.license_id) + '\')" style="color:var(--error);border-color:#FECACA;">ลบ</button>'
         + (r.attachment_url ? '<a class="btn-row" href="' + esc(r.attachment_url) + '" target="_blank">ดู cert</a>' : '')
         + '</div></td>'
         + '</tr>';
@@ -554,8 +613,8 @@ function LC_RUN_PAGE_JS() {
       + '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">'
       + '<div class="field"><label class="field-label">วันที่ออก</label>'
       + '<input type="date" class="field-input" id="fIssue" value="' + esc(row.issue_date || '') + '"></div>'
-      + '<div class="field"><label class="field-label">วันหมดอายุ</label>'
-      + '<input type="date" class="field-input" id="fExpiry" value="' + esc(row.expiry_date || '') + '"></div>'
+      + '<div class="field"><label class="field-label">วันหมดอายุ <span class="req">*</span></label>'
+      + '<input type="date" class="field-input" id="fExpiry" value="' + esc(row.expiry_date || '') + '" required></div>'
       + '</div>'
       + '<div class="field"><label class="field-label">URL สำเนา cert (Drive link)</label>'
       + '<input class="field-input" id="fUrl" value="' + esc(row.attachment_url || '') + '" placeholder="https://drive.google.com/..."></div>'
@@ -576,14 +635,39 @@ function LC_RUN_PAGE_JS() {
       notes: document.getElementById('fNotes').value,
     };
     if (!payload.employee_id || !payload.license_type) { showToast('กรอก employee_id และเลือกประเภท', 'error'); return; }
+    if (!payload.expiry_date) { showToast('กรอกวันหมดอายุ', 'error'); return; }
+    var isEdit = !!payload.license_id;
     google.script.run.withSuccessHandler(function (r) {
-      if (r && r.ok) { closeModal(); reload(); }
-      else showToast('บันทึกล้มเหลว · ' + (r && r.error ? r.error : ''), 'error');
+      if (r && r.ok) {
+        closeModal();
+        showToast(isEdit ? 'แก้ไขใบรับรองแล้ว' : 'เพิ่มใบรับรองแล้ว', 'success');
+        init();
+      } else {
+        showToast('บันทึกล้มเหลว · ' + (r && r.error ? r.error : ''), 'error');
+      }
+    }).withFailureHandler(function (e) {
+      showToast('บันทึกล้มเหลว · ' + ((e && e.message) || e), 'error');
     }).licenseAdminUpsert(payload);
   }
 
+  function deleteLicense(id) {
+    var row = _state.rows.find(function (r) { return r.license_id === id; });
+    var name = row ? (row.license_type_label + ' · ' + row.employee_name) : id;
+    if (!confirm('ลบใบรับรองนี้?\n' + name + '\n(ลบแบบ soft — กู้คืนได้)')) return;
+    google.script.run.withSuccessHandler(function (r) {
+      if (r && r.ok) {
+        showToast('ลบใบรับรองแล้ว', 'success');
+        init();
+      } else {
+        showToast('ลบล้มเหลว · ' + (r && r.error ? r.error : ''), 'error');
+      }
+    }).withFailureHandler(function (e) {
+      showToast('ลบล้มเหลว · ' + ((e && e.message) || e), 'error');
+    }).licenseAdminDelete(id);
+  }
+
   // ---- expose fn ที่ inline onclick ใน markup ต้องเรียก ไปยัง window ----
-  var _exp = { reload: reload, setTab: setTab, sendReminder: sendReminder, bulkRemind: bulkRemind, openAddModal: openAddModal, openEdit: openEdit, closeModal: closeModal, saveLicense: saveLicense };
+  var _exp = { reload: reload, setTab: setTab, sendReminder: sendReminder, bulkRemind: bulkRemind, openAddModal: openAddModal, openEdit: openEdit, closeModal: closeModal, saveLicense: saveLicense, deleteLicense: deleteLicense };
   Object.keys(_exp).forEach(function (k) { window[k] = _exp[k]; });
 
   // ---- start ----

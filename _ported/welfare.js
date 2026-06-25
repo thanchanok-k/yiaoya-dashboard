@@ -124,9 +124,40 @@ function wf2MapRow(p) {
     end_date: endDate,
     note: note,
     extra: extra,
+    _deleted: (p._status === 'deleted' || p._deleted === true || p.deleted === true),
     _raw: p,
   };
 }
+
+// ตรวจ 403/401 จาก res ของ functions.invoke (supabase-js คืน {data,error}; error.context = Response)
+function wf2Is403(res) {
+  if (!res) return false;
+  var err = res.error || res;
+  if (!err) return false;
+  if (err.context && typeof err.context.status === 'number') {
+    if (err.context.status === 403 || err.context.status === 401) return true;
+  }
+  if (typeof err.status === 'number' && (err.status === 403 || err.status === 401)) return true;
+  var msg = String(err.message || err.error || err).toLowerCase();
+  return msg.indexOf('403') >= 0 || msg.indexOf('forbidden') >= 0 ||
+    msg.indexOf('401') >= 0 || msg.indexOf('unauthor') >= 0 || msg.indexOf('not allowed') >= 0;
+}
+
+// unwrap error body (FunctionsHttpError → error.context เป็น Response) → คืน Promise<string>
+function wf2UnwrapErr(err) {
+  if (err && err.context && typeof err.context.json === 'function') {
+    return err.context.json().then(function (j) {
+      return (j && (j.error || j.message)) || (err.message || 'error');
+    }).catch(function () { return (err && err.message) || 'error'; });
+  }
+  return Promise.resolve((err && err.message) || String(err || 'error'));
+}
+
+function wf2GetSb() {
+  return (typeof window !== 'undefined' && window.sb) ? window.sb : (typeof sb !== 'undefined' ? sb : null);
+}
+
+var WF_WRITE_FN = 'hr_write';
 
 // cache row ล่าสุด (backend ไม่มี endpoint แยก)
 var _wf2Rows = [];
@@ -144,6 +175,7 @@ function wf2FetchRows() {
     var seen = {}; var rows = [];
     items.forEach(function (p, i) {
       var row = wf2MapRow(p);
+      if (row._deleted) return; // กรองรายการที่ลบ (soft delete) ทิ้ง
       var key = row.id || (row.employee_id + '|' + row.type + '|' + row.start_date) || ('idx' + i);
       if (seen[key]) return;
       seen[key] = true;
@@ -180,6 +212,47 @@ var WF_BACKEND = {
       statuses.sort(function (a, b) { return String(a).localeCompare(String(b), 'th'); });
       extraKeys.sort(function (a, b) { return a.localeCompare(b); });
       return { rows: all, types: types, employees: employees, statuses: statuses, extraKeys: extraKeys };
+    });
+  },
+
+  // เพิ่ม/แก้ — ไม่ส่ง entity_id = ใหม่ · ส่ง entity_id = แก้ของเดิม
+  // คืน { ok, denied, error }
+  wfSave: function (payload, entityId) {
+    var sb = wf2GetSb();
+    if (!sb || !sb.functions) return Promise.resolve({ ok: false, denied: false, error: 'no sb' });
+    var body = { event_type: WF_TYPE, payload: payload };
+    if (entityId) body.entity_id = entityId;
+    return sb.functions.invoke(WF_WRITE_FN, { body: body }).then(function (res) {
+      if (res && res.error) {
+        if (wf2Is403(res)) return { ok: false, denied: true, error: null };
+        return wf2UnwrapErr(res.error).then(function (m) { return { ok: false, denied: false, error: m }; });
+      }
+      var data = (res && res.data) || {};
+      if (!data.ok) return { ok: false, denied: false, error: (data.error || 'save failed') };
+      return { ok: true, denied: false, error: null };
+    }).catch(function (e) {
+      if (wf2Is403({ error: e })) return { ok: false, denied: true, error: null };
+      return wf2UnwrapErr(e).then(function (m) { return { ok: false, denied: false, error: m }; });
+    });
+  },
+
+  // ลบ (soft) — ส่ง entity_id + deleted:true · คืน { ok, denied, error }
+  wfDelete: function (entityId) {
+    var sb = wf2GetSb();
+    if (!sb || !sb.functions) return Promise.resolve({ ok: false, denied: false, error: 'no sb' });
+    if (!entityId) return Promise.resolve({ ok: false, denied: false, error: 'no id' });
+    var body = { event_type: WF_TYPE, entity_id: entityId, deleted: true };
+    return sb.functions.invoke(WF_WRITE_FN, { body: body }).then(function (res) {
+      if (res && res.error) {
+        if (wf2Is403(res)) return { ok: false, denied: true, error: null };
+        return wf2UnwrapErr(res.error).then(function (m) { return { ok: false, denied: false, error: m }; });
+      }
+      var data = (res && res.data) || {};
+      if (!data.ok) return { ok: false, denied: false, error: (data.error || 'delete failed') };
+      return { ok: true, denied: false, error: null };
+    }).catch(function (e) {
+      if (wf2Is403({ error: e })) return { ok: false, denied: true, error: null };
+      return wf2UnwrapErr(e).then(function (m) { return { ok: false, denied: false, error: m }; });
     });
   },
 };
@@ -265,6 +338,30 @@ function WF_CSS() {
     '#wf .empty-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px}',
     '#wf .empty-sub{font-size:12px;color:var(--text-muted)}',
     '#wf .loading{text-align:center;padding:50px;color:var(--text-muted);font-size:13px}',
+    // action buttons (toolbar + row)
+    '#wf .btn-primary{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}',
+    '#wf .btn-primary:hover{background:var(--teal-dark);border-color:var(--teal-dark)}',
+    '#wf .row-actions{white-space:nowrap;text-align:right}',
+    '#wf .btn-icon{padding:3px 8px;font-size:11px;border:1px solid var(--border-strong);border-radius:5px;background:#fff;color:var(--text);cursor:pointer;font-family:inherit;margin-left:4px}',
+    '#wf .btn-icon:hover{border-color:var(--navy)}',
+    '#wf .btn-icon.danger{color:var(--danger);border-color:#FCA5A5}',
+    '#wf .btn-icon.danger:hover{background:#FEE2E2;border-color:var(--danger)}',
+    // modal
+    '#wf-modal{position:fixed;inset:0;z-index:9998;display:none;align-items:flex-start;justify-content:center;background:rgba(15,23,42,.45);padding:40px 16px;overflow-y:auto}',
+    '#wf-modal.open{display:flex}',
+    '#wf-modal .modal-card{background:#fff;border-radius:12px;width:100%;max-width:520px;box-shadow:0 20px 50px rgba(0,0,0,.25);overflow:hidden}',
+    '#wf-modal .modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}',
+    '#wf-modal .modal-head h2{margin:0;font-size:16px;font-weight:600;color:var(--navy)}',
+    '#wf-modal .modal-x{background:none;border:0;font-size:20px;line-height:1;color:var(--text-faint);cursor:pointer;padding:0 4px}',
+    '#wf-modal .modal-body{padding:18px 20px;max-height:60vh;overflow-y:auto}',
+    '#wf-modal .modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}',
+    '#wf-modal .fld{margin-bottom:14px}',
+    '#wf-modal .fld label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}',
+    '#wf-modal .fld label .req{color:var(--danger)}',
+    '#wf-modal .fld input,#wf-modal .fld select,#wf-modal .fld textarea{width:100%;box-sizing:border-box;padding:8px 10px;font-size:13px;border:1px solid var(--border-strong);border-radius:6px;font-family:inherit;background:#fff;color:var(--text)}',
+    '#wf-modal .fld input:focus,#wf-modal .fld select:focus,#wf-modal .fld textarea:focus{outline:0;border-color:var(--teal);box-shadow:0 0 0 3px rgba(61,197,183,.15)}',
+    '#wf-modal .fld textarea{resize:vertical;min-height:60px}',
+    '#wf-modal .fld-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}',
     '@media (max-width:768px){#wf .stats{grid-template-columns:repeat(2,1fr)}}',
   ].join('\n');
 }
@@ -282,13 +379,14 @@ function WF_MARKUP() {
     '    <div class="subtitle" id="wf-subtitle">ทะเบียนสวัสดิการ แยกตามประเภท/พนักงาน (Welfare/Benefits)</div>',
     '  </div>',
     '  <div class="page-actions">',
+    '    <button class="btn btn-sm btn-primary" onclick="wfOpenAdd()" id="wf-add-btn">＋ เพิ่ม</button>',
     '    <button class="btn btn-sm" onclick="wfReload()" id="wf-refresh-btn"></button>',
     '  </div>',
     '</header>',
-    // read-only banner
+    // info banner
     '<div class="ro-banner">',
     '  <span style="width:8px;height:8px;border-radius:50%;background:#3DC5B7;display:inline-block"></span>',
-    '  <span><strong>มุมมอง HR:</strong> ทะเบียนสวัสดิการของพนักงานแต่ละท่าน · อ่านอย่างเดียว (ไม่แสดงข้อมูลจำนวนเงิน)</span>',
+    '  <span><strong>มุมมอง HR:</strong> ทะเบียนสวัสดิการของพนักงานแต่ละท่าน · เพิ่ม/แก้/ลบ ได้ (ไม่แสดงข้อมูลจำนวนเงิน)</span>',
     '</div>',
     '<div class="stats" id="wf-stats"></div>',
     // filters
@@ -303,6 +401,19 @@ function WF_MARKUP() {
     '  </div>',
     '</div>',
     '<div id="wf-content" class="loading">กำลังโหลด...</div>',
+    // modal (เพิ่ม/แก้)
+    '<div id="wf-modal">',
+    '  <div class="modal-card">',
+    '    <div class="modal-head"><h2 id="wf-modal-title">เพิ่มสวัสดิการ</h2><button class="modal-x" onclick="wfCloseModal()" type="button">&times;</button></div>',
+    '    <form id="wf-form" onsubmit="return wfSubmitForm(event)">',
+    '      <div class="modal-body" id="wf-form-body"></div>',
+    '      <div class="modal-foot">',
+    '        <button type="button" class="btn btn-sm" onclick="wfCloseModal()">ยกเลิก</button>',
+    '        <button type="submit" class="btn btn-sm btn-primary" id="wf-save-btn">บันทึก</button>',
+    '      </div>',
+    '    </form>',
+    '  </div>',
+    '</div>',
   ].join('\n');
 }
 
@@ -512,6 +623,7 @@ function WF_RUN_PAGE_JS() {
     if (hasDate) th.push('<th>ช่วงวัน</th>');
     extraKeys.forEach(function (k) { th.push('<th>' + escapeHtml(wf2Humanize(k)) + '</th>'); });
     if (hasNote) th.push('<th>หมายเหตุ</th>');
+    th.push('<th class="row-actions">จัดการ</th>');
 
     var body = rows.map(function (r) {
       var tds = [
@@ -536,6 +648,13 @@ function WF_RUN_PAGE_JS() {
       if (hasNote) {
         tds.push('<td class="note-cell">' + (r.note ? escapeHtml(r.note) : '—') + '</td>');
       }
+      var rid = escapeHtml(r.id || '');
+      tds.push(
+        '<td class="row-actions">' +
+        '<button type="button" class="btn-icon" onclick="wfOpenEdit(\'' + rid + '\')">แก้</button>' +
+        '<button type="button" class="btn-icon danger" onclick="wfAskDelete(\'' + rid + '\')">ลบ</button>' +
+        '</td>'
+      );
       return '<tr>' + tds.join('') + '</tr>';
     }).join('');
 
@@ -562,6 +681,128 @@ function WF_RUN_PAGE_JS() {
     ].join('');
   }
 
+  /* ===== CRUD: modal form (เพิ่ม/แก้) + ลบ ===== */
+  // นิยามฟิลด์ฟอร์ม — payload key ตรงกับที่ wf2MapRow อ่าน
+  // employee_name / employee_id / benefit_type(required) / status / start_date / end_date / note
+  var WF_FIELDS = [
+    { key: 'employee_name', label: 'พนักงาน', type: 'text', required: true, ph: 'ชื่อ-สกุล พนักงาน' },
+    { key: 'employee_id', label: 'รหัสพนักงาน', type: 'text', required: false, ph: 'เช่น EMP001' },
+    { key: 'benefit_type', label: 'ประเภทสวัสดิการ', type: 'text', required: true, ph: 'เช่น ประกันสุขภาพ' },
+    { key: 'status', label: 'สถานะ', type: 'text', required: false, ph: 'เช่น ใช้งาน / รออนุมัติ' },
+    { key: 'start_date', label: 'วันเริ่ม', type: 'date', required: false, half: true },
+    { key: 'end_date', label: 'วันสิ้นสุด', type: 'date', required: false, half: true },
+    { key: 'note', label: 'หมายเหตุ', type: 'textarea', required: false, ph: 'รายละเอียดเพิ่มเติม (ถ้ามี)' },
+  ];
+
+  var _wfEditId = null; // null = เพิ่มใหม่ · มีค่า = แก้
+
+  function buildForm(row) {
+    var halves = [];
+    var html = WF_FIELDS.map(function (f) {
+      var val = '';
+      if (row) {
+        if (f.key === 'employee_name') val = row.employee || '';
+        else if (f.key === 'employee_id') val = row.employee_id || '';
+        else if (f.key === 'benefit_type') val = row.type || '';
+        else if (f.key === 'status') val = row.status || '';
+        else if (f.key === 'start_date') val = row.start_date || '';
+        else if (f.key === 'end_date') val = row.end_date || '';
+        else if (f.key === 'note') val = row.note || '';
+      }
+      var req = f.required ? ' <span class="req">*</span>' : '';
+      var attrs = 'id="wf-f-' + f.key + '"' + (f.required ? ' required' : '') + (f.ph ? ' placeholder="' + escapeHtml(f.ph) + '"' : '');
+      var ctrl;
+      if (f.type === 'textarea') {
+        ctrl = '<textarea ' + attrs + '>' + escapeHtml(val) + '</textarea>';
+      } else {
+        ctrl = '<input type="' + f.type + '" ' + attrs + ' value="' + escapeHtml(val) + '">';
+      }
+      var fld = '<div class="fld"><label>' + escapeHtml(f.label) + req + '</label>' + ctrl + '</div>';
+      if (f.half) { halves.push(fld); return ''; }
+      return fld;
+    });
+    // วันเริ่ม + วันสิ้นสุด → จัดเป็นแถวคู่
+    var out = html.filter(function (s) { return s; }).join('');
+    if (halves.length) {
+      out += '<div class="fld-row">' + halves.join('') + '</div>';
+    }
+    return out;
+  }
+
+  function openModal(title, row, editId) {
+    _wfEditId = editId || null;
+    var t = $id('wf-modal-title'); if (t) t.textContent = title;
+    var body = $id('wf-form-body'); if (body) body.innerHTML = buildForm(row);
+    var m = $id('wf-modal'); if (m) m.classList.add('open');
+    var first = body && body.querySelector('input,textarea');
+    if (first) try { first.focus(); } catch (e) {}
+  }
+
+  function wfCloseModal() {
+    var m = $id('wf-modal'); if (m) m.classList.remove('open');
+    _wfEditId = null;
+  }
+
+  function wfOpenAdd() {
+    openModal('เพิ่มสวัสดิการ', null, null);
+  }
+
+  function wfOpenEdit(id) {
+    var rows = (_wfData && _wfData.rows) || [];
+    var row = null;
+    for (var i = 0; i < rows.length; i++) { if (String(rows[i].id) === String(id)) { row = rows[i]; break; } }
+    if (!row) { showToast('ไม่พบรายการ', 'error'); return; }
+    openModal('แก้ไขสวัสดิการ', row, id);
+  }
+
+  function collectForm() {
+    var payload = {};
+    var missing = false;
+    WF_FIELDS.forEach(function (f) {
+      var el = $id('wf-f-' + f.key);
+      var v = el ? String(el.value || '').trim() : '';
+      if (f.required && !v) missing = true;
+      if (v !== '') payload[f.key] = v; // กัน null/ค่าว่าง — ส่งเฉพาะที่มีค่า
+    });
+    return { payload: payload, missing: missing };
+  }
+
+  function wfSubmitForm(ev) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    var c = collectForm();
+    if (c.missing) { showToast('กรุณากรอกฟิลด์ที่จำเป็น (*)', 'error'); return false; }
+    var btn = $id('wf-save-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก...'; }
+    WF_BACKEND.wfSave(c.payload, _wfEditId).then(function (res) {
+      if (btn) { btn.disabled = false; btn.textContent = 'บันทึก'; }
+      if (res.denied) { showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error'); return; }
+      if (!res.ok) { showToast('บันทึกไม่สำเร็จ: ' + (res.error || ''), 'error'); return; }
+      showToast(_wfEditId ? 'แก้ไขเรียบร้อย' : 'เพิ่มเรียบร้อย', 'success');
+      wfCloseModal();
+      loadData();
+    }).catch(function (e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'บันทึก'; }
+      showToast('บันทึกไม่สำเร็จ: ' + ((e && e.message) || e), 'error');
+    });
+    return false;
+  }
+
+  function wfAskDelete(id) {
+    if (!id) return;
+    var rows = (_wfData && _wfData.rows) || [];
+    var label = id;
+    for (var i = 0; i < rows.length; i++) { if (String(rows[i].id) === String(id)) { label = (rows[i].employee || '') + ' · ' + (rows[i].type || ''); break; } }
+    if (!window.confirm('ยืนยันลบรายการสวัสดิการนี้?\n' + label)) return;
+    WF_BACKEND.wfDelete(id).then(function (res) {
+      if (res.denied) { showToast('ต้องเป็น HR / ล็อกอินก่อน', 'error'); return; }
+      if (!res.ok) { showToast('ลบไม่สำเร็จ: ' + (res.error || ''), 'error'); return; }
+      showToast('ลบเรียบร้อย', 'success');
+      loadData();
+    }).catch(function (e) {
+      showToast('ลบไม่สำเร็จ: ' + ((e && e.message) || e), 'error');
+    });
+  }
+
   function wfReload() { loadData(); }
   function wfRender() { renderAll(); }
 
@@ -571,6 +812,11 @@ function WF_RUN_PAGE_JS() {
   // expose fn ที่ inline onclick ต้องเรียก ไปยัง window (prefix wf* กันชน)
   window.wfReload = wfReload;
   window.wfRender = wfRender;
+  window.wfOpenAdd = wfOpenAdd;
+  window.wfOpenEdit = wfOpenEdit;
+  window.wfAskDelete = wfAskDelete;
+  window.wfCloseModal = wfCloseModal;
+  window.wfSubmitForm = wfSubmitForm;
 
   // init
   loadData();
