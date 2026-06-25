@@ -3251,6 +3251,9 @@ function mountPromo(){
    +'<div style="font-weight:700;color:var(--navy,#0D2F4F);font-size:12.5px;margin-bottom:8px">ตั้งค่าต้นทุน / กำไรขั้นต่ำ</div>'
    +'<div style="display:flex;align-items:center;gap:8px"><span style="width:110px;font-size:12px;color:var(--navy,#0D2F4F)">กำไรขั้นต่ำ</span><input type="number" id="mgMin" value="'+Math.round((g.minMargin||0.35)*100)+'" style="width:68px;border:1px solid #E2E8F0;border-radius:6px;padding:4px 7px;font-size:12px"> <span style="font-size:11px;color:#94A3B8">% (margin หลังหักต้นทุน)</span></div>'
    +'<div style="font-size:11px;color:#64748B;margin-top:10px">ต้นทุนรายแผนก (% ของราคา · ปรับให้ตรงต้นทุนจริง — กระดูกฯ มียา/ฉีดสูง):</div>'+rows
+   +'<div style="font-size:11px;color:#64748B;margin-top:12px;font-weight:700;color:var(--navy,#0D2F4F)"><i class="ti ti-calendar-plus"></i> วันสำคัญของคลินิก (เพิ่มเอง · AI จะเอาไปคิดโปรฯ)</div>'
+   +'<div style="font-size:10.5px;color:#94A3B8;margin:3px 0 5px">บรรทัดละ 1 วัน · รูปแบบ: <b>15/8 วันเกิดคลินิก = มุม/เหตุผล</b> (ส่วน "= มุม" ใส่หรือไม่ก็ได้)</div>'
+   +'<textarea id="mgEvents" rows="3" placeholder="15/8 วันเกิดคลินิก = ฉลองครบรอบ ลดทั้งร้าน\n28 ทุกเดือน Payday โปรฯ เงินเดือนออก" style="width:100%;box-sizing:border-box;border:1px solid #E2E8F0;border-radius:7px;padding:7px 9px;font-size:12px;font-family:inherit;line-height:1.6">'+esc((g.customEvents||[]).map(function(e){return e.d+'/'+e.m+' '+(e.name||'')+(e.angle?' = '+e.angle:'');}).join('\n'))+'</textarea>'
    +'<div style="display:flex;gap:8px;margin-top:12px"><button id="promoMarginSave" style="cursor:pointer;border:none;background:#0F766E;color:#fff;border-radius:7px;padding:6px 14px;font-size:12px;font-weight:700">บันทึก</button><button id="promoMarginCancel" style="cursor:pointer;border:1px solid #E2E8F0;background:#fff;color:#64748B;border-radius:7px;padding:6px 12px;font-size:12px">ยกเลิก</button></div></div>';
  }
  const dOff=(o)=>{o=parseInt(o,10);if(isNaN(o))return '';return o===0?'D-Day':(o>0?'D+'+o:'D'+o);};
@@ -3359,8 +3362,9 @@ function mountPromo(){
   const mgs=$('promoMarginSave');if(mgs)mgs.onclick=()=>{
    const mm=Math.max(0,Math.min(90,+(($('mgMin')||{}).value||35)||0))/100;const dc={};
    document.querySelectorAll('.mgDept').forEach(i=>{if(i.value!==''&&i.value!=null)dc[i.dataset.d]=Math.max(0,Math.min(99,+i.value||0))/100;});
+   const evs=[];const evt=$('mgEvents');if(evt)String(evt.value||'').split('\n').forEach(line=>{const m=line.trim().match(/^(\d{1,2})\/(\d{1,2})\s+(.+)$/);if(m){const parts=m[3].split('=');evs.push({d:+m[1],m:+m[2],name:parts[0].trim(),angle:(parts[1]||'').trim()});}});
    mgs.disabled=true;mgs.textContent='บันทึก…';
-   sb.functions.invoke('promo_design',{body:{action:'set_margin',min_margin:mm,dept_costs:dc}}).then(({data})=>{settingsOpen=false;if(data&&data.guard)curGuard=data.guard;load();}).catch(e=>alert('error: '+(e&&e.message||e)));};
+   sb.functions.invoke('promo_design',{body:{action:'set_margin',min_margin:mm,dept_costs:dc,custom_events:evs}}).then(({data})=>{settingsOpen=false;if(data&&data.guard)curGuard=data.guard;load();}).catch(e=>alert('error: '+(e&&e.message||e)));};
   document.querySelectorAll('.promoAct').forEach(b=>b.onclick=()=>{
    sb.functions.invoke('promo_design',{body:{action:'decide',id:+b.dataset.id,status:b.dataset.st}}).then(()=>load()).catch(e=>alert('error: '+(e&&e.message||e)));});
   document.querySelectorAll('.promoPlanBtn').forEach(b=>b.onclick=()=>{const id=+b.dataset.id;const pr=promosCache.find(x=>x.id===id);
