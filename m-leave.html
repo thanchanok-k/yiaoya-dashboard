@@ -1,32 +1,15 @@
 <!DOCTYPE html><html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>ยื่นใบลา · Yiaoya</title>
+<link rel="stylesheet" href="m-shared.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
-:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--bg:#F8F9FA;--text:#333333}
-*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
-body{margin:0;background:var(--bg);color:var(--text);padding:14px;max-width:480px;margin:0 auto}
-.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
-.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
-.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
 .bal{display:flex;gap:8px;margin-bottom:12px}
 .bal .c{flex:1;background:#fff;border-radius:12px;padding:11px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .bal .n{font-size:22px;font-weight:800;color:var(--teal)}.bal .l{font-size:11px;color:var(--muted);margin-top:2px}
-.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid var(--border)}
-label{display:block;font-size:13px;font-weight:600;margin:12px 0 5px}
-input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;background:#fff}
-.row{display:flex;gap:9px}.row>div{flex:1}
 .chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px}.chk input{width:auto}
-button{width:100%;padding:14px;background:var(--teal);color:#04342C;border:none;border-radius:12px;font-size:15px;font-weight:700;margin-top:18px;cursor:pointer}
-button:disabled{opacity:.5}
-.msg{text-align:center;font-size:14px;margin-top:12px;min-height:20px;line-height:1.5}
-.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
-a.lk{color:var(--teal);font-weight:700;text-decoration:none}
 .recent{margin-top:14px}.recent .it{background:#fff;border-radius:10px;padding:10px 12px;margin-bottom:7px;font-size:13px;display:flex;justify-content:space-between}
-.pill{font-size:11px;padding:2px 9px;border-radius:99px;font-weight:700}
 </style></head>
 <body>
-<div class="head"><div class="eb">YIAOYA · HR</div><h1>ยื่นใบลา</h1><div class="who" id="who">—</div></div>
 <div id="app" style="display:none">
   <div class="bal" id="bal"></div>
   <div class="card">
@@ -49,33 +32,15 @@ a.lk{color:var(--teal);font-weight:700;text-decoration:none}
   </div>
   <div class="recent" id="recent"></div>
 </div>
-<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<div id="block" style="display:none"></div>
 <script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
-const sb=createClient(SB_URL,ANON);
-const $=(id)=>document.getElementById(id);
+import { ID, $, api, mountHead, requireSession } from './m-shared.js';
+mountHead('ยื่นใบลา');
 const TH={annual:'ลาพักร้อน',sick:'ลาป่วย',personal:'ลากิจ',emergency:'ลาฉุกเฉิน',maternity:'ลาคลอด',paternity:'ลาดูแลบุตร',ordination:'ลาบวช',military:'ลาเกณฑ์ทหาร',special_holiday:'วันหยุดพิเศษ',birthday:'ลาวันเกิด',reward:'ลารางวัล',other:'อื่นๆ'};
 const STPILL={submitted:['รออนุมัติ','#FEF3C7','#92400E'],approved:['อนุมัติ','#D1FAE5','#065F46'],rejected:['ไม่อนุมัติ','#FEE2E2','#991B1B']};
-let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
-
-function block(html){ $('block').style.display='block'; $('blockmsg').innerHTML=html; }
-async function token(){ return (await sb.auth.getSession()).data.session?.access_token; }
-async function api(path,body){
-  const t=await token();
-  const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',
-    headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},
-    body:body?JSON.stringify(body):undefined});
-  return r.json();
-}
 
 async function init(){
-  if(!ID||!ID.employee_id){ block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>'); return; }
-  $('who').textContent=(ID.employee_name||ID.display_name)+' · '+ID.employee_id;
-  // session (anonymous) เพื่อเรียก edge fn
-  let { data:s }=await sb.auth.getSession();
-  if(!s.session){ const r=await sb.auth.signInAnonymously(); if(r.error){ block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>'); return; } }
-  $('app').style.display='block';
+  if(!await requireSession()) return;
   $('sd').value=new Date().toISOString().slice(0,10);
   $('half').onchange=()=>{ $('edWrap').style.display=$('half').checked?'none':''; };
   $('send').onclick=submit;

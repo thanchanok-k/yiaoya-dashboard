@@ -1,16 +1,8 @@
 <!DOCTYPE html><html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>ปฏิทินลาทีม · Yiaoya</title>
+<link rel="stylesheet" href="m-shared.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
-:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
-*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
-body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 40px;max-width:480px;margin:0 auto}
-.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
-.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
-.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
-.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
-.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
 .sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
 .num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
 .dgrp{margin-bottom:13px}
@@ -27,39 +19,25 @@ body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 40px;max-
 .me-pill{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:11px;background:var(--teal);color:#04342C;margin-left:6px}
 .tp{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:12px;background:#E6F1FB;color:#0C447C;flex-shrink:0;white-space:nowrap}
 .hint{color:var(--faint);font-size:13px;text-align:center;padding:22px 8px;line-height:1.6}
-.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
-a.lk{color:var(--teal);font-weight:700;text-decoration:none}
 </style></head>
 <body>
-<div class="head"><div class="eb">YIAOYA · HR</div><h1>ปฏิทินลาทีม</h1><div class="who" id="who">—</div></div>
 <div id="app" style="display:none">
   <div class="note" id="note">การลาที่อนุมัติแล้วของทีมในเดือนนี้ · เรียงตามวันที่ (อ่านอย่างเดียว)</div>
   <div class="card"><div class="sec"><span class="num" id="monthNum">·</span><span id="monthLbl">เดือนนี้</span></div>
     <div id="list"><div class="hint">กำลังโหลด…</div></div>
   </div>
 </div>
-<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<div id="block" style="display:none"></div>
 <script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
-const sb=createClient(SB_URL,ANON);
-const $=(id)=>document.getElementById(id);
+import { ID, $, api, mountHead, requireSession, esc } from './m-shared.js';
+mountHead('ปฏิทินลาทีม');
 const TH_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const LEAVE_LABEL={annual:'พักร้อน',sick:'ลาป่วย',personal:'ลากิจ',maternity:'ลาคลอด',paternity:'ลาเลี้ยงดูบุตร',ordination:'ลาบวช',military:'ลาทหาร',emergency:'ลาฉุกเฉิน',special_holiday:'วันหยุดพิเศษ',birthday:'วันเกิด',reward:'วันลารางวัล',other:'อื่นๆ'};
-let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
-const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
-const esc=(s)=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
-async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
 function pad(n){return (n<10?'0':'')+n;}
 function thDate(iso){const p=String(iso).split('-');return Number(p[2])+' '+TH_MONTHS[Number(p[1])-1];}
 
 async function init(){
-  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
-  $('who').textContent=(ID.employee_name||ID.display_name)+' · '+ID.employee_id;
-  let {data:s}=await sb.auth.getSession();
-  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
-  $('app').style.display='block';
+  if(!await requireSession()) return;
   load();
 }
 

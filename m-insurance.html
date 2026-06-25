@@ -1,16 +1,8 @@
 <!DOCTYPE html><html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>สวัสดิการ & ประกันของฉัน · Yiaoya</title>
+<link rel="stylesheet" href="m-shared.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
-:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
-*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
-body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 40px;max-width:480px;margin:0 auto}
-.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
-.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
-.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
-.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
-.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
 .badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
 .badge{padding:4px 10px;border-radius:99px;font-size:11.5px;font-weight:700;background:#E6F7F5;color:#0F766E}
 .badge.co{background:var(--navy);color:#9FE1CB}
@@ -34,27 +26,17 @@ body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 40px;max-
 .rrow{display:flex;justify-content:space-between;align-items:center;margin-top:11px}
 .rrow .rl{font-size:12px;color:var(--muted)}
 .empty{text-align:center;color:var(--muted);font-size:13.5px;padding:40px 16px;line-height:1.6}
-.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
-a.lk{color:var(--teal);font-weight:700;text-decoration:none}
 .loading{text-align:center;color:var(--faint);font-size:13px;padding:34px 0}
 </style></head>
 <body>
-<div class="head"><div class="eb">YIAOYA · HR</div><h1>สวัสดิการ &amp; ประกันของฉัน</h1><div class="who" id="who">—</div></div>
 <div id="app" style="display:none">
   <div class="note">ข้อมูลสวัสดิการและประกันของคุณ · ดูอย่างเดียว · หากข้อมูลไม่ถูกต้องแจ้งฝ่ายบุคคล</div>
   <div id="list"></div>
 </div>
-<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<div id="block" style="display:none"></div>
 <script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
-const sb=createClient(SB_URL,ANON);
-const $=(id)=>document.getElementById(id);
-let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
-const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
-async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
-async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
-const esc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+import { ID, $, api, mountHead, requireSession, esc } from './m-shared.js';
+mountHead('สวัสดิการ & ประกันของฉัน');
 const TYPE_TH={welfare_fund:'กองทุนสวัสดิการ',professional_insurance:'ประกันวิชาชีพ',malpractice:'ประกันความรับผิด'};
 function baht(v){if(v==null||v===''||isNaN(Number(v)))return null;return '฿'+Number(v).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:2});}
 function fdate(d){if(!d)return '—';const x=new Date(d);if(isNaN(x))return esc(d);return x.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});}
@@ -93,11 +75,7 @@ function card(rec){
   return h;
 }
 async function init(){
-  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
-  $('who').textContent=(ID.employee_name||ID.display_name)+' · '+ID.employee_id;
-  let {data:s}=await sb.auth.getSession();
-  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
-  $('app').style.display='block';
+  if(!await requireSession()) return;
   $('list').innerHTML='<div class="loading">กำลังโหลด…</div>';
   const r=await api('hr_insurance?employee_id='+encodeURIComponent(ID.employee_id));
   if(!r||r.ok===false||r.error){$('list').innerHTML='<div class="warn">โหลดข้อมูลไม่สำเร็จ'+(r&&r.error?': '+esc(r.error):'')+'</div>';return;}

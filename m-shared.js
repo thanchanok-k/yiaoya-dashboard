@@ -6,7 +6,7 @@ export const SB_URL = "https://iyldrlzhftylewstfmsg.supabase.co";
 export const ANON   = "sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
 export const sb = createClient(SB_URL, ANON);
 export const $ = (id) => document.getElementById(id);
-export const esc = (s) => String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+export const esc = (s) => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // ตัวตนจาก LINE login (login.html เก็บไว้ใน localStorage)
 export let ID = null;

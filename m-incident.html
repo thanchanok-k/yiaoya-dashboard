@@ -1,21 +1,12 @@
 <!DOCTYPE html><html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>แจ้งเหตุการณ์ / Incident · Yiaoya</title>
+<link rel="stylesheet" href="m-shared.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
-:root{--navy:#0D2F4F;--teal:#3DC5B7;--border:#E5E7EB;--muted:#6B7280;--faint:#94a3b8;--bg:#F8F9FA;--text:#333333}
-*{box-sizing:border-box;font-family:'Inter','Noto Sans Thai',-apple-system,system-ui,sans-serif}
-body{margin:0;background:var(--bg);color:var(--text);padding:14px 14px 96px;max-width:480px;margin:0 auto}
-.head{background:linear-gradient(135deg,#0D2F4F 0%,#0F766E 100%);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px}
-.head .eb{color:#9FE1CB;font-size:11px;letter-spacing:2px;font-weight:700}
-.head h1{font-size:19px;margin:3px 0 2px}.head .who{font-size:12.5px;color:#9fb6c9}
-.note{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;line-height:1.5}
-.card{background:#fff;border-radius:12px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:11px;border:1px solid var(--border)}
+body{padding-bottom:96px}
 .sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
 .num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
 .req::after{content:"*";color:#DC2626;margin-left:3px;font-weight:700}
-input,textarea,select{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;background:#fff}
-.row{display:flex;gap:10px}.row>div{flex:1}
 .flbl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
 .hint{font-size:11.5px;color:var(--faint);margin-top:6px}
 .chips{display:flex;flex-wrap:wrap;gap:7px}
@@ -31,11 +22,8 @@ input,textarea,select{width:100%;padding:12px;border:1px solid var(--border);bor
 .cta button{width:100%;padding:14px;background:var(--teal);color:#04342C;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}
 .cta button:disabled{opacity:.45}
 .msg{text-align:center;font-size:13px;margin-top:7px;min-height:18px;line-height:1.5}
-.warn{background:#FEF3C7;color:#92400e;border-radius:10px;padding:13px;font-size:13px;line-height:1.6}
-a.lk{color:var(--teal);font-weight:700;text-decoration:none}
 </style></head>
 <body>
-<div class="head"><div class="eb">YIAOYA · HR</div><h1>แจ้งเหตุการณ์ / Incident</h1><div class="who" id="who">—</div></div>
 <div id="app" style="display:none">
   <div class="note">เหตุการณ์ระดับรุนแรง (severe) หรือวิกฤต (critical) จะแจ้ง HR และผู้จัดการสาขาทันที · กรณีวิกฤตแจ้งถึงเจ้าของด้วย</div>
   <div class="card"><div class="sec"><span class="num">1</span><span class="req">ประเภทเหตุการณ์</span></div>
@@ -59,12 +47,10 @@ a.lk{color:var(--teal);font-weight:700;text-decoration:none}
     <input type="url" id="fAtt" placeholder="https://drive.google.com/..."><div class="hint">ไม่บังคับ</div></div>
 </div>
 <div class="cta" id="cta" style="display:none"><button id="send" disabled>แจ้งเหตุการณ์</button><div class="msg" id="msg"></div></div>
-<div id="block" style="display:none"><div class="warn" id="blockmsg"></div></div>
+<div id="block" style="display:none"></div>
 <script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
-const sb=createClient(SB_URL,ANON);
-const $=(id)=>document.getElementById(id);
+import { ID, $, api, mountHead, requireSession } from './m-shared.js';
+mountHead('แจ้งเหตุการณ์ / Incident');
 const CATEGORIES=[
   {key:'injury',label:'บาดเจ็บ / Injury'},
   {key:'near_miss',label:'เกือบเกิดเหตุ / Near-miss'},
@@ -79,19 +65,12 @@ const SEVERITIES=[
   {key:'severe',label:'รุนแรง',sub:'ต้องหยุดงาน'},
   {key:'critical',label:'วิกฤต',sub:'เสี่ยงชีวิต/ทรัพย์สินสูง'},
 ];
-let ID=null; try{ID=JSON.parse(localStorage.getItem('yy_line_id')||'null');}catch(e){}
 let cat='', sev='';
-const block=(h)=>{$('block').style.display='block';$('blockmsg').innerHTML=h;};
-async function token(){return (await sb.auth.getSession()).data.session?.access_token;}
-async function api(path,body){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',apikey:ANON},body:body?JSON.stringify(body):undefined});return r.json();}
 function todayStr(){return new Date().toISOString().slice(0,10);}
 function validate(){const ok=cat&&sev&&$('fDate').value&&$('fLoc').value.trim()&&$('fDetail').value.trim();$('send').disabled=!ok;}
 async function init(){
-  if(!ID||!ID.employee_id){block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');return;}
-  $('who').textContent=(ID.employee_name||ID.display_name)+' · '+ID.employee_id;
-  let {data:s}=await sb.auth.getSession();
-  if(!s.session){const r=await sb.auth.signInAnonymously();if(r.error){block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>');return;}}
-  $('app').style.display='block';$('cta').style.display='block';
+  if(!await requireSession()) return;
+  $('cta').style.display='block';
   $('fDate').max=todayStr();$('fDate').value=todayStr();
   $('cat').innerHTML=CATEGORIES.map(c=>`<span class="chip" data-k="${c.key}">${c.label}</span>`).join('');
   $('sev').innerHTML=SEVERITIES.map(c=>`<span class="chip" data-k="${c.key}">${c.label}<small>${c.sub}</small></span>`).join('');
