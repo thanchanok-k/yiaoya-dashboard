@@ -16,7 +16,7 @@
 
   let MY_ROLE = 'viewer', MY_UID = null, MODE = 'person', LOADED = false;
   let MENU = {}, MENUS = [], ROLES = [], ROLEBASE = {}, EMPS = [], EMPROLE = {}, EMPADD = {};
-  let CUR_EMP = null, EMP_FILTER = '', ADD_FILTER = '', BASE_ROLE = null;
+  let CUR_EMP = null, EMP_FILTER = '', ADD_FILTER = '', BASE_ROLE = null, OPEN_DOMS = null;
   let RERENDER = null; // callback rerender ของบริบทปัจจุบัน (page หรือ modal)
 
   const ic = (name, extra) => `<i class="ti ${name}"${extra || ''} aria-hidden="true"></i>`;
@@ -82,41 +82,137 @@
     }).join('');
   }
 
-  function baseChips(role) {
-    const base = [...(ROLEBASE[role] || [])];
-    if (!base.length) return '<span style="font-size:12px;color:#94A3B8">— บทบาทนี้ยังไม่มีสิทธิ์พื้นฐาน —</span>';
-    return base.map(vk => `<span style="font-size:11.5px;background:#F1F5F9;color:#475569;border-radius:7px;padding:3px 9px;margin:0 4px 4px 0;display:inline-block">${esc(MENU[vk]?.label || vk)}</span>`).join('');
+  /* ===== render ใหม่: accordion + toggle + สรุปสิทธิ์ (คง logic เดิม) ===== */
+  // inject CSS ครั้งเดียว
+  function ensureStyle() {
+    if (document.getElementById('am2-style')) return;
+    const s = document.createElement('style'); s.id = 'am2-style';
+    s.textContent = '.am-sw{width:38px;height:22px;border-radius:11px;background:#CBD5E1;position:relative;flex:0 0 auto;cursor:pointer;transition:background .15s}'
+      + '.am-sw.on{background:#3DC5B7}.am-sw.lk{background:#94A3B8;cursor:not-allowed}'
+      + '.am-kn{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}'
+      + '.am-sw.on .am-kn{left:18px}'
+      + '.am-pill{font-size:10px;border-radius:5px;padding:1px 6px;margin-left:5px;white-space:nowrap}'
+      + '.am-tag{font-size:10px;border-radius:5px;padding:2px 7px;font-weight:600;white-space:nowrap}'
+      + '.am-dom{border:1px solid var(--border,#E5E7EB);border-radius:10px;margin-bottom:8px;overflow:hidden}'
+      + '.am-dh{display:flex;align-items:center;gap:9px;padding:10px 12px;cursor:pointer;background:#fff}.am-dh:hover{background:#F8F9FA}'
+      + '.am-grp{font-size:11px;border:1px solid var(--border,#E5E7EB);border-radius:7px;padding:3px 9px;background:#fff;color:#475569;cursor:pointer}.am-grp:hover{background:#E6F7F5}'
+      + '.am-cnt{font-size:11px;font-weight:600;border-radius:7px;padding:2px 8px;white-space:nowrap}'
+      + '.am-row:hover{background:#FAFCFC}';
+    document.head.appendChild(s);
   }
 
-  function addRow(m, granted) {
-    const editable = canEdit(m.view_key);
-    const lock = m.owner_reserved ? `<span style="font-size:10px;color:#B45309;background:#FEF3C7;border-radius:5px;padding:1px 6px;margin-left:6px">${ic('ti-lock')} เฉพาะผู้บริหาร</span>` : '';
-    const pii = m.sensitive ? `<span style="font-size:10px;color:#6B21A8;background:#F3E8FF;border-radius:5px;padding:1px 6px;margin-left:4px">PDPA</span>` : '';
-    return `<label class="am-add" data-key="${esc(m.view_key)}"
-        style="display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-bottom:1px solid var(--border,#EEF2F6);cursor:${editable ? 'pointer' : 'not-allowed'};opacity:${editable ? 1 : .55}">
-      <input type="checkbox" class="am-add-cb" ${granted ? 'checked' : ''} ${editable ? '' : 'disabled'} style="width:16px;height:16px;accent-color:#0F766E;margin-top:1px">
-      <span style="flex:1">
-        <span style="font-size:13px;font-weight:600;color:var(--navy,#0D2F4F)">${esc(m.label || m.view_key)}${lock}${pii}</span>
-        <span style="display:block;font-size:11px;color:#64748B;margin-top:1px">${esc(m.description || '')}</span>
-      </span>
-      <span class="am-msg" style="font-size:11px;min-width:36px;text-align:right"></span>
-    </label>`;
-  }
-
-  function addListHTML() {
+  // state ของเมนู 1 อัน ตามโหมด
+  function menuOn(m, mode) {
+    if (mode === 'base') { const rs = ROLEBASE[BASE_ROLE] || new Set(); return { on: rs.has(m.view_key), src: rs.has(m.view_key) ? 'role' : null }; }
     const base = ROLEBASE[EMPROLE[CUR_EMP]] || new Set();
     const add = EMPADD[CUR_EMP] || new Set();
-    const q = ADD_FILTER.trim().toLowerCase();
-    const addMenus = MENUS.filter(m => !base.has(m.view_key))
-      .filter(m => !q || (m.label || '').toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q) || m.view_key.includes(q));
+    if (base.has(m.view_key)) return { on: true, src: 'role' };
+    if (add.has(m.view_key)) return { on: true, src: 'add' };
+    return { on: false, src: null };
+  }
+  function menuEditable(m, mode) {
+    if (!canEdit(m.view_key)) return false;                       // owner_reserved + hr_director → ล็อก
+    if (mode === 'person' && (ROLEBASE[EMPROLE[CUR_EMP]] || new Set()).has(m.view_key)) return false; // มาจากบทบาท → แก้ที่นี่ไม่ได้
+    return true;
+  }
+  function personStats() {
+    const base = ROLEBASE[EMPROLE[CUR_EMP]] || new Set();
+    const add = EMPADD[CUR_EMP] || new Set();
+    const union = new Set([...base, ...add]);
+    let addOnly = 0; add.forEach(v => { if (!base.has(v)) addOnly++; });
+    return { all: union.size, role: base.size, add: addOnly };
+  }
+  function summaryInner() {
+    const s = personStats();
+    const card = (n, l, bg, nc, lc) => `<div style="background:${bg};border-radius:8px;padding:9px 11px;text-align:center"><div style="font-size:21px;font-weight:700;color:${nc};line-height:1.1">${n}</div><div style="font-size:11px;color:${lc};margin-top:2px">${l}</div></div>`;
+    return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">
+      ${card(s.all, 'เข้าได้ทั้งหมด', '#E6F7F5', '#0D2F4F', '#0F766E')}
+      ${card(s.role, 'จากบทบาท', '#F1F5F9', '#475569', '#64748B')}
+      ${card(s.add, 'เพิ่มให้คนนี้', '#E6F7F5', '#0D2F4F', '#0F766E')}
+    </div>`;
+  }
+  function rowHTML(m, mode) {
+    const st = menuOn(m, mode);
+    const ed = menuEditable(m, mode);
+    const swCls = 'am-sw' + (st.on ? ' on' : '') + (ed ? '' : ' lk');
+    let pills = '';
+    if (m.owner_reserved) pills += `<span class="am-pill" style="background:#FEF3C7;color:#B45309">${ic('ti-lock')} เฉพาะผู้บริหาร</span>`;
+    if (m.sensitive) pills += `<span class="am-pill" style="background:#F3E8FF;color:#6B21A8">PDPA</span>`;
+    let tag = '';
+    if (mode === 'person') {
+      if (st.src === 'role') tag = '<span class="am-tag" style="background:#F1F5F9;color:#475569">จากบทบาท</span>';
+      else if (st.src === 'add') tag = '<span class="am-tag" style="background:#E6F7F5;color:#0F766E">เพิ่มเอง</span>';
+    }
+    return `<div class="am-row" data-key="${esc(m.view_key)}" style="display:flex;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid #F1F5F9${ed ? '' : ';opacity:.6'}">
+      <span class="${swCls}"><span class="am-kn"></span></span>
+      <span style="flex:1;min-width:0"><span style="font-size:13px;font-weight:600;color:var(--navy,#0D2F4F)">${esc(m.label || m.view_key)}${pills}</span><span style="display:block;font-size:11px;color:#94A3B8">${esc(m.description || '')}</span></span>
+      ${tag}
+      <span class="am-msg" style="font-size:11px;min-width:18px;text-align:right"></span>
+    </div>`;
+  }
+  function initOpenDoms(mode) {
+    OPEN_DOMS = new Set();
+    DOMAINS.forEach(([dk]) => {
+      const onAll = MENUS.filter(m => m.domain === dk).filter(m => menuOn(m, mode).on).length;
+      if (onAll > 0) OPEN_DOMS.add(dk);
+    });
+    if (OPEN_DOMS.size === 0) { const first = DOMAINS.find(([dk]) => MENUS.some(m => m.domain === dk)); if (first) OPEN_DOMS.add(first[0]); }
+  }
+  function accordionHTML(mode) {
+    const q = (ADD_FILTER || '').trim().toLowerCase();
+    if (OPEN_DOMS === null) initOpenDoms(mode);
     let html = '';
     DOMAINS.forEach(([dk, dic, dl]) => {
-      const rows = addMenus.filter(m => m.domain === dk);
+      const all = MENUS.filter(m => m.domain === dk);
+      if (!all.length) return;
+      const rows = q ? all.filter(m => (m.label || '').toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q) || m.view_key.toLowerCase().includes(q)) : all;
       if (!rows.length) return;
-      html += `<div class="sec" style="margin:12px 2px 4px"><span class="sec-bar"></span>${ic(dic)} ${esc(dl)}<span class="sec-c">${rows.length}</span></div>
-        <div class="card" style="margin-bottom:2px">${rows.map(m => addRow(m, add.has(m.view_key))).join('')}</div>`;
+      const onAll = all.filter(m => menuOn(m, mode).on).length;
+      const open = q ? true : OPEN_DOMS.has(dk);
+      const cntStyle = onAll > 0 ? 'background:#E6F7F5;color:#0F766E' : 'background:#F1F5F9;color:#94A3B8';
+      const anyEd = rows.some(m => menuEditable(m, mode));
+      const grp = anyEd ? `<div style="display:flex;gap:7px;padding:8px 12px;border-top:1px solid #F1F5F9;background:#FAFCFC"><button class="am-grp" data-dom="${dk}" data-act="on">${ic('ti-check')} เปิดทั้งหมวด</button><button class="am-grp" data-dom="${dk}" data-act="off">${ic('ti-x')} ปิดทั้งหมวด</button></div>` : '';
+      html += `<div class="am-dom"><div class="am-dh" data-dom="${dk}">${ic(open ? 'ti-chevron-down' : 'ti-chevron-right')} ${ic(dic)} <span style="font-weight:600;font-size:13.5px;color:var(--navy,#0D2F4F);flex:1">${esc(dl)}</span><span class="am-cnt" style="${cntStyle}">เปิด ${onAll} / ${all.length}</span></div><div class="am-db" style="display:${open ? 'block' : 'none'}">${grp}${rows.map(m => rowHTML(m, mode)).join('')}</div></div>`;
     });
     return html || '<div style="padding:14px;color:#94A3B8;font-size:12px">ไม่พบเมนูตามคำค้น</div>';
+  }
+  function refreshAcc(mode) {
+    const acc = document.getElementById('am-acc'); if (acc) acc.innerHTML = accordionHTML(mode);
+    if (mode === 'person') { const s = document.getElementById('am-summary'); if (s) s.innerHTML = summaryInner(); }
+    else { const bc = document.getElementById('am-base-count'); if (bc) bc.textContent = MENUS.filter(m => (ROLEBASE[BASE_ROLE] || new Set()).has(m.view_key)).length; }
+    bindAcc(mode);
+  }
+  function bindAcc(mode) {
+    document.querySelectorAll('#am-acc .am-dh').forEach(h => {
+      h.onclick = (ev) => { if (ev.target.closest('.am-grp')) return; const dk = h.dataset.dom; if (OPEN_DOMS === null) initOpenDoms(mode); if (OPEN_DOMS.has(dk)) OPEN_DOMS.delete(dk); else OPEN_DOMS.add(dk); refreshAcc(mode); };
+    });
+    document.querySelectorAll('#am-acc .am-sw').forEach(sw => {
+      sw.onclick = async () => {
+        const r = sw.closest('.am-row'); const vk = r.dataset.key; const msg = r.querySelector('.am-msg');
+        if (sw.classList.contains('lk')) {
+          if (mode === 'person' && (ROLEBASE[EMPROLE[CUR_EMP]] || new Set()).has(vk)) { if (window.em2Toast) window.em2Toast('สิทธิ์นี้มาจากบทบาท — แก้ที่บทบาท หรือเปลี่ยนบทบาทของคนนี้', 'error'); }
+          else if (window.em2Toast) window.em2Toast('เมนูนี้เฉพาะผู้บริหาร (owner) กำหนดได้', 'error');
+          return;
+        }
+        const want = !sw.classList.contains('on');
+        const ok = mode === 'base' ? await toggleBase(vk, want, msg) : await toggleAdd(vk, want, msg);
+        if (ok) refreshAcc(mode);
+      };
+    });
+    document.querySelectorAll('#am-acc .am-grp').forEach(b => {
+      b.onclick = async (ev) => {
+        ev.stopPropagation();
+        const dk = b.dataset.dom, want = b.dataset.act === 'on';
+        const rows = MENUS.filter(m => m.domain === dk && menuEditable(m, mode));
+        for (const m of rows) {
+          const cur = menuOn(m, mode).on;
+          if (want && !cur) { mode === 'base' ? await toggleBase(m.view_key, true, null) : await toggleAdd(m.view_key, true, null); }
+          else if (!want && cur) { mode === 'base' ? await toggleBase(m.view_key, false, null) : await toggleAdd(m.view_key, false, null); }
+        }
+        refreshAcc(mode);
+      };
+    });
+    bindMenuTooltips();
   }
 
   function panelHTML() {
@@ -124,61 +220,46 @@
     const e = EMPS.find(x => x.employee_id === CUR_EMP) || {};
     const role = EMPROLE[CUR_EMP] || '';
     const roleDis = canSetRole() ? '' : ' disabled';
-    const roleHint = canSetRole() ? 'เลือกบทบาทเพื่อกำหนดสิทธิ์พื้นฐาน' : 'เปลี่ยนบทบาทได้เฉพาะผู้บริหาร (owner)';
+    const roleHint = canSetRole() ? 'เลือกบทบาทเพื่อกำหนดสิทธิ์พื้นฐาน — เมนูที่มาจากบทบาทจะติดป้าย “จากบทบาท” อัตโนมัติ (ล็อกไว้) · ติ๊กเพิ่มได้เฉพาะเมนูอื่น' : 'เปลี่ยนบทบาทได้เฉพาะผู้บริหาร (owner)';
+    const initials = (e.full_name || CUR_EMP).trim().slice(0, 2);
     return `<div style="flex:1;min-width:300px">
-      <div class="card" style="padding:14px 16px;margin-bottom:10px">
-        <div style="font-weight:700;font-size:15px;color:var(--navy,#0D2F4F)">${esc(e.full_name || CUR_EMP)}</div>
-        <div style="font-size:11.5px;color:#94A3B8;margin-bottom:10px">${esc(CUR_EMP)} · ตำแหน่งเดิม: ${esc(e.position || '—')}</div>
-        <label style="font-size:12px;color:#64748B;display:block;margin-bottom:4px">1 · บทบาท (สิทธิ์พื้นฐาน)</label>
-        <select id="am-role"${roleDis} style="width:100%;max-width:340px;padding:8px 10px;border:1px solid var(--border,#E5E7EB);border-radius:8px;font-size:13px">
-          <option value="">— เลือกบทบาท —</option>${roleOptions(role)}
-        </select>
-        <div style="font-size:11px;color:#94A3B8;margin-top:4px">${esc(roleHint)}</div>
-      </div>
-      <div class="card" style="padding:12px 16px;margin-bottom:10px">
-        <div style="font-size:12px;color:#64748B;margin-bottom:7px">2 · สิทธิ์พื้นฐานของบทบาทนี้ <span style="color:#94A3B8">(มาอัตโนมัติ)</span></div>
-        <div>${role ? baseChips(role) : '<span style="font-size:12px;color:#94A3B8">— ยังไม่ได้เลือกบทบาท —</span>'}</div>
-      </div>
-      <div class="card" style="padding:12px 16px">
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-          <span style="font-size:12px;color:#64748B">3 · ให้สิทธิ์เพิ่มเติม (เฉพาะคนนี้)</span>
-          <input id="am-add-search" placeholder="ค้นหาเมนูที่จะเปิดเพิ่ม…" value="${esc(ADD_FILTER)}"
-            style="flex:1;min-width:180px;padding:7px 9px;border:1px solid var(--border,#E5E7EB);border-radius:8px;font-size:12.5px">
+      <div class="card" style="padding:12px 14px;margin-bottom:11px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="width:42px;height:42px;border-radius:50%;background:#0D2F4F;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px">${esc(initials)}</div>
+        <div style="flex:1;min-width:140px">
+          <div style="font-weight:700;font-size:15px;color:var(--navy,#0D2F4F)">${esc(e.full_name || CUR_EMP)}</div>
+          <div style="font-size:11.5px;color:#94A3B8">${esc(CUR_EMP)} · ${esc(e.position || '—')}</div>
         </div>
-        <div id="am-add-list">${addListHTML()}</div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:#94A3B8;margin-bottom:3px">บทบาท (สิทธิ์พื้นฐาน)</div>
+          <select id="am-role"${roleDis} style="min-width:170px;padding:7px 9px;border:1px solid var(--border,#E5E7EB);border-radius:8px;font-size:13px"><option value="">— เลือกบทบาท —</option>${roleOptions(role)}</select>
+        </div>
       </div>
+      <div id="am-summary">${summaryInner()}</div>
+      <div style="position:relative;margin:11px 0 6px">
+        <span style="position:absolute;left:11px;top:8px;color:#94A3B8">${ic('ti-search')}</span>
+        <input id="am-add-search" placeholder="ค้นหาเมนูทุกหมวด…" value="${esc(ADD_FILTER)}" style="width:100%;padding:8px 10px 8px 32px;border:1px solid var(--border,#E5E7EB);border-radius:8px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="font-size:11px;color:#94A3B8;margin-bottom:8px">${esc(roleHint)}</div>
+      <div id="am-acc">${accordionHTML('person')}</div>
     </div>`;
   }
 
-  function baseListHTML() {
-    if (!BASE_ROLE) BASE_ROLE = ROLES[0]?.role_key;
-    const base = ROLEBASE[BASE_ROLE] || new Set();
-    const q = ADD_FILTER.trim().toLowerCase();
-    const menus = MENUS.filter(m => !q || (m.label || '').toLowerCase().includes(q) || m.view_key.includes(q));
-    let html = '';
-    DOMAINS.forEach(([dk, dic, dl]) => {
-      const rows = menus.filter(m => m.domain === dk);
-      if (!rows.length) return;
-      html += `<div class="sec" style="margin:12px 2px 4px"><span class="sec-bar"></span>${ic(dic)} ${esc(dl)}</div><div class="card" style="margin-bottom:2px">`;
-      html += rows.map(m => `<label class="am-base" data-key="${esc(m.view_key)}" style="display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-bottom:1px solid var(--border,#EEF2F6);cursor:pointer">
-        <input type="checkbox" class="am-base-cb" ${base.has(m.view_key) ? 'checked' : ''} style="width:16px;height:16px;accent-color:#0F766E;margin-top:1px">
-        <span style="flex:1"><span style="font-size:13px;font-weight:600;color:var(--navy,#0D2F4F)">${esc(m.label)}</span>
-          <span style="display:block;font-size:11px;color:#64748B">${esc(m.description || '')}</span></span>
-        <span class="am-msg" style="font-size:11px;min-width:36px;text-align:right"></span></label>`).join('');
-      html += '</div>';
-    });
-    return html;
-  }
   function baseEditor() {
+    if (!BASE_ROLE) BASE_ROLE = ROLES[0]?.role_key;
+    const onAll = MENUS.filter(m => (ROLEBASE[BASE_ROLE] || new Set()).has(m.view_key)).length;
     return `<div style="flex:1">
-      <div class="card" style="padding:12px 16px;margin-bottom:10px">
-        <label style="font-size:12px;color:#64748B;display:block;margin-bottom:4px">แก้สิทธิ์พื้นฐานของบทบาท (มีผลกับทุกคนในบทบาทนั้น)</label>
-        <select id="am-baserole" style="max-width:340px;padding:8px 10px;border:1px solid var(--border,#E5E7EB);border-radius:8px;font-size:13px">
-          ${ROLES.map(r => `<option value="${esc(r.role_key)}"${r.role_key === BASE_ROLE ? ' selected' : ''}>${esc(r.label)}</option>`).join('')}
-        </select>
-        <input id="am-add-search" placeholder="ค้นหาเมนู…" value="${esc(ADD_FILTER)}" style="margin-left:8px;padding:7px 9px;border:1px solid var(--border,#E5E7EB);border-radius:8px;font-size:12.5px;min-width:160px">
+      <div class="card" style="padding:12px 14px;margin-bottom:11px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:12px;color:#64748B;margin-bottom:4px">แก้สิทธิ์พื้นฐานของบทบาท <span style="color:#94A3B8">(มีผลกับทุกคนในบทบาทนี้)</span></div>
+          <select id="am-baserole" style="min-width:240px;padding:8px 10px;border:1px solid var(--border,#E5E7EB);border-radius:8px;font-size:13px">${ROLES.map(r => `<option value="${esc(r.role_key)}"${r.role_key === BASE_ROLE ? ' selected' : ''}>${esc(r.label)}</option>`).join('')}</select>
+        </div>
+        <div style="text-align:right"><div id="am-base-count" style="font-size:21px;font-weight:700;color:#0D2F4F;line-height:1">${onAll}</div><div style="font-size:11px;color:#0F766E">เมนูที่เปิด</div></div>
       </div>
-      <div id="am-add-list">${baseListHTML()}</div>
+      <div style="position:relative;margin-bottom:11px">
+        <span style="position:absolute;left:11px;top:8px;color:#94A3B8">${ic('ti-search')}</span>
+        <input id="am-add-search" placeholder="ค้นหาเมนูทุกหมวด…" value="${esc(ADD_FILTER)}" style="width:100%;padding:8px 10px 8px 32px;border:1px solid var(--border,#E5E7EB);border-radius:8px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div id="am-acc">${accordionHTML('base')}</div>
     </div>`;
   }
 
@@ -199,7 +280,8 @@
         EMPADD[CUR_EMP] && EMPADD[CUR_EMP].delete(key);
       }
       if (msgEl) { msgEl.style.color = '#0F766E'; msgEl.innerHTML = ic('ti-check'); setTimeout(() => { msgEl.innerHTML = ''; }, 1200); }
-    } catch (e) { if (msgEl) { msgEl.style.color = '#B91C1C'; msgEl.textContent = 'ห้าม'; } console.error(e); }
+      return true;
+    } catch (e) { if (msgEl) { msgEl.style.color = '#B91C1C'; msgEl.textContent = 'ห้าม'; } console.error(e); return false; }
   }
   async function toggleBase(key, want, msgEl) {
     if (msgEl) { msgEl.style.color = '#64748B'; msgEl.textContent = '…'; }
@@ -214,35 +296,77 @@
         ROLEBASE[BASE_ROLE] && ROLEBASE[BASE_ROLE].delete(key);
       }
       if (msgEl) { msgEl.style.color = '#0F766E'; msgEl.innerHTML = ic('ti-check'); setTimeout(() => { msgEl.innerHTML = ''; }, 1200); }
-    } catch (e) { if (msgEl) { msgEl.style.color = '#B91C1C'; msgEl.textContent = 'ห้าม'; } console.error(e); }
+      return true;
+    } catch (e) { if (msgEl) { msgEl.style.color = '#B91C1C'; msgEl.textContent = 'ห้าม'; } console.error(e); return false; }
   }
 
   // bind handler บน scope ปัจจุบัน · rerender = ฟังก์ชัน redraw panel ทั้งก้อน
   function bindPanel() {
+    ensureStyle();
     const rs = document.getElementById('am-role');
-    if (rs) rs.onchange = async () => { await setEmpRole(rs.value); RERENDER && RERENDER(); };
+    if (rs) rs.onchange = async () => { await setEmpRole(rs.value); OPEN_DOMS = null; RERENDER && RERENDER(); };
     const br = document.getElementById('am-baserole');
-    if (br) br.onchange = () => { BASE_ROLE = br.value; RERENDER && RERENDER(); };
+    if (br) br.onchange = () => { BASE_ROLE = br.value; OPEN_DOMS = null; RERENDER && RERENDER(); };
     const as = document.getElementById('am-add-search');
     if (as) as.oninput = () => {
       ADD_FILTER = as.value;
-      const list = document.getElementById('am-add-list');
-      if (list) list.innerHTML = (MODE === 'base') ? baseListHTML() : addListHTML();
+      refreshAcc(MODE);
       const f = document.getElementById('am-add-search'); if (f) { f.focus(); f.selectionStart = f.value.length; }
-      bindToggles();
     };
-    bindToggles();
+    bindAcc(MODE);
   }
-  function bindToggles() {
-    document.querySelectorAll('.am-add-cb').forEach(cb => { cb.onchange = () => { const r = cb.closest('.am-add'); toggleAdd(r.dataset.key, cb.checked, r.querySelector('.am-msg')); }; });
-    document.querySelectorAll('.am-base-cb').forEach(cb => { cb.onchange = () => { const r = cb.closest('.am-base'); toggleBase(r.dataset.key, cb.checked, r.querySelector('.am-msg')); }; });
+
+  // ── tooltip สรุปต่อเมนู (hover แถวสิทธิ์) ──
+  const DOMAIN_LBL = {}; DOMAINS.forEach(([dk, , dl]) => { DOMAIN_LBL[dk] = dl; });
+  function rolesWithMenu(vk) {
+    return ROLES.filter(r => ROLEBASE[r.role_key] && ROLEBASE[r.role_key].has(vk)).map(r => r.label);
+  }
+  function menuTipHTML(vk) {
+    const m = MENU[vk]; if (!m) return '';
+    const row = (label, val) => `<div style="display:flex;gap:6px;margin-top:4px"><span style="color:#94A3B8;min-width:62px">${label}</span><span style="color:#E2E8F0;flex:1">${val}</span></div>`;
+    const flags = [];
+    if (m.owner_reserved) flags.push('<span style="color:#FCD34D">เฉพาะผู้บริหาร (owner)</span>');
+    if (m.sensitive) flags.push('<span style="color:#E9D5FF">ข้อมูลอ่อนไหว · PDPA</span>');
+    const roles = rolesWithMenu(vk);
+    let h = `<div style="font-weight:700;font-size:12.5px;color:#fff;margin-bottom:2px">${esc(m.label || vk)}</div>`;
+    if (m.description) h += `<div style="color:#CBD5E1;line-height:1.45">${esc(m.description)}</div>`;
+    h += row('รหัสเมนู', `<code style="color:#7DD3FC">${esc(vk)}</code>`);
+    h += row('โดเมน', esc(DOMAIN_LBL[m.domain] || m.domain || '—'));
+    if (flags.length) h += row('สถานะ', flags.join(' · '));
+    h += row('บทบาทพื้นฐาน', roles.length ? esc(roles.join(', ')) : '<span style="color:#94A3B8">— ไม่มีบทบาทใดเปิดให้โดยอัตโนมัติ —</span>');
+    return h;
+  }
+  function tipEl() {
+    let t = document.getElementById('am-tip');
+    if (!t) {
+      t = document.createElement('div'); t.id = 'am-tip';
+      t.style.cssText = 'position:fixed;z-index:10001;max-width:320px;background:#0F172A;border:1px solid #334155;border-radius:9px;padding:10px 12px;font-size:11.5px;line-height:1.4;box-shadow:0 12px 30px rgba(0,0,0,.4);pointer-events:none;display:none';
+      document.body.appendChild(t);
+    }
+    return t;
+  }
+  function moveTip(e) {
+    const t = tipEl(); const pad = 14;
+    let x = e.clientX + pad, y = e.clientY + pad;
+    const w = t.offsetWidth || 320, h = t.offsetHeight || 120;
+    if (x + w > window.innerWidth - 8) x = e.clientX - w - pad;
+    if (y + h > window.innerHeight - 8) y = e.clientY - h - pad;
+    t.style.left = Math.max(8, x) + 'px'; t.style.top = Math.max(8, y) + 'px';
+  }
+  function bindMenuTooltips() {
+    document.querySelectorAll('.am-row').forEach(r => {
+      const vk = r.dataset.key; if (!vk) return;
+      r.onmouseenter = () => { const t = tipEl(); const html = menuTipHTML(vk); if (!html) return; t.innerHTML = html; t.style.display = 'block'; };
+      r.onmousemove = moveTip;
+      r.onmouseleave = () => { const t = document.getElementById('am-tip'); if (t) t.style.display = 'none'; };
+    });
   }
 
   // ── หน้าเต็ม ──
   function rerenderMain() {
     const host = document.getElementById('am-main'); if (!host) return;
     host.innerHTML = MODE === 'base' ? baseEditor() : (empList() + panelHTML());
-    document.querySelectorAll('.am-emp').forEach(el => { el.onclick = () => { CUR_EMP = el.dataset.emp; ADD_FILTER = ''; rerenderMain(); }; });
+    document.querySelectorAll('.am-emp').forEach(el => { el.onclick = () => { CUR_EMP = el.dataset.emp; ADD_FILTER = ''; OPEN_DOMS = null; rerenderMain(); }; });
     const es = document.getElementById('am-emp-search');
     if (es) es.oninput = () => { EMP_FILTER = es.value; rerenderMain(); const f = document.getElementById('am-emp-search'); if (f) { f.focus(); f.selectionStart = f.value.length; } };
     RERENDER = rerenderMain;
@@ -269,8 +393,8 @@
           </div>` : '';
       root.innerHTML = banner + tabs + `<div id="am-main" style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start"></div>`;
       const tp = document.getElementById('am-tab-person'), tb = document.getElementById('am-tab-base');
-      if (tp) tp.onclick = () => { MODE = 'person'; ADD_FILTER = ''; render(); };
-      if (tb) tb.onclick = () => { MODE = 'base'; ADD_FILTER = ''; render(); };
+      if (tp) tp.onclick = () => { MODE = 'person'; ADD_FILTER = ''; OPEN_DOMS = null; render(); };
+      if (tb) tb.onclick = () => { MODE = 'base'; ADD_FILTER = ''; OPEN_DOMS = null; render(); };
       rerenderMain();
     } catch (e) {
       root.innerHTML = `<div style="padding:20px;color:#B91C1C">โหลดไม่สำเร็จ: ${esc(e.message)}<br><small style="color:#94A3B8">ต้องรัน 33_role_access.sql และ login ด้วย owner/hr_director</small></div>`;
@@ -278,7 +402,7 @@
   }
 
   // ── modal (เรียกจากหน้าทะเบียนพนักงาน) ──
-  function closeModal() { const m = document.getElementById('am-modal'); if (m) m.remove(); }
+  function closeModal() { const m = document.getElementById('am-modal'); if (m) m.remove(); const t = document.getElementById('am-tip'); if (t) t.style.display = 'none'; }
   function rerenderModalBody() {
     const b = document.getElementById('am-modal-body'); if (!b) return;
     MODE = 'person'; b.innerHTML = panelHTML();
@@ -290,7 +414,7 @@
       if (!LOADED) { await loadMe(); }
       if (MY_ROLE !== 'owner' && MY_ROLE !== 'hr_director') { if (window.em2Toast) window.em2Toast('เฉพาะผู้บริหาร/HR Director จัดการสิทธิ์ได้', 'error'); return; }
       if (!LOADED) await loadAll(); else { /* refresh grants/role ของคนนี้ */ }
-      MODE = 'person'; CUR_EMP = empId; ADD_FILTER = '';
+      MODE = 'person'; CUR_EMP = empId; ADD_FILTER = ''; OPEN_DOMS = null;
       closeModal();
       const ov = document.createElement('div');
       ov.id = 'am-modal';

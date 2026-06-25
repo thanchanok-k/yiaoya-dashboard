@@ -467,7 +467,7 @@ function EM2_MARKUP() {
     '<div class="filters">',
       '<div class="filter">',
         '<label>ค้นหา</label>',
-        '<input type="search" id="filter-search" placeholder="ID / ชื่อ / nickname / email" oninput="renderList()" style="min-width:240px">',
+        '<input type="search" id="filter-search" placeholder="ID / ชื่อ / nickname / email / ตำแหน่ง / แผนก" oninput="renderList()" style="min-width:230px">',
       '</div>',
       '<div class="filter">',
         '<label>สถานะ</label>',
@@ -480,12 +480,50 @@ function EM2_MARKUP() {
         '</select>',
       '</div>',
       '<div class="filter">',
-        '<label>สาขาหลัก</label>',
+        '<label>สาขา (หลัก/รอง)</label>',
         '<select id="filter-branch" onchange="renderList()"><option value="">ทุกสาขา</option></select>',
+      '</div>',
+      '<div class="filter">',
+        '<label>แผนก</label>',
+        '<select id="filter-department" onchange="renderList()"><option value="">ทุกแผนก</option></select>',
       '</div>',
       '<div class="filter">',
         '<label>ตำแหน่ง</label>',
         '<select id="filter-position" onchange="renderList()"><option value="">ทุกตำแหน่ง</option></select>',
+      '</div>',
+      '<div class="filter">',
+        '<label>ระดับ</label>',
+        '<select id="filter-level" onchange="renderList()"><option value="">ทุกระดับ</option></select>',
+      '</div>',
+      '<div class="filter">',
+        '<label>หัวหน้า (supervisor)</label>',
+        '<select id="filter-supervisor" onchange="renderList()"><option value="">ทุกหัวหน้า</option></select>',
+      '</div>',
+      '<div class="filter">',
+        '<label>การทำงาน</label>',
+        '<select id="filter-work" onchange="renderList()">',
+          '<option value="">ทั้งหมด</option>',
+          '<option value="multi">หลายสาขา</option>',
+          '<option value="single">สาขาเดียว</option>',
+          '<option value="mgmt">หัวหน้า/บริหาร</option>',
+          '<option value="staff">ไม่ใช่บริหาร</option>',
+        '</select>',
+      '</div>',
+      '<div class="filter">',
+        '<label>เรียงตาม</label>',
+        '<select id="filter-sort" onchange="renderList()">',
+          '<option value="">— เริ่มต้น —</option>',
+          '<option value="name">ชื่อเล่น (ก-ฮ)</option>',
+          '<option value="id">รหัสพนักงาน</option>',
+          '<option value="position">ตำแหน่ง</option>',
+          '<option value="department">แผนก</option>',
+          '<option value="branch">สาขาหลัก</option>',
+          '<option value="start">วันเริ่มงาน (ใหม่→เก่า)</option>',
+        '</select>',
+      '</div>',
+      '<div class="filter" style="flex-direction:row;align-items:center;gap:10px;margin-left:auto">',
+        '<span id="filter-count" style="font-size:12px;font-weight:600;color:var(--text-muted);white-space:nowrap"></span>',
+        '<button type="button" class="btn" id="filter-clear" onclick="clearFilters()" style="height:34px;white-space:nowrap">ล้างตัวกรอง</button>',
       '</div>',
     '</div>',
 
@@ -791,7 +829,7 @@ function EM2_RUN_PAGE_JS() {
     intro: 'ดูข้อมูลพนักงานทั้งหมด — รองรับ 1 พนักงานทำหลายสาขา (Pattern B)',
     sections: [
       { title: 'การใช้งาน', items: [
-        'Table view + filter (search/status/branch/position)',
+        'ฟิลเตอร์: ค้นหา (ID/ชื่อ/email/ตำแหน่ง/แผนก) · สถานะ · สาขา (หลัก+รอง) · แผนก · ตำแหน่ง · ระดับ · หัวหน้า · การทำงาน (หลายสาขา/บริหาร) · เรียงลำดับ — มีตัวนับผลลัพธ์ + ปุ่มล้างตัวกรอง',
         '4 มุมมอง: รายชื่อ · ตามสาขา · ตามตำแหน่ง · ผังองค์กร — filter เดียวกัน sync ทุก view',
         'ผังองค์กร: สลับสายบังคับบัญชา (จาก supervisor_id) ↔ ตามสาขา · คลิกการ์ดเปิดดูรายคน (360)',
         'คลิก row → ดูรายละเอียดครบ 6 sections (basic + position + multi-branch + contact + dates + delegation)',
@@ -847,10 +885,23 @@ function EM2_RUN_PAGE_JS() {
   function populateDropdowns() {
     const fb = document.getElementById('filter-branch');
     const fp = document.getElementById('filter-position');
+    const fd = document.getElementById('filter-department');
+    const fl = document.getElementById('filter-level');
+    const fs = document.getElementById('filter-supervisor');
     fb.innerHTML = '<option value="">ทุกสาขา</option>';
     fp.innerHTML = '<option value="">ทุกตำแหน่ง</option>';
+    fd.innerHTML = '<option value="">ทุกแผนก</option>';
+    fl.innerHTML = '<option value="">ทุกระดับ</option>';
+    fs.innerHTML = '<option value="">ทุกหัวหน้า</option>';
     (allLookups.branches || []).forEach(b => { fb.innerHTML += `<option value="${b.id}">${b.id} — ${escapeHtml(b.name)}</option>`; });
     (allLookups.positions || []).forEach(p => { fp.innerHTML += `<option value="${p.id}">${p.id} — ${escapeHtml(p.name)}</option>`; });
+    (allLookups.departments || []).forEach(d => { fd.innerHTML += `<option value="${d.id}">${d.id} — ${escapeHtml(d.name)}</option>`; });
+    (allLookups.supervisors || []).forEach(s => { fs.innerHTML += `<option value="${s.id}">${s.id} — ${escapeHtml(s.name)}</option>`; });
+    // ระดับ (level) — distinct จาก positions lookup
+    const _levels = [];
+    (allLookups.positions || []).forEach(p => { if (p.level && _levels.indexOf(p.level) < 0) _levels.push(p.level); });
+    _levels.sort((a, b) => String(a).localeCompare(String(b), 'th'));
+    _levels.forEach(lv => { fl.innerHTML += `<option value="${escapeAttr(lv)}">${escapeHtml(lv)}</option>`; });
     const mp = document.getElementById('m-position-id');
     const md = document.getElementById('m-department-id');
     const mb = document.getElementById('m-primary-branch');
@@ -893,24 +944,61 @@ function EM2_RUN_PAGE_JS() {
   }
 
   function renderList() {
-    const q = (document.getElementById('filter-search').value || '').toLowerCase().trim();
-    const status = document.getElementById('filter-status').value;
-    const branch = document.getElementById('filter-branch').value;
-    const pos = document.getElementById('filter-position').value;
+    const $v = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const q = ($v('filter-search') || '').toLowerCase().trim();
+    const status = $v('filter-status');
+    const branch = $v('filter-branch');
+    const dept = $v('filter-department');
+    const pos = $v('filter-position');
+    const level = $v('filter-level');
+    const sup = $v('filter-supervisor');
+    const work = $v('filter-work');
+    const sort = $v('filter-sort');
+
+    // position_id → level (จาก lookup) สำหรับ filter ระดับ
+    const posLevel = {};
+    ((allLookups && allLookups.positions) || []).forEach(p => { posLevel[p.id] = p.level; });
 
     let filtered = allEmployees;
     if (status) filtered = filtered.filter(e => e.status === status);
     if (branch) filtered = filtered.filter(e =>
       e.primary_branch_id === branch ||
       (e.assignments || []).some(a => a.branch_id === branch));
+    if (dept) filtered = filtered.filter(e => e.department_id === dept);
     if (pos) filtered = filtered.filter(e => e.position_id === pos);
+    if (level) filtered = filtered.filter(e => posLevel[e.position_id] === level);
+    if (sup) filtered = filtered.filter(e => e.supervisor_id === sup);
+    if (work === 'multi') filtered = filtered.filter(e => e.is_multi_branch);
+    else if (work === 'single') filtered = filtered.filter(e => !e.is_multi_branch);
+    else if (work === 'mgmt') filtered = filtered.filter(e => e.is_management);
+    else if (work === 'staff') filtered = filtered.filter(e => !e.is_management);
     if (q) {
       filtered = filtered.filter(e =>
         e.employee_id.toLowerCase().includes(q) ||
         (e.first_name || '').toLowerCase().includes(q) ||
         (e.last_name || '').toLowerCase().includes(q) ||
         (e.nickname || '').toLowerCase().includes(q) ||
-        (e.email || '').toLowerCase().includes(q));
+        (e.email || '').toLowerCase().includes(q) ||
+        (e.position_name || '').toLowerCase().includes(q) ||
+        (e.department_name || '').toLowerCase().includes(q));
+    }
+
+    // sort (copy ก่อน — ห้าม mutate allEmployees)
+    if (sort) {
+      filtered = filtered.slice();
+      const cmp = (a, b, k) => String(a[k] == null ? '' : a[k]).localeCompare(String(b[k] == null ? '' : b[k]), 'th');
+      if (sort === 'name') filtered.sort((a, b) => cmp(a, b, 'nickname') || cmp(a, b, 'first_name'));
+      else if (sort === 'id') filtered.sort((a, b) => cmp(a, b, 'employee_id'));
+      else if (sort === 'position') filtered.sort((a, b) => cmp(a, b, 'position_name'));
+      else if (sort === 'department') filtered.sort((a, b) => cmp(a, b, 'department_name'));
+      else if (sort === 'branch') filtered.sort((a, b) => cmp(a, b, 'primary_branch_id'));
+      else if (sort === 'start') filtered.sort((a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')));
+    }
+
+    const cntEl = document.getElementById('filter-count');
+    if (cntEl) {
+      const total = (allEmployees || []).length;
+      cntEl.textContent = filtered.length === total ? (total + ' คน') : ('พบ ' + filtered.length + ' / ' + total + ' คน');
     }
 
     renderBranchView(filtered);
@@ -1393,10 +1481,18 @@ function EM2_RUN_PAGE_JS() {
 
   document.getElementById('save-btn').innerHTML = ICONS.save + ' บันทึก';
 
+  function clearFilters() {
+    const ids = ['filter-search', 'filter-status', 'filter-branch', 'filter-department',
+      'filter-position', 'filter-level', 'filter-supervisor', 'filter-work', 'filter-sort'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    renderList();
+  }
+
   /* ===== expose fn ที่ inline onclick/markup ต้องเรียก ไปยัง window ===== */
   const _exp = {
     showHelp, HELP, loadList, openAdd, openEdit, setView, setOrgMode,
     onPositionChange, addAssignment, endAssign, closeModal, saveEmployee,
+    renderList, clearFilters,
   };
   Object.keys(_exp).forEach(k => { window[k] = _exp[k]; });
 
