@@ -3261,15 +3261,19 @@ function mountPromo(){
    sb.functions.invoke('promo_design',{body:{action:'decide',id:+b.dataset.id,status:b.dataset.st}}).then(()=>load()).catch(e=>alert('error: '+(e&&e.message||e)));});
   document.querySelectorAll('.promoPlanBtn').forEach(b=>b.onclick=()=>{const id=+b.dataset.id;const pr=promosCache.find(x=>x.id===id);
    if(pr&&pr.plan){if(openPlan.has(id))openPlan.delete(id);else openPlan.add(id);render();return;}
+   const gi=prompt('ตั้งเป้ายอดขายของโปรฯ นี้ (บาท)\nเว้นว่าง = ให้ AI ตั้งเป้าให้อัตโนมัติจากข้อมูลจริง','');
+   if(gi===null)return;const goal=Math.round(+String(gi).replace(/[^0-9.]/g,''))||0;
    b.disabled=true;b.innerHTML='<i class="ti ti-loader"></i> AI กำลังวางแผน…';
-   sb.functions.invoke('promo_design',{body:{action:'plan',id:id}}).then(({data})=>{
+   sb.functions.invoke('promo_design',{body:Object.assign({action:'plan',id:id},goal?{goal_revenue:goal}:{})}).then(({data})=>{
     if(!data||!data.ok){alert('วางแผนไม่สำเร็จ: '+((data&&data.error)||''));load();return;}
     openPlan.add(id);load();}).catch(e=>{alert('error: '+(e&&e.message||e));load();});});
-  document.querySelectorAll('.promoReplan').forEach(b=>b.onclick=()=>{const id=+b.dataset.id;
-   if(!confirm('ให้ AI วางแผนใหม่? แผนเดิมจะถูกแทนที่'))return;
+  document.querySelectorAll('.promoReplan').forEach(b=>b.onclick=()=>{const id=+b.dataset.id;const pr=promosCache.find(x=>x.id===id);
+   const cur=(pr&&pr.plan&&pr.plan.revenue_target&&pr.plan.revenue_target.target_revenue)||'';
+   const gi=prompt('วางแผนใหม่ — ตั้งเป้ายอดขาย (บาท)\nเว้นว่าง = ให้ AI ตั้งให้อัตโนมัติ',cur?String(cur):'');
+   if(gi===null)return;const goal=Math.round(+String(gi).replace(/[^0-9.]/g,''))||0;
    b.disabled=true;b.innerHTML='<i class="ti ti-loader"></i> วางแผนใหม่…';
    const li=document.querySelector('.promoLaunch[data-id="'+id+'"]');const ld=li&&li.value?li.value:null;
-   sb.functions.invoke('promo_design',{body:Object.assign({action:'plan',id:id},ld?{launch_date:ld}:{})}).then(()=>{openPlan.add(id);load();}).catch(e=>{alert('error: '+(e&&e.message||e));load();});});
+   sb.functions.invoke('promo_design',{body:Object.assign({action:'plan',id:id},ld?{launch_date:ld}:{},goal?{goal_revenue:goal}:{})}).then(()=>{openPlan.add(id);load();}).catch(e=>{alert('error: '+(e&&e.message||e));load();});});
   document.querySelectorAll('.promoLaunch').forEach(inp=>inp.onchange=()=>{const id=+inp.dataset.id;if(!inp.value)return;
    sb.functions.invoke('promo_design',{body:{action:'set_launch',id:id,launch_date:inp.value}}).then(()=>{openPlan.add(id);load();}).catch(e=>alert('error: '+(e&&e.message||e)));});
  }
