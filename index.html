@@ -1872,6 +1872,7 @@ async function ptDownloadLog(){
  a.download='ประวัติแก้ไขค่าจ้าง_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
 }
 
+let _paPeople=[];
 function paMd(t){
  return String(t||'').split('\n').map(ln=>{ln=esc(ln.trim()); if(!ln)return'';
   let m=ln.match(/^\*\*(.+?)\*\*$/); if(m)return'<div style="font-weight:700;color:var(--navy);margin:13px 0 5px;font-size:13px">'+m[1]+'</div>';
@@ -1895,7 +1896,7 @@ async function paRun(fresh){
  try{
   const {data,error}=await sb.functions.invoke('hr_people_ai',{body:fresh?{action:'refresh'}:{}});
   if(error||!data||!data.ok){b.innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>วิเคราะห์ไม่สำเร็จ</span></div>';return;}
-  const s=data.stats||{}, ppl=data.people||[];
+  const s=data.stats||{}, ppl=data.people||[]; _paPeople=ppl;
   if($('paAt'))$('paAt').textContent=data.ai_generated_at?('AI สรุปเมื่อ '+String(data.ai_generated_at).slice(0,16).replace('T',' ')+(data.cached?' · แคช':' · ใหม่')):'';
   let h=statHero([
    {eyebrow:'ครบถ้วนเฉลี่ย',big:s.avg_completeness+'%',unit:'',sub:s.total+' สัญญา',tone:'navy'},
@@ -1903,6 +1904,9 @@ async function paRun(fresh){
    {eyebrow:'สัญญาดิ้นได้',big:s.flex,unit:'คน',sub:'มีช่องโหว่',tone:''},
    {eyebrow:'ไม่ครบ <70%',big:s.incomplete,unit:'คน',sub:'ต่อรอง '+s.negotiated,tone:''},
   ]);
+  h+='<div class="card" style="padding:14px;margin-top:12px"><div style="font-weight:700;color:var(--navy);margin-bottom:8px"><i class="ti ti-user-search" style="color:var(--teal-ink)"></i> เจาะรายบุคคล (เลือกดูละเอียด + AI)</div>';
+  h+='<select id="paSel" style="width:100%;max-width:440px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"><option value="">— เลือกพนักงาน —</option>'+ppl.slice().sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||'','th')).map(p=>'<option value="'+esc(p.person_key)+'">'+esc(p.full_name)+' · '+esc(p.position||'')+'</option>').join('')+'</select>';
+  h+='<div id="paDetail"></div></div>';
   // AI narrative
   h+='<div class="card" style="padding:16px;margin-top:12px;border-left:3px solid var(--teal)"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap"><div style="font-weight:700;color:var(--navy)"><i class="ti ti-sparkles" style="color:var(--teal)"></i> สรุปเชิงบริหาร (AI)</div>'+(data.ai_analysis?'<span style="font-size:10.5px;color:var(--text-muted)">'+(data.cached?'แคช · ':'')+'กด “วิเคราะห์ใหม่” เพื่ออัปเดต</span>':'')+'</div>';
   if(data.ai_analysis)h+=paMd(data.ai_analysis);
@@ -1933,7 +1937,48 @@ async function paRun(fresh){
   });
   h+='</div>';
   b.innerHTML=h;
+  if($('paSel'))$('paSel').onchange=function(){paDetail(this.value);};
  }catch(e){ console.error('peopleai',e); b.innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>เกิดข้อผิดพลาด</span></div>'; }
+}
+
+function paDetail(pk){
+ const d=$('paDetail'); if(!d)return;
+ if(!pk){d.innerHTML='';return;}
+ const p=_paPeople.find(x=>x.person_key===pk); if(!p){d.innerHTML='';return;}
+ const baht=n=>n?('฿'+Number(n).toLocaleString('th-TH')):'—';
+ const fa=p.fixed_allowances||{};
+ const al=[]; [['license','ใบประกอบ'],['expertise','เชี่ยวชาญ'],['position','ค่าตำแหน่ง'],['diligence','เบี้ยขยัน'],['meal','ค่าข้าว'],['other','อื่นๆ']].forEach(x=>{if(fa[x[0]])al.push(x[1]+' '+baht(fa[x[0]]));});
+ const blk=(lbl,txt,col)=>txt?'<div style="margin-top:6px"><span style="font-size:10px;font-weight:700;color:'+col+';text-transform:uppercase;letter-spacing:.03em">'+lbl+'</span><div style="font-size:12px;line-height:1.5;color:var(--text)">'+esc(txt)+'</div></div>':'';
+ const SV={HIGH:'#B91C1C',MED:'#B45309',INFO:'#475569',OK:'#047857'};
+ let h='<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">';
+ h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-size:15px;font-weight:700;color:var(--navy)">'+esc(p.full_name)+(p.negotiated?' <span style="background:#FEF3C7;color:#B45309;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:20px">★ ต่อรอง</span>':'')+'</div><div style="font-size:12px;color:var(--text-muted)">'+esc(p.position||'')+' · '+esc(p.employment_type)+(p.contract_start?' · เริ่ม '+esc(p.contract_start):'')+'</div></div>';
+ h+='<div style="text-align:right"><div style="font-size:23px;font-weight:700;color:'+(p.completeness>=85?'#0D9488':p.completeness>=70?'#3DC5B7':'#D97706')+'">'+p.completeness+'%</div><div style="font-size:10px;color:var(--text-muted)">ครบถ้วน</div></div></div>';
+ h+='<div style="margin-top:8px;font-size:13px"><b>'+(p.base_salary?baht(p.base_salary):'<span style="color:#B45309">ไม่ระบุฐาน</span>')+'</b>'+(al.length?' <span style="color:var(--text-muted)">+ '+al.join(' · ')+'</span>':'')+'</div>';
+ const pills=(p.sso_member?'<span class="pill posted">ประกันสังคม</span>':'')+(p.wht?'<span class="pill pending">หัก ณ ที่จ่าย 3%</span>':'');
+ if(pills)h+='<div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap">'+pills+'</div>';
+ h+=blk('ค่ามือ',p.handfee_scheme,'#0E7490')+blk('คอมมิชชั่น',p.commission_scheme,'#4338CA')+blk('โบนัส',p.bonus_scheme,'#A21CAF')+blk('OT',p.ot_rule,'#B45309');
+ if(p.gaps.length)h+='<div style="margin-top:8px;font-size:11.5px;color:#B45309"><b>ขาด:</b> '+esc(p.gaps.join(', '))+'</div>';
+ if(p.flex.length)h+='<div style="margin-top:4px;font-size:11.5px;color:var(--text-muted)"><b>จุดดิ้นได้:</b> '+esc(p.flex.join(' · '))+'</div>';
+ if(p.flags.length)h+='<div style="margin-top:6px;display:flex;flex-direction:column;gap:2px">'+p.flags.map(f=>'<div style="font-size:11.5px"><span style="color:'+SV[f.sev]+';font-weight:700">●</span> '+esc(f.text)+'</div>').join('')+'</div>';
+ if(p.special_notes)h+='<div style="margin-top:7px;font-size:10.5px;color:var(--text-muted);background:#F8FAFC;border-radius:7px;padding:6px 9px;line-height:1.5">'+esc(p.special_notes)+'</div>';
+ if(p.contract_url)h+='<div style="margin-top:7px"><a href="'+esc(p.contract_url)+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--teal-ink);font-weight:600;text-decoration:none"><i class="ti ti-file-text"></i> เปิดสัญญา</a></div>';
+ h+='<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button id="paOneBtn" style="background:var(--teal);color:#04342C;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-sparkles"></i> วิเคราะห์เชิงลึกด้วย AI</button><span id="paOneMsg" style="font-size:11px;color:var(--text-muted)"></span></div>';
+ h+='<div id="paOneAI" style="margin-top:10px"></div></div>';
+ d.innerHTML=h;
+ $('paOneBtn').onclick=()=>paOneAI(pk,true);
+ paOneAI(pk,false);
+}
+async function paOneAI(pk,fresh){
+ const a=$('paOneAI'), m=$('paOneMsg'); if(!a)return;
+ if(fresh)a.innerHTML='<div style="padding:14px;color:#94A3B8"><i class="ti ti-loader"></i> AI กำลังวิเคราะห์เชิงลึก…</div>';
+ try{
+  const {data}=await sb.functions.invoke('hr_people_ai',{body:{action:'analyze_one',person_key:pk,refresh:!!fresh}});
+  if(!data||!data.ok){ if(fresh)a.innerHTML='<div style="font-size:12px;color:#B45309">วิเคราะห์ไม่สำเร็จ</div>'; return; }
+  if(m)m.textContent=data.ai_generated_at?((data.cached?'แคช · ':'ใหม่ · ')+String(data.ai_generated_at).slice(0,16).replace('T',' ')):'';
+  if(data.ai_analysis)a.innerHTML='<div class="card" style="padding:13px;background:#F8FBFA;border-left:3px solid var(--teal)">'+paMd(data.ai_analysis)+'</div>';
+  else if(fresh&&data.ai_error)a.innerHTML='<div style="font-size:12px;color:#B45309">'+esc(data.ai_error)+'</div>';
+  else if(!fresh)a.innerHTML='<div style="font-size:11.5px;color:var(--text-muted)">ยังไม่เคยวิเคราะห์เชิงลึก — กดปุ่มด้านบน (ใช้ token ครั้งเดียว เก็บผลไว้)</div>';
+ }catch(e){ if(fresh)a.innerHTML='<div style="font-size:12px;color:#B45309">เกิดข้อผิดพลาด</div>'; }
 }
 
 async function loadPayset(){
