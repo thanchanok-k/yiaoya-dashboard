@@ -4098,6 +4098,7 @@ function mountCnDraft(){const w=$('cnDraftWrap');if(!w)return;
  const mpBlock='<div class="card" style="padding:15px;margin-bottom:14px;border:1px solid #3DC5B7;background:#F0FDFA">'
   +'<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-brand-facebook" style="color:#185FA5"></i> โพสต์ลงเพจจริง (Meta)</div>'
   +'<select id="mpPage" style="width:100%;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px;box-sizing:border-box">'+MP_PAGES.map(p=>'<option value="'+p[0]+'">'+esc(p[1])+'</option>').join('')+'</select>'
+  +'<div style="display:flex;gap:8px;margin-bottom:8px"><input id="mpTopic" placeholder="หัวข้อให้ AI เขียน เช่น โปรตรวจเข่าฟรี ก.ค." style="flex:1;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box"><button id="mpAI" style="background:#0F766E;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap"><i class="ti ti-wand"></i> ให้ AI เขียน</button></div>'
   +'<textarea id="mpMsg" rows="4" placeholder="ข้อความโพสต์..." style="width:100%;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px;box-sizing:border-box;resize:vertical"></textarea>'
   +'<input id="mpImg" placeholder="ลิงก์รูป (ไม่บังคับ) https://..." style="width:100%;padding:9px 11px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:10px;box-sizing:border-box">'
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button id="mpDraft" style="background:#fff;border:1px solid #3DC5B7;color:#0F766E;border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit"><i class="ti ti-file-pencil"></i> บันทึกเป็นร่าง</button>'
@@ -4124,6 +4125,15 @@ function mountCnDraft(){const w=$('cnDraftWrap');if(!w)return;
   }).catch(e=>{res.innerHTML='<span style="color:#B91C1C">ผิดพลาด: '+esc(String(e&&e.message||e))+'</span>';});};
  if($('mpDraft'))$('mpDraft').onclick=()=>mpSend(false);
  if($('mpPost'))$('mpPost').onclick=()=>mpSend(true);
+ // ── AI ร่าง caption (Gemini) → เติมลงช่องข้อความ ──
+ const mpAi=()=>{const t=($('mpTopic')&&$('mpTopic').value||'').trim(),res=$('mpResult'),b=$('mpAI');
+  if(!t){if(res)res.innerHTML='<span style="color:#B91C1C">ใส่หัวข้อให้ AI ก่อน</span>';return;}
+  if(b){b.disabled=true;b.textContent='กำลังเขียน...';}
+  window.sb.functions.invoke('meta_sync',{body:{mode:'caption',brief:t}}).then(r=>{const d=(r&&r.data)||{};
+   if(d.ok&&d.caption){if($('mpMsg'))$('mpMsg').value=d.caption;if(res)res.innerHTML='<span style="color:#047857">AI ร่างให้แล้ว ✓ แก้ได้ตามใจ</span>';}
+   else if(res)res.innerHTML='<span style="color:#B91C1C">AI: '+esc(String(d.error||(r&&r.error&&r.error.message)||'ไม่สำเร็จ'))+'</span>';
+  }).catch(e=>{if(res)res.innerHTML='<span style="color:#B91C1C">'+esc(String(e&&e.message||e))+'</span>';}).finally(()=>{if(b){b.disabled=false;b.innerHTML='<i class="ti ti-wand"></i> ให้ AI เขียน';}});};
+ if($('mpAI'))$('mpAI').onclick=mpAi;
  const inp=$('cnVid'),drop=$('cnDrop');
  const render=()=>{const l=$('cnVidList');if(!l)return;l.innerHTML=CN_UPLOADS.length?CN_UPLOADS.map((u,i)=>'<div class="card" style="padding:10px;margin-bottom:8px;display:flex;gap:10px;align-items:center"><video src="'+u.url+'" style="width:120px;height:74px;border-radius:8px;object-fit:cover;background:#000" muted></video><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--navy,#0D2F4F);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(u.name)+'</div><div style="font-size:11px;color:var(--text-muted,#64748B)">'+u.size+'</div></div><button data-cnrm="'+i+'" style="background:#fff;border:1px solid #FCA5A5;color:#B91C1C;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit"><i class="ti ti-trash"></i></button></div>').join(''):'<div style="font-size:12px;color:var(--text-muted,#64748B)">ยังไม่มีไฟล์อัปโหลด</div>';l.querySelectorAll('[data-cnrm]').forEach(b=>b.onclick=()=>{const u=CN_UPLOADS[+b.dataset.cnrm];if(u&&u.url)URL.revokeObjectURL(u.url);CN_UPLOADS.splice(+b.dataset.cnrm,1);render();});};
  const add=(files)=>{[...files].forEach(f=>{if(!f.type.startsWith('video/')){_cnToast('รับเฉพาะวิดีโอ: '+f.name);return;}CN_UPLOADS.push({name:f.name,size:(f.size/1048576).toFixed(1)+' MB',url:URL.createObjectURL(f)});});_cnToast('อัปโหลด '+files.length+' ไฟล์ (preview)');render();};
