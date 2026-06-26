@@ -3836,7 +3836,7 @@ function cnKPI(){ var a=CN_LIVE&&CN_LIVE.kpi; if(a&&a.length) return a.map(funct
 function cnINFLU(){ var a=CN_LIVE&&CN_LIVE.influencer; if(a&&a.length) return a.map(function(x){return {n:x.name,dept:x.dept||'',ch:x.channel||'',followers:x.followers||'',rate:+x.rate||0,quota:+x.quota||0,who:x.who||'',st:x.status||''};}); return CN_INFLU_MOCK; }
 function cnBRIEF(){ var a=CN_LIVE&&CN_LIVE.brief; if(a&&a.length){ var s2=a.slice().sort(function(x,y){return String(y.brief_date).localeCompare(String(x.brief_date));}); var b=s2[0]; return {date:String(b.brief_date).slice(0,10),lead:(b.lead||'-'),present:(b.present||[]),absent:(b.absent||[]),highlight:(b.highlight||[]),deadline:(b.deadline||[]),remind:(b.remind||[])}; } return CN_BRIEF_MOCK; }
 function cnLoadLive(){ try{ if(typeof sb==='undefined')return; }catch(e){ return; }
-  sb.functions.invoke('content_list',{body:{}}).then(function(r){ if(r&&r.data&&!r.error){ CN_LIVE=r.data; if(CN_LIVE.pieces)CN_LIVE.pieces.forEach(cnNorm);
+  sb.functions.invoke('content_list',{body:{}}).then(function(r){ if(r&&r.data&&!r.error){ CN_LIVE=r.data; try{if(CN_LIVE.pieces)CN_LIVE.pieces.forEach(cnNorm);}catch(e){console.warn('content cnNorm failed',e);} try{if(CN_LIVE.pieces&&CN_LIVE.status_overrides)CN_LIVE.pieces.forEach(function(p){var o=CN_LIVE.status_overrides[p.id];if(o){p.status=o;p.col=o;}});}catch(e){}
     [mountCnBrief,mountCnCheckin,mountCnPlan,mountCnBoard,mountCnDraft,mountCnReview,mountCnQueue,mountCnCampaign,mountCnKpi,mountCnMonthly,mountCnHighlight,mountCnInflu,mountCnPerf,mountCnSync].forEach(function(f){try{f();}catch(e){}}); } }).catch(function(){}); }
 
 function _cnToast(m){let t=$('cnToast');if(!t){t=document.createElement('div');t.id='cnToast';t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0D2F4F;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 8px 24px rgba(13,47,79,.3);max-width:90vw;transition:opacity .2s';document.body.appendChild(t);}t.textContent=m;t.style.opacity='1';clearTimeout(t._h);t._h=setTimeout(()=>{t.style.opacity='0';},2400);}
@@ -3879,7 +3879,7 @@ function cnPersonAgg(){
   var topics={}; mine.forEach(function(p){if(p.topic)topics[p.topic]=(topics[p.topic]||0)+1;});
   var engScore=Math.min(100,avgEng/12*100);
   // composite = KPI 70% + Engagement 30% · ถ้ายังไม่มีข้อมูล engagement → ใช้ KPI ล้วน (ไม่หัก 30% ฟรี) · ไม่มี KPI → eng ล้วน
-  var composite=k?(engArr.length?Math.round(kTotal*0.7+engScore*0.3):kTotal):Math.round(engScore);
+  var composite=(k&&kTotal>0)?(engArr.length?Math.round(kTotal*0.7+engScore*0.3):kTotal):Math.round(engScore);
   return {who:who,mine:mine,total:mine.length,posted:posted.length,engArr:engArr,avgEng:avgEng,best:best,hi:hi,k:k,kTotal:kTotal,grade:cnGrade(composite),chk:chk,topics:topics,engScore:engScore,composite:composite};
  });
 }
@@ -3920,6 +3920,8 @@ function cnCreatorCard(r,rank){
  h+='</div>'; return h;
 }
 
+function _cnLiveHas(key){return !!(CN_LIVE&&CN_LIVE[key]&&CN_LIVE[key].length);}
+function _cnDemoBanner(msg){return '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;padding:11px 14px;background:#FFF7ED;border:1px solid #FCD9A8;border-radius:10px"><i class="ti ti-flask" style="color:#B45309;font-size:16px;margin-top:1px"></i><span style="font-size:12px;color:#92400E"><b>ตัวอย่าง (Demo)</b> · '+msg+'</span></div>';}
 function mountCnBrief(){const w=$('cnBriefWrap');if(!w)return;const b=cnBRIEF();
  let h='<div class="card" style="padding:18px 20px;margin-bottom:14px;border:1px solid #C7E8E3;background:linear-gradient(135deg,#F0FDFA,#fff)"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px"><div><div style="font-size:11px;letter-spacing:1px;color:#0F766E;font-weight:700">MORNING BRIEF · สรุปเช้า</div><div style="font-size:20px;font-weight:800;color:var(--navy,#0D2F4F)">'+esc(b.date)+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">ผู้นำประชุม: <b>'+esc(b.lead)+'</b></div></div><button data-cnact="ส่ง Brief เข้า LINE กลุ่ม" style="background:#06C755;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-brand-line"></i> ส่งเข้า LINE</button></div></div>';
  h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">';
@@ -3927,7 +3929,7 @@ function mountCnBrief(){const w=$('cnBriefWrap');if(!w)return;const b=cnBRIEF();
  const box=(t,icon,arr,col)=>'<div class="card" style="padding:14px 16px;margin-bottom:10px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:8px"><i class="ti '+icon+'" style="color:'+col+'"></i> '+t+'</div>'+(arr.length?arr.map(x=>'<div style="font-size:13px;color:var(--text,#0F172A);padding:3px 0">• '+esc(x)+'</div>').join(''):'<div style="font-size:12px;color:var(--text-muted,#64748B)">—</div>')+'</div>';
  h+='<div class="card" style="padding:14px 16px;margin-bottom:10px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:8px"><i class="ti ti-users" style="color:#0F766E"></i> ทีมวันนี้</div><div style="display:flex;gap:8px;flex-wrap:wrap">'+b.present.map(n=>'<span style="font-size:12px;background:#ECFDF5;color:#047857;padding:3px 10px;border-radius:10px">'+_cnWho(n).replace(/<span style="[^"]*color:var[^>]*>|<\/span>$/,'')+'</span>').join('')+b.absent.map(n=>'<span style="font-size:12px;background:#FEF2F2;color:#B91C1C;padding:3px 10px;border-radius:10px">'+esc(n)+'</span>').join('')+'</div></div>';
  h+=box('ไฮไลท์วันนี้','ti-star',b.highlight,'#CA8A04')+box('Deadline วันนี้','ti-clock',b.deadline,'#B91C1C')+box('เตือนทีม','ti-bell',b.remind,'#185FA5');
- w.innerHTML=h;_cnBind(w);_cnSetCt('cnbrief',b.deadline.length);}
+ w.innerHTML=(_cnLiveHas('brief')?'':_cnDemoBanner('Morning Brief นี้ยังเป็นตัวอย่าง · ค่าจริงมาเมื่อ sync V3'))+h;_cnBind(w);_cnSetCt('cnbrief',b.deadline.length);}
 
 function mountCnCheckin(){const w=$('cnCheckinWrap');if(!w)return;
  const onTime=cnCHECKIN().filter(x=>x.punc==='เต็ม').length;const avg=Math.round(cnCHECKIN().filter(x=>x.punc!=='ลา').reduce((a,x)=>a+x.eod,0)/Math.max(1,cnCHECKIN().filter(x=>x.punc!=='ลา').length));
@@ -3935,7 +3937,7 @@ function mountCnCheckin(){const w=$('cnCheckinWrap');if(!w)return;
  let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#EFF6FF;border-radius:10px;border:1px solid #BFDBFE"><i class="ti ti-clock-hour-8" style="color:#1D4ED8"></i><span style="font-size:12px;color:#1E40AF">ตรงเวลา: ก่อน 09:00 = เต็ม · 09:00-09:30 = ครึ่ง · หลัง = 0 (คำนวณอัตโนมัติจาก Check-in)</span></div>';
  h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(onTime+'/'+cnCHECKIN().length,'มาตรงเวลา','#047857')+_cnSc(avg+'%','EOD เฉลี่ย','#185FA5')+_cnSc(cnCHECKIN().filter(x=>x.punc==='ลา').length,'ลาวันนี้','#B45309')+'</div>';
  h+='<div class="card" style="padding:6px 14px">'+cnCHECKIN().map(x=>'<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border,#E2E8F0)"><span style="width:30px;height:30px;border-radius:50%;background:'+(CN_WHO_C[x.who]||'#64748B')+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">'+esc(x.who.charAt(0))+'</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(x.who)+' <span style="font-size:11px;font-weight:400;color:var(--text-muted,#64748B)">เข้า '+esc(x.inT)+'</span></div><div style="font-size:11px;color:var(--text-muted,#64748B);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(x.plan)+'</div></div><span style="font-size:10px;font-weight:700;color:'+pc[x.punc]+';background:'+pc[x.punc]+'1a;padding:2px 8px;border-radius:10px;flex-shrink:0">'+esc(x.punc)+'</span><span style="font-size:13px;font-weight:700;color:'+(x.eod>=100?'#047857':x.eod>=80?'#B45309':'#B91C1C')+';width:42px;text-align:right;flex-shrink:0">'+x.eod+'%</span></div>').join('')+'</div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cncheckin',onTime);}
+ w.innerHTML=(_cnLiveHas('checkin')?'':_cnDemoBanner('Check-in/EOD นี้ยังเป็นตัวอย่าง · ค่าจริงมาเมื่อ sync V3'))+h;_cnBind(w);_cnSetCt('cncheckin',onTime);}
 
 function mountCnPlan(){const w=$('cnPlanWrap');if(!w)return;
  const first=new Date(2026,5,1).getDay();const days=new Date(2026,6,0).getDate();
@@ -3979,15 +3981,33 @@ function mountCnDraft(){const w=$('cnDraftWrap');if(!w)return;
  if(drop){drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.background='#E1F5EE';});drop.addEventListener('dragleave',()=>{drop.style.background='#F8FEFD';});drop.addEventListener('drop',e=>{e.preventDefault();drop.style.background='#F8FEFD';if(e.dataTransfer&&e.dataTransfer.files)add(e.dataTransfer.files);});}
  render();}
 
-function mountCnReview(){const w=$('cnReviewWrap');if(!w)return;
- const revActions='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px">'+_cnBtn('อนุมัติ · ส่งต่อ','ti-check','ok')+_cnBtn('ขอแก้','ti-message-circle','warn')+_cnBtn('ตีกลับ','ti-x','danger')+'</div><textarea placeholder="คอมเมนต์ (บันทึก audit)" style="width:100%;padding:8px 10px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;min-height:42px"></textarea>';
- const tong=cnDATA().filter(x=>x.col==='ตองตรวจ');const zern=cnDATA().filter(x=>x.col==='เซินรีวิว');const fix=cnDATA().filter(x=>x.col==='แก้ไข');const sent=cnDATA().filter(x=>x.col==='ส่งงานแล้ว');
- let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFF7ED;border-radius:10px;border:1px solid #FCD9A8"><i class="ti ti-shield-check" style="color:#B45309;font-size:18px"></i><span style="font-size:12px;color:#92400E">รีวิวตามจริง 2 ชั้น: <b>ตองตรวจ → เซินรีวิว</b> · งานการแพทย์เพิ่ม fact-check แพทย์ · ทุกการอนุมัติบันทึก audit</span></div>';
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:6px 0 10px"><i class="ti ti-inbox" style="color:#64748B"></i> ส่งงานแล้ว · รอเข้ารีวิว ('+sent.length+')</div>'+sent.map(it=>_cnCard(it,_cnBtn('รับเข้ารีวิว (ตอง)','ti-arrow-right','ok'))).join('')||'';
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-user-check" style="color:#4D7C0F"></i> ชั้น 1 · ตองตรวจ ('+tong.length+')</div>'+(tong.map(it=>_cnCard(it,revActions)).join('')||emptyCard('ไม่มีงาน'));
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-user-star" style="color:#185FA5"></i> ชั้น 2 · เซินรีวิว ('+zern.length+')</div>'+(zern.map(it=>_cnCard(it,revActions)).join('')||emptyCard('ไม่มีงาน'));
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-rotate" style="color:#64748B"></i> แก้ไข ('+fix.length+')</div>'+(fix.map(it=>_cnCard(it,_cnBtn('ส่งรีวิวอีกครั้ง','ti-send','ok'))).join('')||emptyCard('ไม่มีงานรอแก้'));
- w.innerHTML=h;_cnBind(w);_cnSetCt('cnreview',tong.length+zern.length);}
+/* ===== act-in-dashboard : เขียน action จริงลง Supabase (content_action) ===== */
+var CN_ACTOR='';
+function _cnBtnCss(cls){var col=cls==='ok'?'background:#047857;color:#fff;border:none':cls==='warn'?'background:#fff;color:#B45309;border:1px solid #FCD9A8':cls==='danger'?'background:#fff;color:#B91C1C;border:1px solid #FCA5A5':'background:#fff;color:var(--navy,#0D2F4F);border:1px solid var(--border,#E2E8F0)';return col+';border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px';}
+function _cnActBtn(it,label,icon,cls,action,to){return '<button data-cnrev="1" data-piece="'+esc(String(it.id))+'" data-from="'+esc(it.col||'')+'" data-to="'+esc(to)+'" data-action="'+esc(action)+'" style="'+_cnBtnCss(cls)+'"><i class="ti '+icon+'"></i>'+esc(label)+'</button>';}
+function cnAct(piece_id,action,to_status,from_status,comment,btn){
+ if(btn){btn.disabled=true;btn.style.opacity='.55';}
+ var reEnable=function(){if(btn){btn.disabled=false;btn.style.opacity='';}};
+ var applyLocal=function(){var it=cnDATA().find(function(x){return String(x.id)===String(piece_id);});if(it&&to_status){it.col=to_status;it.status=to_status;}};
+ var refresh=function(){[mountCnReview,mountCnBoard,mountCnQueue,mountCnDraft,mountCnKpi,mountCnMonthly].forEach(function(f){try{f();}catch(e){}});};
+ try{ if(typeof sb==='undefined'){reEnable();_cnToast('ยังไม่ได้เชื่อม Supabase');return;}
+  sb.functions.invoke('content_action',{body:{piece_id:String(piece_id),action:action,to_status:to_status,from_status:from_status,comment:comment||'',actor:CN_ACTOR||''}}).then(function(r){
+   if(r&&r.data&&r.data.ok){ applyLocal(); _cnToast('บันทึกแล้ว → '+(to_status||action)); refresh(); }
+   else { reEnable(); _cnToast('บันทึกไม่สำเร็จ: '+((r&&r.error&&r.error.message)||(r&&r.data&&r.data.error)||'ตรวจ deploy content_action')); }
+  }).catch(function(e){ reEnable(); _cnToast('ผิดพลาด: '+((e&&e.message)||e)); });
+ }catch(e){ reEnable(); _cnToast('ผิดพลาด'); }
+}
+function mountCnReview(){var w=$('cnReviewWrap');if(!w)return;
+ var tong=cnDATA().filter(function(x){return x.col==='ตองตรวจ';}),zern=cnDATA().filter(function(x){return x.col==='เซินรีวิว';}),fix=cnDATA().filter(function(x){return x.col==='แก้ไข';}),sent=cnDATA().filter(function(x){return x.col==='ส่งงานแล้ว';});
+ var revBlock=function(it,toApprove){return '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px">'+_cnActBtn(it,'อนุมัติ · ส่งต่อ','ti-check','ok','review_approve',toApprove)+_cnActBtn(it,'ขอแก้','ti-message-circle','warn','review_request_change','แก้ไข')+_cnActBtn(it,'ตีกลับ','ti-x','danger','review_reject','แก้ไข')+'</div><textarea data-revc="'+esc(String(it.id))+'" placeholder="คอมเมนต์ (บันทึก audit)" style="width:100%;padding:8px 10px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;min-height:42px"></textarea>';};
+ var h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFF7ED;border-radius:10px;border:1px solid #FCD9A8"><i class="ti ti-shield-check" style="color:#B45309;font-size:18px"></i><span style="font-size:12px;color:#92400E">รีวิวตามจริง 2 ชั้น: <b>ตองตรวจ → เซินรีวิว</b> · งานการแพทย์เพิ่ม fact-check แพทย์ · ทุกการกดบันทึก audit ลง Supabase</span></div>';
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:6px 0 10px"><i class="ti ti-inbox" style="color:#64748B"></i> ส่งงานแล้ว · รอเข้ารีวิว ('+sent.length+')</div>'+(sent.map(function(it){return _cnCard(it,_cnActBtn(it,'รับเข้ารีวิว (ตอง)','ti-arrow-right','ok','move','ตองตรวจ'));}).join('')||emptyCard('ไม่มีงานรอ'));
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-user-check" style="color:#4D7C0F"></i> ชั้น 1 · ตองตรวจ ('+tong.length+')</div>'+(tong.map(function(it){return _cnCard(it,revBlock(it,'เซินรีวิว'));}).join('')||emptyCard('ไม่มีงาน'));
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-user-star" style="color:#185FA5"></i> ชั้น 2 · เซินรีวิว ('+zern.length+')</div>'+(zern.map(function(it){return _cnCard(it,revBlock(it,'ผ่านการรีวิว'));}).join('')||emptyCard('ไม่มีงาน'));
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-rotate" style="color:#64748B"></i> แก้ไข ('+fix.length+')</div>'+(fix.map(function(it){return _cnCard(it,_cnActBtn(it,'ส่งรีวิวอีกครั้ง','ti-send','ok','submit','ตองตรวจ'));}).join('')||emptyCard('ไม่มีงานรอแก้'));
+ w.innerHTML=h;_cnBind(w);
+ w.querySelectorAll('[data-cnrev]').forEach(function(b){b.onclick=function(e){e.stopPropagation();var pid=b.dataset.piece;var ta=w.querySelector('textarea[data-revc="'+pid+'"]');cnAct(pid,b.dataset.action,b.dataset.to,b.dataset.from,ta?ta.value:'',b);};});
+ _cnSetCt('cnreview',tong.length+zern.length);}
 
 function mountCnQueue(){const w=$('cnQueueWrap');if(!w)return;
  const appr=cnDATA().filter(it=>it.col==='ผ่านการรีวิว');const pub=cnDATA().filter(it=>it.col==='โพสเรียบร้อย');
@@ -4003,7 +4023,7 @@ function mountCnCampaign(){const w=$('cnCampaignWrap');if(!w)return;
  let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(cnPROMO().length,'โปรเดือนนี้')+_cnSc('฿'+estTot.toLocaleString(),'Est. Revenue รวม','#0F766E')+_cnSc(cnPROMO().filter(p=>p.st!=='อนุมัติแล้ว').length,'รออนุมัติ','#B45309')+'</div>';
  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:9px 13px;background:#F8FAFC;border:1px solid var(--border,#E2E8F0);border-radius:10px"><i class="ti ti-route" style="color:#185FA5"></i><span style="font-size:12px;color:var(--text-muted,#64748B)">Flow อนุมัติ: เลือกโปร → Manager → CEO · Promo_ID format CRS-XX-YYY-0000-P · Tier T1=Safe T2=Growth T3=Aggressive</span></div>';
  h+='<div class="card" style="padding:4px 0">'+cnPROMO().map(p=>'<div style="padding:12px 16px;border-bottom:1px solid var(--border,#E2E8F0)"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(p.n)+(p.lead?' <span style="font-size:9px;color:#CA8A04;background:#FEF9C3;padding:1px 6px;border-radius:5px">LEAD</span>':'')+'</div><div style="font-size:11px;color:var(--text-muted,#64748B);font-family:monospace">'+esc(p.id)+'</div></div>'+stP(p.st)+'</div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px">'+_cnDept(p.dept)+tierP(p.tier)+'<span style="font-size:12px;color:var(--navy,#0D2F4F);font-weight:700">฿'+p.price.toLocaleString()+'</span><span style="font-size:11px;color:var(--text-muted,#64748B)">เป้า '+p.target+' เคส · Est. ฿'+p.est.toLocaleString()+'</span></div></div>').join('')+'</div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cncampaign',cnPROMO().length);}
+ w.innerHTML=(_cnLiveHas('promo')?'':_cnDemoBanner('โปรโมชั่น/Est. Revenue นี้ยังเป็นตัวอย่าง · ค่าจริงมาเมื่อ sync V3'))+h;_cnBind(w);_cnSetCt('cncampaign',cnPROMO().length);}
 
 function mountCnKpi(){var w=$('cnKpiWrap');if(!w)return;
  var ranked=cnPersonAgg().filter(function(x){return x.k||x.total>0;}).sort(function(a,b){return b.composite-a.composite;});
@@ -4021,7 +4041,7 @@ function mountCnKpi(){var w=$('cnKpiWrap');if(!w)return;
  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px">';
  ranked.forEach(function(r,i){h+=cnCreatorCard(r,i+1);});
  h+='</div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cnkpi',ranked.length);}
+ w.innerHTML=(_cnLiveHas('kpi')?'':_cnDemoBanner('คะแนน KPI/อันดับนี้ยังเป็นตัวอย่าง · ค่าจริงมาเมื่อ sync KPI_TRACKER/DAILY_LOG'))+h;_cnBind(w);_cnSetCt('cnkpi',ranked.length);}
 
 function mountCnMonthly(){var w=$('cnMonthlyWrap');if(!w)return;
  var pieces=cnDATA();
@@ -4053,7 +4073,7 @@ function mountCnHighlight(){var w=$('cnHighlightWrap');if(!w)return;
 function mountCnInflu(){const w=$('cnInfluWrap');if(!w)return;
  let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(cnINFLU().length,'อินฟลูที่ดีลอยู่')+_cnSc('฿'+cnINFLU().reduce((a,x)=>a+x.rate,0).toLocaleString(),'ค่าตัวรวม','#0F766E')+'<div style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:center"><button data-cnact="ลงทะเบียนอินฟลูใหม่" style="background:#3DC5B7;color:#04342C;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มอินฟลู</button></div></div>';
  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">'+cnINFLU().map(x=>'<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(x.n)+'</div>'+_cnDept(x.dept)+'</div><div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">'+_cnPlat(x.ch)+'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-users"></i> '+esc(x.followers)+'</span></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted,#64748B);border-top:1px solid var(--border,#E2E8F0);padding-top:8px"><span>ค่าตัว ฿'+x.rate.toLocaleString()+' · โควตา '+x.quota+'</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span style="font-size:11px;color:#0F766E;background:#E1F5EE;padding:2px 8px;border-radius:10px">'+esc(x.st)+'</span>'+_cnWhoLink(x.who)+'</div></div>').join('')+'</div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cninflu',cnINFLU().length);}
+ w.innerHTML=(_cnLiveHas('influencer')?'':_cnDemoBanner('ทะเบียนอินฟลู/ค่าตัวนี้ยังเป็นตัวอย่าง · ค่าจริงมาเมื่อ sync V3'))+h;_cnBind(w);_cnSetCt('cninflu',cnINFLU().length);}
 
 /* ===== Performance รายโพสต์ organic + สถานะเชื่อมต่อ/Sync (รองรับดึง engagement จาก API) ===== */
 var _cnPerfPlat='all', _cnPerfSort='eng';
@@ -4145,7 +4165,7 @@ function start(){
    const e=(data&&data.user&&data.user.email)||'admin';
    // ลำดับความสำคัญ: ตัวตนจาก LINE (ถ้าล็อกอินผ่าน LINE) → ROLE_MAP อีเมล → director
    const who=(LINE_ID&&(LINE_ID.employee_name||LINE_ID.display_name))||e;
-   $('sbName').textContent=who; $('sbAv').textContent=who.substring(0,2).toUpperCase();
+   $('sbName').textContent=who; $('sbAv').textContent=who.substring(0,2).toUpperCase(); CN_ACTOR=who;
    const lineRole=(LINE_ID&&LINE_ID.role&&VIEWS_BY_ROLE[LINE_ID.role])?LINE_ID.role:null;
    const role=lineRole||ROLE_MAP[e.toLowerCase()]||'director';
    const sel=$('viewAs'); if(sel) sel.value=role;
