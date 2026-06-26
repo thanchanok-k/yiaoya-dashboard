@@ -76,6 +76,66 @@ function lm2MapChannel(p) {
   };
 }
 
+// ---- JS port ของ campaign_name_parser.parse_campaign — แกะชื่อแคมเปญฝั่ง client ----
+// ใช้เป็น fallback เมื่อ backend ยังไม่เติมฟิลด์ (เช่น entity เก่า/จาก publisher อื่น) ทุก entity มี campaign_name ดิบอยู่แล้ว
+var LM_CL_LOCATION = { 'INBOX': 'ทักแชต (Messages)', 'ON-YOUR-AD-INTERACTION': 'มีปฏิสัมพันธ์บนโฆษณา', 'ON-YOUR-AD-VIDEOVIEW': 'ดูวิดีโอบนโฆษณา' };
+var LM_CL_AS_OBJ = { 'AWARENESS': 1, 'REACH': 1 };
+var LM_CO_LABEL = { 'SALE': 'ยอดขาย', 'ENGAGEMENT': 'การมีส่วนร่วม', 'AWARENESS': 'การรับรู้', 'REACH': 'การเข้าถึง' };
+var LM_PG_LABEL = { 'MAX.CONV': 'คอนเวอร์ชันสูงสุด', 'MAX.INTERACT': 'ปฏิสัมพันธ์สูงสุด', 'MAX.THRUPLAY': 'ดูวิดีโอจบสูงสุด', 'MAX.REACH': 'เข้าถึงสูงสุด', 'MAX.MES': 'ข้อความสูงสุด' };
+var LM_BGS_LABEL = { 'CBO': 'เกลี่ยงบทั้งแคมเปญ (CBO)', 'ASB': 'เกลี่ยงบระดับชุดโฆษณา (ASB/ABO)' };
+var LM_BGT_LABEL = { 'LIFETIME': 'งบตลอดอายุ', 'DAILY': 'งบรายวัน' };
+var LM_PAGE_LABEL = { 'YIAOYA': 'Yiaoya (รวม)', 'PILATES': 'Pilates', 'KNEE': 'KneeCare (เข่า)' };
+var LM_PROGRAM_FIX = { 'PILATES_RROMOTION': 'PILATES_PROMOTION' };
+var LM_MONTHS = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
+
+function lm2NormDate(tok) {
+  tok = String(tok || '').trim();
+  if (/^\d{8}$/.test(tok)) return { d: tok.slice(0, 4) + '-' + tok.slice(4, 6) + '-' + tok.slice(6, 8), bare: false };
+  var m = /^([A-Z]{3})(\d{4})$/.exec(tok);
+  if (m && LM_MONTHS[m[1]]) return { d: m[2] + '-' + ('0' + LM_MONTHS[m[1]]).slice(-2) + '-01', bare: true };
+  return { d: null, bare: false };
+}
+
+function lm2ParseName(raw) {
+  raw = String(raw || '').trim();
+  var out = { raw_name: raw, name_gen: 'legacy', prod: '', prod_label: '', conv_loc: '', conv_loc_label: '', objective: '', objective_label: '', perf_goal: '', perf_goal_label: '', budget_strat: '', budget_strat_label: '', budget_type: '', budget_type_label: '', start_date: '', program: '', flags: [] };
+  var m = /(PL:.*)$/.exec(raw);              // ตัด prefix เช่น "meta:Yiaoya:" ทิ้ง
+  if (!m) return out;
+  var toks = m[1].split('|'), kv = {}, bare = [], hasKey = {};
+  for (var i = 0; i < toks.length; i++) {
+    var t = toks[i].trim(); if (!t) continue;
+    var ci = t.indexOf(':');
+    if (ci < 0) { bare.push(t); continue; }
+    var key = t.slice(0, ci).trim().toUpperCase();
+    var val = t.slice(ci + 1).trim();
+    if (val.charAt(0) === ':') { val = val.replace(/^:+/, '').trim(); out.flags.push(key + '_double_colon'); }
+    kv[key] = val; hasKey[key] = 1;
+  }
+  if (!hasKey.PL) return out;
+  var page = (kv.PAGE || '').toUpperCase();
+  out.prod = page; out.prod_label = LM_PAGE_LABEL[page] || page;
+  var co = (kv.CO || '').toUpperCase();
+  var cl = (kv.CL || '').toUpperCase();
+  if (LM_CL_AS_OBJ[cl]) { if (!co) co = cl; out.conv_loc = ''; out.flags.push('cl_was_objective_normalized'); }
+  else out.conv_loc = cl;
+  out.conv_loc_label = LM_CL_LOCATION[out.conv_loc] || out.conv_loc;
+  out.objective = co; out.objective_label = LM_CO_LABEL[co] || co;
+  var pg = (kv.PG || '').toUpperCase(); out.perf_goal = pg; out.perf_goal_label = LM_PG_LABEL[pg] || pg;
+  var bgs = (kv.BGS || '').toUpperCase(), bgt = (kv.BGT || '').toUpperCase();
+  if (bgt === 'CBO' || bgt === 'ASB') { if (!bgs) bgs = bgt; out.flags.push('bgt_had_strat_value'); bgt = ''; }
+  out.budget_strat = bgs; out.budget_strat_label = LM_BGS_LABEL[bgs] || bgs;
+  out.budget_type = bgt; out.budget_type_label = LM_BGT_LABEL[bgt] || bgt;
+  var prog = (kv.PROGRAM || '').trim();
+  if (prog) { if (LM_PROGRAM_FIX[prog.toUpperCase()]) { prog = LM_PROGRAM_FIX[prog.toUpperCase()]; out.flags.push('program_typo_fixed'); } out.program = prog; }
+  var sd = null, fromBare = false;
+  if (kv.STA) { sd = lm2NormDate(kv.STA).d; }
+  if (!sd) { for (var b = 0; b < bare.length; b++) { var r = lm2NormDate(bare[b]); if (r.d) { sd = r.d; fromBare = r.bare; break; } } }
+  out.start_date = sd || '';
+  if (fromBare) out.flags.push('date_from_bare_month');
+  out.name_gen = kv.STA ? 'A' : (hasKey.PROGRAM ? 'B' : 'A-');
+  return out;
+}
+
 // 2. แคมเปญ (campaign ROI)
 function lm2MapCampaign(p) {
   p = p || {};
@@ -86,10 +146,18 @@ function lm2MapCampaign(p) {
   var spend = lm2Num(p.actual_spend || p.spend || p.budget_used || p.cost || p.budget_actual || p.budget);
   var leads = lm2Num(p.leads || p.lead_count || p.total_leads);
   var customers = lm2Num(p.customers || p.customer_count || p.conversions || p.real_customers || p.converted);
+  // รายได้: FO ยอดปิด ถ้าไม่มี → ใช้ค่าที่ Meta รายงาน (conversion_value / meta_revenue) เป็น "ROAS ตามที่แพลตฟอร์มรายงาน"
   var revenue = lm2Num(p.revenue || p.revenue_total || p.sales || p.income);
+  var metaRev = lm2Num(p.meta_revenue || p.conversion_value || p.conversion_values || p.purchase_value);
+  var revSource = '';
+  if (revenue > 0) revSource = 'fo';
+  else if (metaRev > 0) { revenue = metaRev; revSource = 'platform'; }
   // ROI% : ใช้ field ถ้ามี ไม่งั้น derive จาก (รายได้-งบ)/งบ*100
   var roi = lm2NumOrNull(p.roi || p.roi_pct || p.roi_percent);
-  if (roi == null) roi = spend > 0 ? ((revenue - spend) / spend) * 100 : null;
+  if (roi == null) roi = spend > 0 && revenue > 0 ? ((revenue - spend) / spend) * 100 : null;
+  // แกะชื่อแคมเปญฝั่ง client เป็น fallback (entity เก่า/prefix ไม่มีฟิลด์ parsed)
+  var pc = lm2ParseName(p.raw_name || name);
+  function pick(field, pcField) { return lm2Str(p[field]) || pc[pcField]; }
   return {
     campaign_id: id || '—',
     campaign_name: name || id || '—',
@@ -101,25 +169,26 @@ function lm2MapCampaign(p) {
     leads: leads,
     customers: customers,
     revenue: revenue,
+    revenue_source: revSource,   // 'fo' = ยอดปิดจริง · 'platform' = Meta รายงาน (pixel, ก่อนหักต้นทุน)
     roi: roi,
-    // ---- field ใหม่จาก backend (อาจ null/ไม่มีบนข้อมูลเก่า — กัน null ด้วย lm2Str) ----
-    raw_name: lm2Str(p.raw_name) || (name || id || ''),
-    prod: lm2Str(p.prod),
-    prod_label: lm2Str(p.prod_label),
-    conv_loc: lm2Str(p.conv_loc),
-    conv_loc_label: lm2Str(p.conv_loc_label),
-    objective: lm2Str(p.objective),
-    objective_label: lm2Str(p.objective_label),
-    perf_goal: lm2Str(p.perf_goal),
-    perf_goal_label: lm2Str(p.perf_goal_label),
-    budget_strat: lm2Str(p.budget_strat),
-    budget_strat_label: lm2Str(p.budget_strat_label),
-    budget_type: lm2Str(p.budget_type),
-    budget_type_label: lm2Str(p.budget_type_label),
-    start_date: lm2Str(p.start_date),
-    program: lm2Str(p.program),
-    name_gen: lm2Str(p.name_gen),
-    parse_flags: lm2ToArr(p.parse_flags),
+    // ---- field parsed: ใช้ของ backend ก่อน ถ้าไม่มีแกะจากชื่อเอง (pc) ----
+    raw_name: lm2Str(p.raw_name) || pc.raw_name || (name || id || ''),
+    prod: pick('prod', 'prod'),
+    prod_label: pick('prod_label', 'prod_label'),
+    conv_loc: pick('conv_loc', 'conv_loc'),
+    conv_loc_label: pick('conv_loc_label', 'conv_loc_label'),
+    objective: pick('objective', 'objective'),
+    objective_label: pick('objective_label', 'objective_label'),
+    perf_goal: pick('perf_goal', 'perf_goal'),
+    perf_goal_label: pick('perf_goal_label', 'perf_goal_label'),
+    budget_strat: pick('budget_strat', 'budget_strat'),
+    budget_strat_label: pick('budget_strat_label', 'budget_strat_label'),
+    budget_type: pick('budget_type', 'budget_type'),
+    budget_type_label: pick('budget_type_label', 'budget_type_label'),
+    start_date: pick('start_date', 'start_date'),
+    program: pick('program', 'program'),
+    name_gen: pick('name_gen', 'name_gen'),
+    parse_flags: (lm2ToArr(p.parse_flags).length ? lm2ToArr(p.parse_flags) : pc.flags),
     _raw: p,
   };
 }
@@ -197,14 +266,21 @@ var LM_BACKEND = {
         channels.push(c);
       });
 
-      // แคมเปญ — de-dup ตาม campaign_id
-      var cmpSeen = {}, campaigns = [];
+      // แคมเปญ — de-dup ตาม "ชื่อ canonical" (ตัด prefix meta:/meta:Yiaoya: ทิ้ง) กันแคมเปญเดียวซ้ำ 2 entity
+      // ถ้าชนกัน เก็บตัวที่งบสูงกว่า (record ที่สมบูรณ์/ครอบคลุมประวัติมากกว่า) — ไม่บวกรวมกันกันนับซ้ำ
+      function lm2CanonKey(c) {
+        var n = c.raw_name || c.campaign_name || c.campaign_id || '';
+        var m = /(PL:.*)$/.exec(n);          // ตัด prefix ใด ๆ ก่อน |PL:
+        var canon = m ? m[1] : n;
+        return canon.replace(/\s+/g, '').toUpperCase();
+      }
+      var cmpIdx = {}, campaigns = [];
       rawCmp.forEach(function (p) {
         var c = lm2MapCampaign(p);
-        var key = c.campaign_id || c.campaign_name;
-        if (!key || cmpSeen[key]) return;
-        cmpSeen[key] = true;
-        campaigns.push(c);
+        var key = lm2CanonKey(c);
+        if (!key) return;
+        if (cmpIdx[key] == null) { cmpIdx[key] = campaigns.length; campaigns.push(c); }
+        else { var prev = campaigns[cmpIdx[key]]; if ((Number(c.spend) || 0) > (Number(prev.spend) || 0)) campaigns[cmpIdx[key]] = c; }
       });
 
       // รายเดือน — de-dup ตาม month|channel
