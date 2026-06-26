@@ -4554,29 +4554,45 @@ const FB_SRC_LABEL=Object.fromEntries(FB_SRCS.map(s=>[s[0],s[1]]));
 const FB_SRC_ICON=Object.fromEntries(FB_SRCS.map(s=>[s[0],s[2]]));
 /* status: [label, bg, fg, ti-icon] */
 const FB_STAT={new:['ใหม่','#EFF6FF','#1D4ED8','ti-circle-dot'],in_progress:['กำลังแก้','#FEF3C7','#B45309','ti-tool'],fixed:['แก้แล้ว · รอเทส','#FEF9C3','#A16207','ti-clock-check'],verified:['ใช้ได้','#DCFCE7','#15803D','ti-circle-check']};
-let FB_CAT='suggest', FB_SRC='dashboard', FB_FILTER='open', FB_PAGE='', FB_FILES=[];
+let FB_CAT='suggest', FB_SRC='dashboard', FB_FILTER='open', FB_PAGE='', FB_FILES=[], FB_RO_FILES=[];
 function fbReporter(){ return ($('sbName')&&$('sbName').textContent)||'ผู้ใช้'; }
-async function fbCapture(){
- if(FB_FILES.length>=FB_MAX){ $('fbErr').textContent='แนบได้สูงสุด '+FB_MAX+' ไฟล์'; return; }
- const btn=$('fbShot'); const orig=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="ti ti-loader-2"></i> กำลังถ่าย…';
- const modal=$('fbModal'); modal.style.display='none';   // ซ่อนฟอร์มก่อนแคป จะได้เห็นหน้าจริง
+/* core: แคปหน้าจอเป็น File (reuse ทั้งฟอร์มหลัก + กล่องตีกลับ) · hideEl = element ที่ซ่อนก่อนแคป */
+async function fbGrabScreenshot(hideEl){
+ const prev=hideEl?hideEl.style.display:null; if(hideEl) hideEl.style.display='none';
  try{
    const { default:html2canvas }=await import('https://esm.sh/html2canvas@1.4.1');
    const opt={useCORS:true, logging:false, backgroundColor:'#F1F5F9', scale:1};
-   // แคปเฉพาะส่วนที่เห็น ถ้ารู้ขนาด viewport · ไม่งั้น fallback แคปทั้งหน้า
-   if(window.innerWidth>0 && window.innerHeight>0){
-     opt.x=window.scrollX; opt.y=window.scrollY;
-     opt.width=window.innerWidth; opt.height=window.innerHeight;
-   }
+   if(window.innerWidth>0 && window.innerHeight>0){ opt.x=window.scrollX; opt.y=window.scrollY; opt.width=window.innerWidth; opt.height=window.innerHeight; }
    const canvas=await html2canvas(document.body,opt);
-   if(!canvas.width||!canvas.height) throw new Error('แคปได้ภาพว่าง ลองใหม่อีกครั้ง');
+   if(!canvas.width||!canvas.height) throw new Error('แคปได้ภาพว่าง ลองใหม่');
    const blob=await new Promise(res=>canvas.toBlob(res,'image/png',0.92));
    if(!blob) throw new Error('แปลงรูปไม่ได้');
-   const file=new File([blob],'screenshot_'+Date.now()+'.png',{type:'image/png'});
+   return new File([blob],'screenshot_'+Date.now()+'.png',{type:'image/png'});
+ } finally { if(hideEl) hideEl.style.display=(prev||'flex'); }
+}
+/* core: อัปโหลดไฟล์เข้า bucket 'feedback' โฟลเดอร์ <uid>/ → คืน attachments[] */
+async function fbUploadAll(files){
+ if(!files||!files.length) return [];
+ const { data:u }=await sb.auth.getUser(); const uid=u&&u.user&&u.user.id;
+ if(!uid) throw new Error('ยังไม่ได้เข้าระบบ');
+ const out=[];
+ for(let i=0;i<files.length;i++){
+   const f=files[i]; const ext=(f.name.split('.').pop()||'bin').toLowerCase();
+   const path=uid+'/'+Date.now()+'_'+i+'.'+ext;
+   const { error:ue }=await sb.storage.from('feedback').upload(path,f,{upsert:false,contentType:f.type||'application/octet-stream'});
+   if(ue) throw ue; out.push({path, name:f.name, type:f.type||'', size:f.size});
+ }
+ return out;
+}
+async function fbCapture(){
+ if(FB_FILES.length>=FB_MAX){ $('fbErr').textContent='แนบได้สูงสุด '+FB_MAX+' ไฟล์'; return; }
+ const btn=$('fbShot'); const orig=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="ti ti-loader-2"></i> กำลังถ่าย…';
+ try{
+   const file=await fbGrabScreenshot($('fbModal'));
    FB_FILES=FB_FILES.concat(file).slice(0,FB_MAX);
    $('fbFilesHint').textContent=FB_FILES.length+' ไฟล์'; $('fbErr').textContent=''; fbRenderThumbs();
  }catch(e){ $('fbErr').textContent='ถ่ายหน้าจอไม่สำเร็จ: '+(e.message||e); }
- modal.style.display='flex'; btn.disabled=false; btn.innerHTML=orig;
+ btn.disabled=false; btn.innerHTML=orig;
 }
 function fbIsImg(name,type){ return (type||'').startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name||''); }
 function fbFileIcon(name,type){
@@ -4619,20 +4635,9 @@ async function fbSend(){
  const btn=$('fbSend'); btn.disabled=true; btn.textContent='กำลังส่ง…'; $('fbErr').textContent='';
  const v=fbCurView();
  const tags=$('fbTags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,8);
- // อัปโหลดไฟล์เข้า bucket 'feedback' โฟลเดอร์ <uid>/ (RLS บังคับ) — เก็บ {path,name,type,size} (signed URL ตอนแสดง)
  let attachments=[];
- try{
-   if(FB_FILES.length){
-     const { data:u }=await sb.auth.getUser(); const uid=u&&u.user&&u.user.id;
-     if(!uid) throw new Error('ยังไม่ได้เข้าระบบ');
-     for(let i=0;i<FB_FILES.length;i++){
-       const f=FB_FILES[i]; const ext=(f.name.split('.').pop()||'bin').toLowerCase();
-       const path=uid+'/'+Date.now()+'_'+i+'.'+ext;
-       const { error:ue }=await sb.storage.from('feedback').upload(path,f,{upsert:false,contentType:f.type||'application/octet-stream'});
-       if(ue) throw ue; attachments.push({path, name:f.name, type:f.type||'', size:f.size});
-     }
-   }
- }catch(e){ btn.disabled=false; btn.textContent='ส่งความเห็น'; $('fbErr').textContent='อัปโหลดไฟล์ไม่สำเร็จ: '+(e.message||e); return; }
+ try{ attachments=await fbUploadAll(FB_FILES); }
+ catch(e){ btn.disabled=false; btn.textContent='ส่งความเห็น'; $('fbErr').textContent='อัปโหลดไฟล์ไม่สำเร็จ: '+(e.message||e); return; }
  const { error }=await sb.from('trial_feedback').insert({
    source:FB_SRC||'dashboard', view_key:v, view_label:VIEW_TITLE[v]||v,
    page_url:(location.hash||location.pathname||'').slice(0,300),
@@ -4653,20 +4658,62 @@ async function fbAction(id,from,to){
  await sb.from('trial_feedback_log').insert({feedback_id:id,kind:'status',from_status:from,to_status:to,actor_name:fbReporter(),note:to==='verified'?'ยืนยันว่าใช้ได้แล้ว':'เปิดเรื่องใหม่ (ยังไม่โอเค)'});
  loadFeedback();
 }
-/* กด "ยังไม่ใช่"/"เปิดใหม่" → เปิดช่องให้บอกว่ายังไม่โอเคตรงไหน ก่อนตีกลับ */
+/* กด "ยังไม่ใช่"/"เปิดใหม่" → เปิดช่องบอกว่ายังไม่โอเคตรงไหน + แนบรูปประกอบ ก่อนตีกลับ */
+function fbRoThumbs(){
+ const w=document.getElementById('fbRoThumbs'); if(!w) return;
+ w.innerHTML=FB_RO_FILES.map((f,i)=>{
+   const x='<button data-i="'+i+'" class="fbRoX" style="position:absolute;top:-6px;right:-6px;background:#B91C1C;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:1;cursor:pointer">×</button>';
+   if(fbIsImg(f.name,f.type)) return '<div style="position:relative"><img src="'+URL.createObjectURL(f)+'" style="width:54px;height:54px;object-fit:cover;border-radius:8px;border:1px solid #E2E8F0">'+x+'</div>';
+   const nm=f.name.length>14?f.name.slice(0,12)+'…':f.name;
+   return '<div style="position:relative;width:80px;height:54px;border:1px solid #E2E8F0;border-radius:8px;background:#F8FAFC;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:3px;overflow:hidden"><i class="ti '+fbFileIcon(f.name,f.type)+'" style="font-size:19px;color:#0F766E"></i><span style="font-size:9px;color:#475569;text-align:center;line-height:1.05;word-break:break-all">'+esc(nm)+'</span>'+x+'</div>';
+ }).join('');
+ w.querySelectorAll('.fbRoX').forEach(b=>b.onclick=()=>{FB_RO_FILES.splice(+b.dataset.i,1);fbRoThumbs();});
+}
 function fbReopenBox(id){
  const el=document.getElementById('fbAct-'+id); if(!el) return;
- el.innerHTML='<div style="margin-top:6px"><textarea id="fbRo-'+id+'" rows="2" placeholder="ยังไม่โอเคตรงไหน / อยากให้แก้อะไรเพิ่ม (ส่งให้ทีมดู)" style="width:100%;box-sizing:border-box;border:1.5px solid #FCA5A5;border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;resize:vertical"></textarea><div style="display:flex;gap:8px;margin-top:7px"><button id="fbRoSend-'+id+'" style="background:#B91C1C;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-arrow-back-up"></i> ส่งกลับให้แก้</button><button id="fbRoCancel-'+id+'" style="background:#fff;color:#64748B;border:1.5px solid #E2E8F0;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button></div></div>';
+ FB_RO_FILES=[];
+ el.innerHTML='<div style="margin-top:6px">'+
+   '<textarea id="fbRo-'+id+'" rows="2" placeholder="ยังไม่โอเคตรงไหน / อยากให้แก้อะไรเพิ่ม (ส่งให้ทีมดู)" style="width:100%;box-sizing:border-box;border:1.5px solid #FCA5A5;border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;resize:vertical"></textarea>'+
+   '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px">'+
+     '<button id="fbRoShot-'+id+'" style="display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--teal,#3DC5B7);background:rgba(61,197,183,.1);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:700;color:#0F766E;cursor:pointer;font-family:inherit"><i class="ti ti-camera"></i> ถ่ายหน้าจอ</button>'+
+     '<label for="fbRoFiles-'+id+'" style="display:inline-flex;align-items:center;gap:6px;border:1.5px dashed #CBD5E1;border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:600;color:#475569;cursor:pointer"><i class="ti ti-paperclip"></i> แนบรูป/ไฟล์</label>'+
+     '<input id="fbRoFiles-'+id+'" type="file" accept="image/*,.pdf,.xls,.xlsx,.csv,.doc,.docx,.txt,.ppt,.pptx" multiple style="display:none">'+
+     '<span id="fbRoErr-'+id+'" style="font-size:11.5px;color:#B91C1C"></span>'+
+   '</div>'+
+   '<div id="fbRoThumbs" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px"></div>'+
+   '<div style="display:flex;gap:8px;margin-top:9px"><button id="fbRoSend-'+id+'" style="background:#B91C1C;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-arrow-back-up"></i> ส่งกลับให้แก้</button><button id="fbRoCancel-'+id+'" style="background:#fff;color:#64748B;border:1.5px solid #E2E8F0;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ยกเลิก</button></div>'+
+ '</div>';
  const t=document.getElementById('fbRo-'+id); if(t) t.focus();
+ document.getElementById('fbRoShot-'+id).onclick=async()=>{
+   const b=document.getElementById('fbRoShot-'+id); const o=b.innerHTML; b.disabled=true; b.innerHTML='<i class="ti ti-loader-2"></i> กำลังถ่าย…';
+   try{ const f=await fbGrabScreenshot(null); FB_RO_FILES=FB_RO_FILES.concat(f).slice(0,FB_MAX); fbRoThumbs(); }
+   catch(e){ document.getElementById('fbRoErr-'+id).textContent='ถ่ายไม่สำเร็จ'; }
+   b.disabled=false; b.innerHTML=o;
+ };
+ document.getElementById('fbRoFiles-'+id).onchange=function(){
+   const picked=[...this.files]; const big=picked.find(f=>f.size>10*1024*1024);
+   if(big){ document.getElementById('fbRoErr-'+id).textContent='ไฟล์ "'+big.name+'" เกิน 10MB'; this.value=''; return; }
+   document.getElementById('fbRoErr-'+id).textContent=''; FB_RO_FILES=FB_RO_FILES.concat(picked).slice(0,FB_MAX); this.value=''; fbRoThumbs();
+ };
  document.getElementById('fbRoSend-'+id).onclick=()=>fbReopenSubmit(id);
  document.getElementById('fbRoCancel-'+id).onclick=()=>loadFeedback();
 }
 async function fbReopenSubmit(id){
  const note=((document.getElementById('fbRo-'+id)||{}).value||'').trim();
- const { error }=await sb.from('trial_feedback').update({status:'new'}).eq('id',id);
+ const send=document.getElementById('fbRoSend-'+id); if(send){ send.disabled=true; send.innerHTML='<i class="ti ti-loader-2"></i> กำลังส่ง…'; }
+ let added=[];
+ try{ added=await fbUploadAll(FB_RO_FILES); }
+ catch(e){ const er=document.getElementById('fbRoErr-'+id); if(er) er.textContent='อัปโหลดไฟล์ไม่สำเร็จ'; if(send){ send.disabled=false; send.innerHTML='<i class="ti ti-arrow-back-up"></i> ส่งกลับให้แก้'; } return; }
+ // แนบรูปใหม่ต่อท้าย attachments เดิม เพื่อให้โชว์ในการ์ด
+ const patch={status:'new'};
+ if(added.length){
+   const cur=await sb.from('trial_feedback').select('attachments').eq('id',id).maybeSingle();
+   patch.attachments=((cur.data&&cur.data.attachments)||[]).concat(added);
+ }
+ const { error }=await sb.from('trial_feedback').update(patch).eq('id',id);
  if(error){ alert('ไม่สำเร็จ: '+error.message); return; }
- await sb.from('trial_feedback_log').insert({feedback_id:id,kind:'status',from_status:'',to_status:'new',actor_name:fbReporter(),note: note?('ยังไม่โอเค: '+note):'เปิดเรื่องใหม่ (ยังไม่โอเค)'});
- loadFeedback();
+ await sb.from('trial_feedback_log').insert({feedback_id:id,kind:'status',from_status:'',to_status:'new',actor_name:fbReporter(),note: (note?('ยังไม่โอเค: '+note):'เปิดเรื่องใหม่ (ยังไม่โอเค)')+(added.length?(' [แนบ '+added.length+' ไฟล์]'):'')});
+ FB_RO_FILES=[]; loadFeedback();
 }
 async function fbSignMap(rows){
  const all=[]; rows.forEach(r=>(r.attachments||[]).forEach(a=>{ if(a&&a.path) all.push(a.path); }));
