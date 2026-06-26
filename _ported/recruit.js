@@ -16,15 +16,54 @@
 //     sendManualFlex/setMbti → เขียนกลับ/ส่ง LINE ไม่ได้ → stub + toast แจ้งยังไม่พร้อม
 
 /* ============================================================
-   RC_BACKEND — map google.script.run → Supabase edge fn hr_list (type=recruit.updated)
+   RC_BACKEND — map google.script.run → Supabase edge fn recruit_proxy (GAS recruit engine สด)
    คืน shape เดียวกับที่ JS เดิมคาดหวัง:
      recruitAdminList(opts)        → { items, stats, positions, branches }
      recruitAdminDetail(id)        → candidate detail object (flat)
      recruitGetOaName()            → string
-     mutations                     → { ok / error } stub + toast
+     recruitAdminMoveStage(...)    → ย้าย stage สด (interview/offer/rejected ส่ง LINE · hired สร้าง emp)
+     mutations อื่น (intake/flex/mbti/offer/invite/update) → ยังไม่ proxy → stub + toast
    ============================================================ */
-var RC_FN = 'hr_list';
-var RC_TYPE = 'recruit.updated';
+var RC_FN = 'recruit_proxy';
+
+/* ---- core proxy caller — รับ response ซ้อน 2 ชั้น (data.result.result) ----
+   contract:
+     สำเร็จ proxy   : res.data && res.data.ok === true
+     ผล GAS         : res.data.result.result   (list/detail) ← ซ้อน 2 ชั้น
+     error          : res.error (network/supabase) | res.data.error (gas_error) | 401
+   throw error ที่ map ภาษาไทยแล้ว → caller (.withFailureHandler) จับเป็น toast แดง */
+function rc2Invoke(action, payload) {
+  var SB = (typeof window !== 'undefined' && window.sb) ? window.sb : (typeof sb !== 'undefined' ? sb : null);
+  if (!SB) return Promise.reject(new Error('ยังไม่ได้เชื่อมต่อระบบ (sb)'));
+  return SB.functions.invoke(RC_FN, { body: { action: action, payload: payload || {} } })
+    .then(function (res) {
+      res = res || {};
+      // network / supabase-level error (รวม non-2xx เช่น 401)
+      if (res.error) {
+        var st = res.error.status || (res.error.context && res.error.context.status);
+        if (st === 401 || st === 403) throw new Error('ต้องเป็น HR / ล็อกอินก่อน');
+        throw new Error(rc2ErrMsg(res.error));
+      }
+      var data = res.data || {};
+      // proxy ตอบมาแต่ ok=false หรือมี error (เช่น gas_error / 401 ใน body)
+      if (data.ok !== true || data.error) {
+        var em = data.error || data.message || '';
+        if (data.code === 401 || /unauthor|forbidden|ไม่มีสิทธิ|401|403/i.test(String(em))) {
+          throw new Error('ต้องเป็น HR / ล็อกอินก่อน');
+        }
+        throw new Error(rc2ErrMsg(em) || 'เรียก recruit engine ไม่สำเร็จ');
+      }
+      // unwrap ซ้อน 2 ชั้น: data.result.result (fallback ถ้าโครงต่างเล็กน้อย)
+      var outer = data.result || {};
+      var inner = (outer && typeof outer === 'object' && ('result' in outer)) ? outer.result : outer;
+      return (inner == null) ? {} : inner;
+    });
+}
+function rc2ErrMsg(e) {
+  if (!e) return '';
+  if (typeof e === 'string') return e;
+  return e.message || e.error || e.msg || JSON.stringify(e);
+}
 
 function rc2ToArr(v) {
   if (!v) return [];
@@ -108,8 +147,8 @@ var _rc2Cands = [];
 var _rc2Raw = {};
 
 function rc2FetchCands() {
-  return sb.functions.invoke(RC_FN + '?type=' + encodeURIComponent(RC_TYPE)).then(function (res) {
-    var data = (res && res.data) || {};
+  return rc2Invoke('recruit.list', { opts: {} }).then(function (data) {
+    data = data || {};
     var items = rc2ToArr(data.items);
     var seen = {}; var rows = [];
     items.forEach(function (p) {
@@ -210,26 +249,31 @@ var RC_BACKEND = {
     return rc2FetchCands().then(build);
   },
 
-  // ---- mutations: เขียนกลับ/ส่ง LINE ไม่ได้บน dashboard → stub + toast ----
-  recruitAdminIntake: function () {
-    rc2NotReady('เพิ่ม candidate (manual)');
-    return Promise.resolve({ error: 'เพิ่ม candidate ยังไม่พร้อมบน dashboard (read-only)' });
+  // ---- mutations ผ่าน recruit_proxy → GAS engine สด (move/reject/hire/intake = จริง) ----
+  // หลัง action สำเร็จต้อง refresh cache → caller เรียก list ใหม่อยู่แล้ว · เคลียร์ cache กันค้าง
+  recruitAdminIntake: function (input) {
+    return rc2Invoke('recruit.intake', input || {}).then(function (inner) {
+      _rc2Cands = []; _rc2Raw = {};
+      var cid = (inner && (inner.candidate_id || inner.id)) || (typeof inner === 'string' ? inner : '');
+      return { ok: true, candidate_id: cid };
+    });
   },
-  recruitAdminMoveStage: function () {
-    rc2NotReady('เปลี่ยน stage');
-    return Promise.resolve({ error: 'เปลี่ยน stage ยังไม่พร้อมบน dashboard (read-only)' });
+  recruitAdminMoveStage: function (candidateId, newStage, notes) {
+    return rc2Invoke('recruit.move', { candidate_id: candidateId, new_stage: newStage, notes: notes || '' })
+      .then(function () { _rc2Cands = []; _rc2Raw = {}; return { ok: true }; });
   },
   recruitAdminUpdateCandidate: function () {
-    rc2NotReady('บันทึก notes / แก้ข้อมูล candidate');
-    return Promise.resolve({ error: 'บันทึกยังไม่พร้อมบน dashboard (read-only)' });
+    // update fields ยังไม่เปิดผ่าน bot (RecruitAdmin.updateCandidate assert HR session) → ทำใน GAS admin
+    rc2NotReady('แก้ข้อมูล candidate (ทำใน Recruit Workspace)');
+    return Promise.resolve({ error: 'แก้ข้อมูล candidate ทำที่ Recruit Workspace (LINE/GAS)' });
   },
-  recruitAdminReject: function () {
-    rc2NotReady('Reject candidate');
-    return Promise.resolve({ error: 'Reject ยังไม่พร้อมบน dashboard (read-only)' });
+  recruitAdminReject: function (candidateId, reason) {
+    return rc2Invoke('recruit.move', { candidate_id: candidateId, new_stage: 'rejected', notes: reason || '' })
+      .then(function () { _rc2Cands = []; _rc2Raw = {}; return { ok: true }; });
   },
-  recruitAdminHire: function () {
-    rc2NotReady('Hire (สร้าง employee + onboarding)');
-    return Promise.resolve({ error: 'Hire ยังไม่พร้อมบน dashboard (read-only)' });
+  recruitAdminHire: function (candidateId) {
+    return rc2Invoke('recruit.move', { candidate_id: candidateId, new_stage: 'hired', notes: '' })
+      .then(function () { _rc2Cands = []; _rc2Raw = {}; return { ok: true }; });
   },
   recruitAdminSendInterviewInvite: function () {
     rc2NotReady('ส่ง LINE invite สัมภาษณ์');
