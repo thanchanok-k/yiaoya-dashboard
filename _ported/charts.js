@@ -17,11 +17,13 @@
   'use strict';
 
   // ---- palette : นำด้วย teal/navy แล้วต่อด้วยสีที่แยกออกจากกันชัด (โทนเดียวกับ donut ของ JERA)
-  var PALETTE = ['#3DC5B7', '#0D2F4F', '#F59E0B', '#6366F1', '#EC4899', '#10B981', '#06B6D4', '#EF4444', '#8B5CF6', '#84CC16', '#F97316', '#14B8A6'];
+  // palette โทนอ่อน (pastel) — แยกออกจากกันได้ชัดแต่ดูนุ่ม ไม่จัดจ้าน
+  var PALETTE = ['#6FD2C6', '#7BA0C9', '#F6CB85', '#A7AAEE', '#F2AECF', '#92D9B2', '#9AD9E6', '#F4ABA6', '#C2ACEC', '#BFE08F'];
   var C = {
     navy: '#0D2F4F', teal: '#3DC5B7', tealInk: '#0F766E', tealDark: '#2BA89B',
+    tealSoft: '#6FD2C6', navySoft: '#7BA0C9', amberSoft: '#F6CB85',
     grid: '#EEF2F6', axis: '#94A3B8', muted: '#64748B', faint: '#94A3B8',
-    up: '#16A34A', down: '#DC2626', track: '#E2E8F0'
+    up: '#16A34A', down: '#DC2626', track: '#EDF1F5'
   };
 
   // ---- helpers
@@ -37,6 +39,32 @@
   function baht(v) { return '฿' + num(v).toLocaleString('th-TH', { maximumFractionDigits: 0 }); }
   function pct(v) { return (num(v) > 0 ? '+' : '') + num(v).toFixed(2) + '%'; }
   function col(i) { return PALETTE[i % PALETTE.length]; }
+
+  // ---- hover tooltip (singleton ติดที่ body · delegated listener ครั้งเดียว)
+  //   ใช้ data-tip="<html>" บน element ใดก็ได้ → โผล่ตาม mouse ทุกกราฟ
+  function ensureTip() {
+    if (typeof document === 'undefined' || document.getElementById('yc-tip')) return;
+    var t = document.createElement('div'); t.id = 'yc-tip';
+    t.style.cssText = 'position:fixed;z-index:99999;pointer-events:none;background:#0D2F4F;color:#fff;font:500 11.5px/1.45 "Noto Sans Thai",Inter,sans-serif;padding:7px 10px;border-radius:9px;box-shadow:0 8px 24px rgba(13,47,79,.28);opacity:0;transform:translateY(2px);transition:opacity .1s,transform .1s;max-width:260px';
+    document.body.appendChild(t);
+    var show = function (e) { var el = e.target.closest && e.target.closest('[data-tip]'); if (!el) return; t.innerHTML = el.getAttribute('data-tip'); t.style.opacity = '1'; t.style.transform = 'translateY(0)'; };
+    document.addEventListener('mouseover', show, { passive: true });
+    document.addEventListener('focusin', show);
+    document.addEventListener('mousemove', function (e) {
+      if (t.style.opacity === '0') return;
+      var x = e.clientX + 14, y = e.clientY + 16, w = t.offsetWidth, h = t.offsetHeight;
+      if (x + w > window.innerWidth - 6) x = e.clientX - w - 14;
+      if (y + h > window.innerHeight - 6) y = e.clientY - h - 16;
+      t.style.left = x + 'px'; t.style.top = y + 'px';
+    }, { passive: true });
+    document.addEventListener('mouseout', function (e) { if (e.target.closest && e.target.closest('[data-tip]')) { t.style.opacity = '0'; t.style.transform = 'translateY(2px)'; } }, { passive: true });
+  }
+  // สร้าง attribute data-tip (escape ปลอดภัย) — html: swatch สี + label + value
+  function tip(label, value, color) {
+    var s = (color ? '<span style=\'display:inline-block;width:8px;height:8px;border-radius:2px;background:' + color + ';margin-right:6px\'></span>' : '') +
+      '<span style=\'color:#9FE1CB\'>' + esc(label) + '</span> <b style=\'margin-left:4px\'>' + esc(value) + '</b>';
+    return ' data-tip="' + s.replace(/"/g, '&quot;') + '" style="cursor:pointer"';
+  }
 
   // ---- CSS (ฉีดครั้งเดียว)
   var CSS =
@@ -76,12 +104,26 @@
     '.yc-bars .b .nm{width:120px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;flex:none}' +
     '.yc-bars .b .tr{flex:1;height:16px;background:#F1F5F9;border-radius:5px;overflow:hidden}' +
     '.yc-bars .b .fl{height:100%;border-radius:5px}' +
-    '.yc-bars .b .vl{width:64px;text-align:right;color:#0D2F4F;font-weight:600;flex:none}';
+    '.yc-bars .b .vl{width:64px;text-align:right;color:#0D2F4F;font-weight:600;flex:none}' +
+    // ---- settings : pills (segment/period) · icon buttons · filter bar
+    '.yc-pills{display:inline-flex;gap:3px;background:#F1F5F9;border-radius:9px;padding:3px}' +
+    '.yc-pills button{border:none;background:none;font:inherit;font-size:12px;color:#64748B;padding:4px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}' +
+    '.yc-pills button.on{background:#fff;color:#0D2F4F;font-weight:600;box-shadow:0 1px 3px rgba(13,47,79,.1)}' +
+    '.yc-ib{width:28px;height:28px;border-radius:8px;border:1px solid #E2E8F0;background:#fff;color:#64748B;cursor:pointer;display:inline-grid;place-items:center;font-size:15px}' +
+    '.yc-ib:hover{border-color:#3DC5B7;color:#0F766E;background:#E6F7F5}' +
+    '.yc-filter{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:#fff;border:1px solid #E2E8F0;border-radius:13px;padding:12px 14px;margin-bottom:14px}' +
+    '.yc-filter .fld{display:flex;flex-direction:column;gap:3px}' +
+    '.yc-filter label{font-size:10.5px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:.04em}' +
+    '.yc-filter select,.yc-filter input{font:inherit;font-size:13px;color:#0F172A;border:1px solid #E2E8F0;border-radius:8px;padding:7px 10px;background:#fff;min-width:120px}' +
+    '.yc-filter select:focus,.yc-filter input:focus{outline:none;border-color:#3DC5B7}' +
+    '.yc-filter .go{background:#3DC5B7;color:#fff;border:none;border-radius:8px;padding:8px 18px;font:inherit;font-weight:700;font-size:13px;cursor:pointer}' +
+    '.yc-filter .go:hover{background:#2BA89B}';
 
   function ensureCSS() {
     if (typeof document === 'undefined' || document.getElementById('ychart-css')) return;
     var st = document.createElement('style'); st.id = 'ychart-css'; st.textContent = CSS;
     document.head.appendChild(st);
+    ensureTip();
   }
 
   // ============================================================ KPI cards
@@ -138,7 +180,7 @@
     var off = 0;
     var seg = parts.map(function (p, i) {
       var c = p.color || col(i), dash = num(p.value) / tot * CC;
-      var el = '<circle cx="100" cy="100" r="' + R + '" fill="none" stroke="' + c + '" stroke-width="' + sw + '" stroke-dasharray="' + dash + ' ' + (CC - dash) + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 100 100)"><title>' + esc(p.label) + ': ' + full(p.value) + ' (' + Math.round(num(p.value) / tot * 100) + '%)</title></circle>';
+      var el = '<circle cx="100" cy="100" r="' + R + '" fill="none" stroke="' + c + '" stroke-width="' + sw + '" stroke-dasharray="' + dash + ' ' + (CC - dash) + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 100 100)"' + tip(p.label, full(p.value) + ' (' + Math.round(num(p.value) / tot * 100) + '%)', c) + '></circle>';
       off += dash; return el;
     }).join('');
     var cv = o.centerValue != null ? esc(o.centerValue) : (o.valueFmt ? o.valueFmt(tot) : fmt(tot));
@@ -174,7 +216,7 @@
       var c = s.color || col(si);
       var pts = s.vals.map(function (v, i) { return X(i) + ',' + Y(v); }).join(' ');
       g += '<polyline points="' + pts + '" fill="none" stroke="' + c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
-      s.vals.forEach(function (v, i) { g += '<circle cx="' + X(i) + '" cy="' + Y(v) + '" r="2.6" fill="' + c + '"><title>' + esc(s.name) + ' ' + esc(labels[i]) + ': ' + full(v) + '</title></circle>'; });
+      s.vals.forEach(function (v, i) { g += '<circle cx="' + X(i) + '" cy="' + Y(v) + '" r="3.2" fill="#fff" stroke="' + c + '" stroke-width="2"' + tip(s.name + ' · ' + labels[i], full(v), c) + '></circle>'; });
     });
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto">' + g + '</svg>';
     if (series.length > 1 || o.legend) svg += legend(series.map(function (s, i) { return { label: s.name, color: s.color || col(i) }; }));
@@ -209,7 +251,7 @@
           var v = num(s.vals[i]); if (v <= 0) return;
           var bx = padL + i * bw + bw * 0.18, w = bw * 0.64;
           var y = Y(acc + v);
-          g += '<rect x="' + bx + '" y="' + y + '" width="' + w + '" height="' + HH(v) + '" fill="' + (s.color || col(si)) + '" rx="2"><title>' + esc(s.name) + ' ' + esc(lb) + ': ' + full(v) + '</title></rect>';
+          g += '<rect x="' + bx + '" y="' + y + '" width="' + w + '" height="' + HH(v) + '" fill="' + (s.color || col(si)) + '" rx="2"' + tip(s.name + ' · ' + lb, full(v), s.color || col(si)) + '></rect>';
           acc += v;
         });
       } else {
@@ -217,7 +259,7 @@
         series.forEach(function (s, si) {
           var v = num(s.vals[i]);
           var bx = padL + i * bw + bw * 0.15 + si * ew;
-          g += '<rect x="' + bx + '" y="' + Y(v) + '" width="' + (ew * 0.86) + '" height="' + HH(v) + '" fill="' + (s.color || col(si)) + '" rx="1.5"><title>' + esc(s.name) + ' ' + esc(lb) + ': ' + full(v) + '</title></rect>';
+          g += '<rect x="' + bx + '" y="' + Y(v) + '" width="' + (ew * 0.86) + '" height="' + HH(v) + '" fill="' + (s.color || col(si)) + '" rx="1.5"' + tip(s.name + ' · ' + lb, full(v), s.color || col(si)) + '></rect>';
         });
       }
     });
@@ -286,7 +328,7 @@
       var c = s.color || col(si);
       var poly = s.vals.map(function (v, i) { return pt(i, num(v) / mx).map(function (z) { return z.toFixed(1); }).join(','); }).join(' ');
       g += '<polygon points="' + poly + '" fill="' + c + '" fill-opacity=".18" stroke="' + c + '" stroke-width="2"/>';
-      s.vals.forEach(function (v, i) { var p = pt(i, num(v) / mx); g += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="2.6" fill="' + c + '"><title>' + esc(axes[i]) + ': ' + full(v) + '</title></circle>'; });
+      s.vals.forEach(function (v, i) { var p = pt(i, num(v) / mx); g += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3" fill="#fff" stroke="' + c + '" stroke-width="2"' + tip(axes[i], full(v), c) + '></circle>'; });
     });
     var svg = '<svg viewBox="0 0 260 250" style="width:100%;height:auto;max-width:300px">' + g + '</svg>';
     if (series.length > 1) svg += legend(series.map(function (s, i) { return { label: s.name, color: s.color || col(i) }; }));
@@ -321,6 +363,55 @@
     }).join('') + '</div>';
   }
 
+  // ============================================================ settings controls
+  // pills : ตัวเลือกแบบ segment (เช่น ช่วงเวลา 14/30/90 วัน) — onPick = ชื่อฟังก์ชัน global, ส่งค่า v กลับ
+  // YChart.pills({items:[{v,label}], active, onPick})
+  function pills(o) {
+    ensureCSS(); o = o || {};
+    return '<span class="yc-pills">' + (o.items || []).map(function (it) {
+      return '<button class="' + (String(it.v) === String(o.active) ? 'on' : '') + '" onclick="' + esc(o.onPick) + '(\'' + esc(it.v) + '\')">' + esc(it.label) + '</button>';
+    }).join('') + '</span>';
+  }
+  // iconBtn : ปุ่มไอคอนในหัวการ์ด (เช่น ดาวน์โหลด) — onClick = JS string
+  function iconBtn(icon, onClick, title) {
+    ensureCSS();
+    return '<button class="yc-ib" title="' + esc(title || '') + '" onclick="' + esc(onClick || '') + '"><i class="ti ' + esc(icon) + '"></i></button>';
+  }
+  // filterBar : แถบกรองแบบ JERA (สาขา/ช่วงวันที่/...) — fields ฉีด element id ให้โมดูลอ่านค่าเอง
+  // YChart.filterBar({fields:[{id,label,type:'select'|'date'|'text',options?,value?}], onSearch})
+  function filterBar(o) {
+    ensureCSS(); o = o || {};
+    var h = (o.fields || []).map(function (f) {
+      var inner;
+      if (f.type === 'select') {
+        inner = '<select id="' + esc(f.id) + '">' + (f.options || []).map(function (op) {
+          var v = op.v != null ? op.v : op, lb = op.label != null ? op.label : op;
+          return '<option value="' + esc(v) + '"' + (String(v) === String(f.value) ? ' selected' : '') + '>' + esc(lb) + '</option>';
+        }).join('') + '</select>';
+      } else {
+        inner = '<input id="' + esc(f.id) + '" type="' + esc(f.type || 'text') + '"' + (f.value != null ? ' value="' + esc(f.value) + '"' : '') + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + '>';
+      }
+      return '<div class="fld"><label>' + esc(f.label || '') + '</label>' + inner + '</div>';
+    }).join('');
+    if (o.onSearch) h += '<div class="fld"><label>&nbsp;</label><button class="go" onclick="' + esc(o.onSearch) + '"><i class="ti ti-search" style="font-size:14px;vertical-align:-2px"></i> ค้นหา</button></div>';
+    return '<div class="yc-filter">' + h + '</div>';
+  }
+  // CSV export — ดาวน์โหลดข้อมูลกราฟ (rows = array of object, cols = [{k,h}])
+  function toCSV(rows, cols) {
+    var head = cols.map(function (c) { return '"' + String(c.h).replace(/"/g, '""') + '"'; }).join(',');
+    var body = (rows || []).map(function (r) {
+      return cols.map(function (c) { var v = r[c.k]; return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\n');
+    return head + '\n' + body;
+  }
+  function download(filename, text, mime) {
+    if (typeof document === 'undefined') return;
+    var blob = new Blob(['﻿' + text], { type: (mime || 'text/csv') + ';charset=utf-8' });
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  }
+
   // ============================================================ empty state
   function empty(msg, icon) {
     return '<div class="yc-empty"><i class="ti ' + esc(icon || 'ti-chart-bar-off') + '" style="font-size:22px;display:block;margin-bottom:6px;color:#CBD5E1"></i>' + esc(msg || 'ยังไม่มีข้อมูล') + '</div>';
@@ -331,6 +422,7 @@
     esc: esc, num: num, fmt: fmt, full: full, baht: baht, pct: pct,
     kpi: kpi, kpiRow: kpiRow, card: card, grid: grid, legend: legend,
     donut: donut, line: line, bars: bars, spark: spark, gauge: gauge, radar: radar,
-    topList: topList, barList: barList, empty: empty, ensureCSS: ensureCSS
+    topList: topList, barList: barList, empty: empty, ensureCSS: ensureCSS,
+    pills: pills, iconBtn: iconBtn, filterBar: filterBar, toCSV: toCSV, download: download, tip: tip
   };
 })(typeof window !== 'undefined' ? window : this);

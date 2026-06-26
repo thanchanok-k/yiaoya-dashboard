@@ -60,6 +60,7 @@ function mountFooverview() {
     '<div class="fov-card"><div class="fov-lab"><i class="ti ti-alert-triangle"></i>รายงานปัญหา</div><div class="fov-val" id="fovK_iss">…</div></div>' +
     '<div class="fov-card"><div class="fov-lab"><i class="ti ti-clock-hour-8"></i>คำขอ OT</div><div class="fov-val" id="fovK_ot">…</div></div>' +
     '</div>' +
+    '<div id="fovBar"></div>' +
     '<div id="fovCharts" style="margin:0 0 16px"></div>' +
     '<div class="fov-tw">' +
     '<div class="fov-th"><i class="ti ti-calendar-stats"></i>กิจกรรมหน้าบ้าน 14 วันล่าสุด</div>' +
@@ -81,59 +82,124 @@ function mountFooverview() {
     });
   });
 
-  // Recent daily activity
+  // filter bar : ช่วงเวลา (pills แบบ JERA) — เปลี่ยนแล้ว re-query + re-render
+  var bar = document.getElementById('fovBar');
+  if (bar && window.YChart) {
+    bar.innerHTML = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">' +
+      '<span style="font-size:12px;color:#94A3B8;font-weight:600">ช่วงเวลา</span>' +
+      window.YChart.pills({ items: [{ v: '14', label: '14 วัน' }, { v: '30', label: '30 วัน' }, { v: '90', label: '90 วัน' }], active: String(fov_period), onPick: 'fov_setPeriod' }) +
+      '</div>';
+  }
+  fov_loadDaily(fov_period);
+}
+
+// state ช่วงเวลา (วัน) + แถวล่าสุด (ไว้ export CSV)
+var fov_period = 30;
+var fov_lastRows = [];
+
+function fov_setPeriod(v) {
+  fov_period = Number(v) || 30;
+  var bar = document.getElementById('fovBar');
+  if (bar && window.YChart) {
+    bar.querySelectorAll('.yc-pills button').forEach(function (b) { b.classList.toggle('on', b.textContent === fov_period + ' วัน'); });
+  }
+  fov_loadDaily(fov_period);
+}
+
+function fov_loadDaily(limit) {
+  var sb = fov_sb(); if (!sb || !sb.schema) return;
+  var box = document.getElementById('fovRecent');
+  if (box) box.innerHTML = '<div class="fov-empty">กำลังโหลด…</div>';
+  var chartsBox = document.getElementById('fovCharts');
+  if (chartsBox && window.YChart) chartsBox.innerHTML = window.YChart.empty('กำลังโหลด…', 'ti-loader');
   sb.schema('fo').from('fo_daily_patients')
     .select('submitted_at,count_new,count_returning,count_pt,count_pilates,count_ortho')
-    .order('submitted_at', { ascending: false }).limit(14)
+    .order('submitted_at', { ascending: false }).limit(limit)
     .then(function (res) {
-      var box = document.getElementById('fovRecent');
-      if (!box) return;
-      if (res.error) { box.innerHTML = '<div class="fov-empty">โหลดไม่ได้: ' + fov_esc(res.error.message) + '</div>'; return; }
-      var rows = res.data || [];
-      if (!rows.length) { box.innerHTML = '<div class="fov-empty">ยังไม่มีข้อมูล</div>'; return; }
-      var html = '<table><thead><tr><th>วันที่</th><th class="r">ใหม่</th><th class="r">เก่า</th><th class="r">กายภาพ</th><th class="r">Pilates</th><th class="r">ออร์โธ</th></tr></thead><tbody>';
-      rows.forEach(function (r) {
-        html += '<tr><td>' + fov_dateTH(r.submitted_at) + '</td>' +
-          '<td class="r">' + fov_fmt(r.count_new) + '</td>' +
-          '<td class="r">' + fov_fmt(r.count_returning) + '</td>' +
-          '<td class="r">' + fov_fmt(r.count_pt) + '</td>' +
-          '<td class="r">' + fov_fmt(r.count_pilates) + '</td>' +
-          '<td class="r">' + fov_fmt(r.count_ortho) + '</td></tr>';
-      });
-      html += '</tbody></table>';
-      box.innerHTML = html;
-      fov_renderCharts(rows);
+      if (box) {
+        if (res.error) { box.innerHTML = '<div class="fov-empty">โหลดไม่ได้: ' + fov_esc(res.error.message) + '</div>'; }
+        else {
+          var rows = res.data || [];
+          if (!rows.length) { box.innerHTML = '<div class="fov-empty">ยังไม่มีข้อมูล</div>'; }
+          else {
+            var html = '<table><thead><tr><th>วันที่</th><th class="r">ใหม่</th><th class="r">เก่า</th><th class="r">กายภาพ</th><th class="r">Pilates</th><th class="r">ออร์โธ</th></tr></thead><tbody>';
+            rows.forEach(function (r) {
+              html += '<tr><td>' + fov_dateTH(r.submitted_at) + '</td>' +
+                '<td class="r">' + fov_fmt(r.count_new) + '</td>' +
+                '<td class="r">' + fov_fmt(r.count_returning) + '</td>' +
+                '<td class="r">' + fov_fmt(r.count_pt) + '</td>' +
+                '<td class="r">' + fov_fmt(r.count_pilates) + '</td>' +
+                '<td class="r">' + fov_fmt(r.count_ortho) + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            box.innerHTML = html;
+          }
+        }
+      }
+      fov_lastRows = (res.data || []);
+      fov_renderCharts(fov_lastRows);
     })
     .catch(function (e) {
-      var box = document.getElementById('fovRecent');
       if (box) box.innerHTML = '<div class="fov-empty">โหลดไม่ได้: ' + fov_esc(e && e.message) + '</div>';
     });
 }
 
-// แดชบอร์ดกราฟ (JERA-style) จาก 14 วันล่าสุด — ใช้ YChart กลาง · ถ้า kit ยังไม่โหลดก็ข้าม (ไม่ error)
+// ดาวน์โหลดข้อมูลรายวันเป็น CSV (ปุ่มในหัวการ์ด — เหมือนไอคอนดาวน์โหลดของ JERA)
+function fov_dlDaily() {
+  if (!window.YChart || !fov_lastRows.length) return;
+  var csv = window.YChart.toCSV(fov_lastRows, [
+    { k: 'submitted_at', h: 'วันที่' }, { k: 'count_new', h: 'ผู้ป่วยใหม่' }, { k: 'count_returning', h: 'ผู้ป่วยเก่า' },
+    { k: 'count_pt', h: 'กายภาพบำบัด' }, { k: 'count_pilates', h: 'Pilates' }, { k: 'count_ortho', h: 'ออร์โธ' }
+  ]);
+  window.YChart.download('fo_ภาพรวม_' + fov_period + 'วัน.csv', csv);
+}
+
+// แดชบอร์ดกราฟ (JERA-style) — ใช้ YChart กลาง · ถ้า kit ยังไม่โหลดก็ข้าม (ไม่ error)
 function fov_renderCharts(rows) {
   var box = document.getElementById('fovCharts');
   if (!box || typeof window === 'undefined' || !window.YChart) return;
   var Y = window.YChart;
+  if (!rows.length) { box.innerHTML = Y.empty('ยังไม่มีข้อมูลในช่วงเวลานี้', 'ti-calendar-off'); return; }
   var asc = rows.slice().reverse(); // เก่า→ใหม่ (ซ้าย→ขวา)
   var labels = asc.map(function (r) { return fov_dateTH(r.submitted_at); });
+  var perLab = fov_period + ' วัน';
+  var dlBtn = Y.iconBtn('ti-download', 'fov_dlDaily()', 'ดาวน์โหลด CSV');
+  var sum = function (k) { return rows.reduce(function (a, r) { return a + fov_num(r[k]); }, 0); };
+  var totNew = sum('count_new'), totRet = sum('count_returning');
+
+  // KPI สรุปช่วงเวลา (รวม · % ใหม่)
+  var totVisit = totNew + totRet;
+  var kpis = Y.kpiRow([
+    { label: 'ผู้ป่วยรวม', value: Y.full(totVisit), unit: 'คน', sub: 'ในช่วง ' + perLab, icon: 'ti-users-group' },
+    { label: 'ผู้ป่วยใหม่', value: Y.full(totNew), unit: 'คน', sub: totVisit ? Math.round(totNew / totVisit * 100) + '% ของทั้งหมด' : '', icon: 'ti-user-plus' },
+    { label: 'ผู้ป่วยเก่า', value: Y.full(totRet), unit: 'คน', sub: totVisit ? Math.round(totRet / totVisit * 100) + '% ของทั้งหมด' : '', icon: 'ti-user-check' },
+    { label: 'เฉลี่ย/วัน', value: Y.full(Math.round(totVisit / asc.length)), unit: 'คน', sub: asc.length + ' วันที่มีข้อมูล', icon: 'ti-chart-bar' }
+  ]);
+
+  // line : แนวโน้มผู้ป่วยรวมรายวัน (ใหม่ + เก่า)
+  var lineCard = Y.card({
+    title: 'แนวโน้มผู้ป่วยรายวัน', icon: 'ti-chart-line', sub: perLab, action: dlBtn,
+    body: Y.line({
+      labels: labels, height: 240,
+      series: [{ name: 'ผู้ป่วยรวม', vals: asc.map(function (r) { return fov_num(r.count_new) + fov_num(r.count_returning); }), color: Y.C.tealSoft }]
+    })
+  });
 
   // stacked bar : ผู้ป่วยใหม่ vs เก่า รายวัน
   var barCard = Y.card({
-    title: 'ผู้ป่วยรายวัน', icon: 'ti-users', sub: 'ใหม่ / เก่า · 14 วัน',
+    title: 'ผู้ป่วยใหม่ / เก่า', icon: 'ti-users', sub: 'รายวัน · ' + perLab, action: dlBtn,
     body: Y.bars({
-      labels: labels, stacked: true, height: 220,
+      labels: labels, stacked: true, height: 240,
       series: [
-        { name: 'ผู้ป่วยใหม่', vals: asc.map(function (r) { return fov_num(r.count_new); }), color: Y.C.teal },
-        { name: 'ผู้ป่วยเก่า', vals: asc.map(function (r) { return fov_num(r.count_returning); }), color: Y.C.navy }
+        { name: 'ผู้ป่วยใหม่', vals: asc.map(function (r) { return fov_num(r.count_new); }), color: Y.C.tealSoft },
+        { name: 'ผู้ป่วยเก่า', vals: asc.map(function (r) { return fov_num(r.count_returning); }), color: Y.C.navySoft }
       ]
     })
   });
 
-  // donut : สัดส่วนบริการ (รวม 14 วัน)
-  var sum = function (k) { return rows.reduce(function (a, r) { return a + fov_num(r[k]); }, 0); };
+  // donut : สัดส่วนบริการ (รวมช่วงเวลา)
   var donutCard = Y.card({
-    title: 'สัดส่วนบริการ', icon: 'ti-chart-donut', sub: 'รวม 14 วัน',
+    title: 'สัดส่วนบริการ', icon: 'ti-chart-donut', sub: 'รวม ' + perLab,
     body: Y.donut([
       { label: 'กายภาพบำบัด', value: sum('count_pt') },
       { label: 'Pilates', value: sum('count_pilates') },
@@ -141,7 +207,24 @@ function fov_renderCharts(rows) {
     ], { centerLabel: 'รวม', valueFmt: Y.full })
   });
 
-  box.innerHTML = Y.grid([barCard, donutCard], { min: 320 });
+  // stacked bar : บริการรายวัน (กายภาพ/Pilates/ออร์โธ)
+  var svcCard = Y.card({
+    title: 'บริการรายวัน', icon: 'ti-stethoscope', sub: 'แยกประเภท · ' + perLab, action: dlBtn,
+    body: Y.bars({
+      labels: labels, stacked: true, height: 240,
+      series: [
+        { name: 'กายภาพบำบัด', vals: asc.map(function (r) { return fov_num(r.count_pt); }) },
+        { name: 'Pilates', vals: asc.map(function (r) { return fov_num(r.count_pilates); }) },
+        { name: 'ออร์โธ', vals: asc.map(function (r) { return fov_num(r.count_ortho); }) }
+      ]
+    })
+  });
+
+  box.innerHTML = kpis + Y.grid([lineCard, barCard, donutCard, svcCard], { min: 360 });
 }
 
-if (typeof window !== 'undefined') window.mountFooverview = mountFooverview;
+if (typeof window !== 'undefined') {
+  window.mountFooverview = mountFooverview;
+  window.fov_setPeriod = fov_setPeriod;   // pills ช่วงเวลา (inline onclick)
+  window.fov_dlDaily = fov_dlDaily;        // ปุ่มดาวน์โหลด CSV (inline onclick)
+}
