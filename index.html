@@ -971,6 +971,9 @@ function showView(v){
 /* ===== ROLE-BASED VIEWS (Wave 4) ===== */
 const ROLES=['director','accountant','hr','staff','purchasing'];
 const ROLE_TH={director:'ผู้บริหาร',accountant:'บัญชี',hr:'ทรัพยากรบุคคล',staff:'พนักงาน',purchasing:'จัดซื้อ'};
+/* label ของ access_role จริง (emp_access_role) — ใช้โชว์ chip "บทบาท" ด้านข้างให้ตรงสิทธิ์จริง (ไม่ใช่ LINE role เดิม) */
+const ACCESS_TH={director:'ผู้บริหาร',accountant:'บัญชี/จัดซื้อ',hr:'ทรัพยากรบุคคล',content:'คอนเทนต์',adops:'คนยิงแอด',clinic:'แพทย์/คลินิก',physio:'นักกายภาพ',front:'ฟรอนต์',freelance:'ฟรีแลนซ์',staff:'พนักงาน'};
+function setRoleChip(r){ const c=document.getElementById('sbRole'); if(c) c.textContent='บทบาท: '+(r==='owner'?'ผู้บริหาร (เจ้าของระบบ)':(ACCESS_TH[r]||ROLE_TH[r]||r||'พนักงาน')); }
 const ROLE_LANDING={director:'myday',accountant:'accdigest',hr:'myday',staff:'overview',purchasing:'purdash'};
 const ALL_VIEWS=Object.keys(VIEW_TITLE);
 const VIEWS_BY_ROLE={
@@ -1208,7 +1211,7 @@ async function resolveAccess(){
   const { data:{ user } } = await sb.auth.getUser();
   if(!user){ EFFECTIVE_VIEWS=null; toggleViewAs(); return; }
   const { data:st } = await sb.from('app_staff').select('role,employee_id,access_role').eq('uid',user.id).maybeSingle();
-  if(st && st.role==='owner'){ EFFECTIVE_VIEWS=null; toggleViewAs(); applyRole(currentRole); return; }
+  if(st && st.role==='owner'){ EFFECTIVE_VIEWS=null; toggleViewAs(); applyRole(currentRole); setRoleChip('owner'); return; }
   /* ตัวตนจาก LINE (anonymous session ไม่มี row ใน app_staff) → ใช้ employee_id จาก LINE หาเมนูจริง
      (เมนูเท่านั้น · ข้อมูลจริงยังตัดสินที่ RLS ตาม app_staff.role) */
   const lineEmp = (window.LINE_ID && LINE_ID.employee_id) || null;
@@ -1216,7 +1219,7 @@ async function resolveAccess(){
   let accessRole = st && st.access_role;
   if(empId){ const { data:er } = await sb.from('emp_access_role').select('access_role').eq('employee_id',empId).maybeSingle(); if(er&&er.access_role) accessRole=er.access_role; }
   /* director (ผู้บริหาร) = เห็นทุกเมนู + ใช้ view-as ได้ (เหมือน owner) — กัน owner/director ที่เข้าผ่าน LINE โดนจำกัด */
-  if(accessRole==='director'){ EFFECTIVE_VIEWS=null; toggleViewAs(); applyRole(currentRole); return; }
+  if(accessRole==='director'){ EFFECTIVE_VIEWS=null; toggleViewAs(); applyRole(currentRole); setRoleChip('director'); return; }
   const eff=new Set(['overview']);
   if(accessRole){ const { data:ra } = await sb.from('role_access').select('view_key').eq('role_key',accessRole); (ra||[]).forEach(r=>eff.add(r.view_key)); }
   const { data:aa } = await sb.from('app_access').select('view_key,employee_id,uid'); (aa||[]).forEach(r=>{ if((empId&&r.employee_id===empId)||r.uid===user.id) eff.add(r.view_key); });
@@ -1227,6 +1230,7 @@ async function resolveAccess(){
   else { EFFECTIVE_VIEWS=null; }
   toggleViewAs();
   applyRole(currentRole);
+  if(accessRole) setRoleChip(accessRole);
  }catch(e){ console.warn('resolveAccess',e); EFFECTIVE_VIEWS=null; toggleViewAs(); }
 }
 /* สวิตช์ "ดูแบบ" = เครื่องมือพรีวิวของผู้บริหารเท่านั้น — ซ่อนจากคนที่ถูกจำกัดสิทธิ์ (EFFECTIVE_VIEWS ถูกตั้ง) */
