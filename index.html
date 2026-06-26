@@ -16,7 +16,7 @@ body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,syste
 
 /* ===== SIDEBAR (ตาม HR _sidebar) ===== */
 .shell{display:flex;min-height:100vh}
-.sb{background:var(--navy);color:#fff;width:220px;position:fixed;top:0;left:0;height:100vh;z-index:40;display:flex;flex-direction:column}
+.sb{background:var(--navy);color:#fff;width:220px;position:fixed;top:0;left:0;height:100vh;z-index:40;display:flex;flex-direction:column;transition:transform .2s ease}
 .sb-brand{display:flex;align-items:center;gap:10px;padding:16px 14px;border-bottom:1px solid rgba(255,255,255,.08);flex:none}
 .sb-brand .ic{width:32px;height:32px;border-radius:8px;background:rgba(61,197,183,.2);color:var(--teal);display:grid;place-items:center;font-size:18px;flex:none}
 .sb-brand .nm{font-size:14px;font-weight:600;line-height:1.2}.sb-brand .vr{font-size:10px;color:rgba(255,255,255,.5)}
@@ -61,7 +61,10 @@ body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,syste
 .sb-urole{font-size:9.5px;color:rgba(255,255,255,.5)}
 .sb-out{display:flex;align-items:center;gap:7px;margin-top:9px;padding:7px 9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);border-radius:7px;font-size:11.5px;color:rgba(255,255,255,.8);cursor:pointer;transition:.12s}
 .sb-out:hover{background:rgba(239,68,68,.2);color:#fff}.sb-out i{font-size:15px}
-.main{flex:1;margin-left:220px;min-width:0}
+.main{flex:1;margin-left:220px;min-width:0;transition:margin-left .2s ease}
+/* desktop : ซ่อน sidebar ทั้งหมดได้ (ปุ่มในหัว) → main เต็มจอ มีที่ให้กราฟมากขึ้น */
+#app.sb-collapsed .sb{transform:translateX(-100%)}
+#app.sb-collapsed .main{margin-left:0}
 .sb-toggle{display:none;position:fixed;top:12px;left:12px;z-index:100;width:38px;height:38px;background:var(--teal);color:#04342C;border:none;border-radius:8px;cursor:pointer;font-size:19px;align-items:center;justify-content:center}
 .sb-ov{display:none;position:fixed;inset:0;background:rgba(13,47,79,.45);z-index:38}
 @media(max-width:768px){
@@ -431,6 +434,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
 
   <div class="main"><div class="wrap">
     <div class="head"><div class="greeting">
+      <button id="sbCollapse" title="ซ่อน/แสดงเมนู" style="background:rgba(255,255,255,.14);border:none;color:#fff;width:34px;height:34px;border-radius:9px;cursor:pointer;display:grid;place-items:center;font-size:19px;flex:none;margin-right:4px"><i class="ti ti-layout-sidebar-left-collapse"></i></button>
       <div class="logo"><i class="ti ti-topology-star-3"></i></div>
       <div><div class="g-eb">YIAOYA · HR PORTAL</div><h1 id="viewTitle">ภาพรวม</h1>
         <div class="sub"><span class="dot"></span><span id="upd">กำลังเชื่อมต่อ realtime…</span></div></div>
@@ -1001,7 +1005,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
 </div>
 
 <!-- YChart : ชุดกราฟ/แดชบอร์ดกลาง (JERA-style) — โหลดก่อน main module เพื่อให้ window.YChart พร้อมใช้ทุกหน้า -->
-<script src="_ported/charts.js?v=20260627b"></script>
+<script src="_ported/charts.js?v=20260627c"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
@@ -4411,6 +4415,12 @@ function start(){
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
+ // ปุ่มในหัว: มือถือ = สไลด์เมนู · จอใหญ่ = ซ่อน sidebar ทั้งหมด (main เต็มจอ)
+ if($('sbCollapse')) $('sbCollapse').onclick=()=>{
+   if(window.matchMedia('(max-width:768px)').matches){ $('sidebar').classList.toggle('open'); }
+   else{ const a=$('app'); a.classList.toggle('sb-collapsed');
+     const ic=$('sbCollapse').querySelector('i'); if(ic) ic.className='ti '+(a.classList.contains('sb-collapsed')?'ti-layout-sidebar-left-expand':'ti-layout-sidebar-left-collapse'); }
+ };
  loadAll(false);
  sb.channel('events-live').on('postgres_changes',{event:'INSERT',schema:'public',table:'events'},()=>loadAll(true)).subscribe();
  applyRole(currentRole);

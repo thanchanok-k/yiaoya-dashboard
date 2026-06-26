@@ -176,20 +176,17 @@ function fov_renderCharts(rows) {
     { label: 'เฉลี่ย/วัน', value: Y.full(Math.round(totVisit / asc.length)), unit: 'คน', sub: asc.length + ' วันที่มีข้อมูล', icon: 'ti-chart-bar' }
   ]);
 
-  // line : แนวโน้มผู้ป่วยรวมรายวัน (ใหม่ + เก่า)
-  var lineCard = Y.card({
-    title: 'แนวโน้มผู้ป่วยรายวัน', icon: 'ti-chart-line', sub: perLab, action: dlBtn,
-    body: Y.line({
-      labels: labels, height: 240,
-      series: [{ name: 'ผู้ป่วยรวม', vals: asc.map(function (r) { return fov_num(r.count_new) + fov_num(r.count_returning); }), color: Y.C.tealSoft }]
-    })
-  });
+  var svcTotals = [
+    { label: 'กายภาพบำบัด', value: sum('count_pt'), color: Y.C.tealSoft },
+    { label: 'Pilates', value: sum('count_pilates'), color: Y.C.navySoft },
+    { label: 'ออร์โธ', value: sum('count_ortho'), color: Y.C.amberSoft }
+  ];
 
-  // stacked bar : ผู้ป่วยใหม่ vs เก่า รายวัน
-  var barCard = Y.card({
-    title: 'ผู้ป่วยใหม่ / เก่า', icon: 'ti-users', sub: 'รายวัน · ' + perLab, action: dlBtn,
-    body: Y.bars({
-      labels: labels, stacked: true, height: 240,
+  // line : แนวโน้มผู้ป่วยรายวัน (ใหม่ vs เก่า — 2 เส้น)
+  var lineCard = Y.card({
+    title: 'แนวโน้มผู้ป่วยรายวัน', icon: 'ti-chart-line', sub: 'ใหม่ / เก่า · ' + perLab, action: dlBtn,
+    body: Y.line({
+      labels: labels, height: 260,
       series: [
         { name: 'ผู้ป่วยใหม่', vals: asc.map(function (r) { return fov_num(r.count_new); }), color: Y.C.tealSoft },
         { name: 'ผู้ป่วยเก่า', vals: asc.map(function (r) { return fov_num(r.count_returning); }), color: Y.C.navySoft }
@@ -197,30 +194,55 @@ function fov_renderCharts(rows) {
     })
   });
 
-  // donut : สัดส่วนบริการ (รวมช่วงเวลา)
-  var donutCard = Y.card({
-    title: 'สัดส่วนบริการ', icon: 'ti-chart-donut', sub: 'รวม ' + perLab,
-    body: Y.donut([
-      { label: 'กายภาพบำบัด', value: sum('count_pt') },
-      { label: 'Pilates', value: sum('count_pilates') },
-      { label: 'ออร์โธ', value: sum('count_ortho') }
-    ], { centerLabel: 'รวม', valueFmt: Y.full })
+  // stacked bar : ผู้ป่วยใหม่ vs เก่า รายวัน
+  var barCard = Y.card({
+    title: 'ผู้ป่วยใหม่ / เก่า', icon: 'ti-users', sub: 'รายวัน · ' + perLab, action: dlBtn,
+    body: Y.bars({
+      labels: labels, stacked: true, height: 260,
+      series: [
+        { name: 'ผู้ป่วยใหม่', vals: asc.map(function (r) { return fov_num(r.count_new); }), color: Y.C.tealSoft },
+        { name: 'ผู้ป่วยเก่า', vals: asc.map(function (r) { return fov_num(r.count_returning); }), color: Y.C.navySoft }
+      ]
+    })
   });
 
   // stacked bar : บริการรายวัน (กายภาพ/Pilates/ออร์โธ)
   var svcCard = Y.card({
     title: 'บริการรายวัน', icon: 'ti-stethoscope', sub: 'แยกประเภท · ' + perLab, action: dlBtn,
     body: Y.bars({
-      labels: labels, stacked: true, height: 240,
+      labels: labels, stacked: true, height: 260,
       series: [
-        { name: 'กายภาพบำบัด', vals: asc.map(function (r) { return fov_num(r.count_pt); }) },
-        { name: 'Pilates', vals: asc.map(function (r) { return fov_num(r.count_pilates); }) },
-        { name: 'ออร์โธ', vals: asc.map(function (r) { return fov_num(r.count_ortho); }) }
+        { name: 'กายภาพบำบัด', vals: asc.map(function (r) { return fov_num(r.count_pt); }), color: Y.C.tealSoft },
+        { name: 'Pilates', vals: asc.map(function (r) { return fov_num(r.count_pilates); }), color: Y.C.navySoft },
+        { name: 'ออร์โธ', vals: asc.map(function (r) { return fov_num(r.count_ortho); }), color: Y.C.amberSoft }
       ]
     })
   });
 
-  box.innerHTML = kpis + Y.grid([lineCard, barCard, donutCard, svcCard], { min: 360 });
+  // donut : สัดส่วนบริการ (รวมช่วงเวลา)
+  var donutCard = Y.card({
+    title: 'สัดส่วนบริการ', icon: 'ti-chart-donut', sub: 'รวม ' + perLab,
+    body: Y.donut(svcTotals, { size: 190, centerLabel: 'รวม', valueFmt: Y.full })
+  });
+
+  // gauge : สัดส่วนผู้ป่วยใหม่
+  var gaugeCard = Y.card({
+    title: 'สัดส่วนผู้ป่วยใหม่', icon: 'ti-user-plus', sub: 'ในช่วง ' + perLab,
+    body: '<div style="padding:12px 0 8px">' + Y.gauge({ value: totNew, max: totVisit || 1, label: 'ใหม่ ' + Y.full(totNew) + ' / รวม ' + Y.full(totVisit), color: Y.C.tealSoft }) + '</div>'
+  });
+
+  // barList : อันดับบริการยอดนิยม
+  var rankCard = Y.card({
+    title: 'บริการยอดนิยม', icon: 'ti-list-numbers', sub: 'รวม ' + perLab,
+    body: Y.barList(svcTotals.slice().sort(function (a, b) { return b.value - a.value; }), { valueFmt: Y.full })
+  });
+
+  // 2 คอลัมน์ตลอด (กราฟใหญ่พอดี ไม่สูงเกิน) + แถวสรุป 3 ช่อง
+  box.innerHTML = kpis + '<div style="display:flex;flex-direction:column;gap:14px">' +
+    Y.grid([lineCard, barCard], { min: 440 }) +
+    Y.grid([svcCard, donutCard], { min: 440 }) +
+    Y.grid([gaugeCard, rankCard], { min: 320 }) +
+    '</div>';
 }
 
 if (typeof window !== 'undefined') {
