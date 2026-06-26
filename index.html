@@ -3769,7 +3769,10 @@ const CN_DEPT={'กายภาพ':'#3DC5B7','กระดูกและข้
 const CN_PLAT={FB:'ti-brand-facebook',IG:'ti-brand-instagram',TikTok:'ti-brand-tiktok',LINE:'ti-brand-line'};
 const CN_TOPICS=['Engagement/Trend','Educational/Health','FAQ & Q&A','Mini-Test/Self-Check','BTS/Clinic Lifestyle','Demo/Exercise Tips','Prevention/Lifestyle','Campaign/Seasonal','Myth-busting','Reaction','influencer'];
 const CN_FORMATS=['Video (short <1 นาที)','Video (long >=1 นาที)','Photo'];
-const CN_COLS=[{k:'วางแผน',i:'ti-clipboard-list'},{k:'กำลังทำ',i:'ti-pencil'},{k:'ส่งงานแล้ว',i:'ti-upload'},{k:'ตองตรวจ',i:'ti-user-check'},{k:'เซินรีวิว',i:'ti-user-star'},{k:'แก้ไข',i:'ti-rotate'},{k:'ผ่านการรีวิว',i:'ti-circle-check'},{k:'โพสเรียบร้อย',i:'ti-send'}];
+/* CN_COLS = สถานะจริงในชีต V3 · รีวิว 2 ชั้น (ตอง→เซิน) เป็น sub-state ของ 'อยู่ระหว่างการตรวจ' ที่แดชบอร์ด track เองผ่าน content_actions */
+const CN_COLS=[{k:'วางแผน',i:'ti-clipboard-list'},{k:'กำลังทำ',i:'ti-pencil'},{k:'ส่งงานแล้ว',i:'ti-upload'},{k:'อยู่ระหว่างการตรวจ',i:'ti-user-search'},{k:'แก้ไข',i:'ti-rotate'},{k:'ผ่านการรีวิว',i:'ti-circle-check'},{k:'รอตั้งโพสต์',i:'ti-clock'},{k:'โพสเรียบร้อย',i:'ti-send'}];
+const CN_REVIEW_SUB={'ตองตรวจ':1,'เซินรีวิว':1};  /* sub-state รีวิวที่ยุบเข้า 'อยู่ระหว่างการตรวจ' บน Kanban */
+function _cnBoardCol(c){return CN_REVIEW_SUB[c]?'อยู่ระหว่างการตรวจ':c;}
 const CN_TEAM=['ตอง','ปาย','แป้ง','แฟร์','แยม','ครีม'];
 const CN_REVIEWERS=['ตอง','เซิน'];
 const CN_WHO_C={'ตอง':'#4D7C0F','ปาย':'#16A34A','ปายฝน':'#16A34A','แป้ง':'#7C3AED','แฟร์':'#0369A1','แยม':'#D4537E','ครีม':'#CA8A04','เซิน':'#185FA5'};
@@ -3953,7 +3956,7 @@ function mountCnPlan(){const w=$('cnPlanWrap');if(!w)return;
 function mountCnBoard(){const w=$('cnBoardWrap');if(!w)return;
  let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:9px 13px;background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px"><i class="ti ti-grip-vertical" style="color:#0F766E"></i><span style="font-size:12px;color:#0F766E">ลากการ์ดข้ามคอลัมน์ได้เลย · 8 สถานะตรงกับ Content planner V3</span><button data-cnact="เพิ่มการ์ดใหม่" style="margin-left:auto;background:#0F766E;color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มการ์ด</button></div>';
  h+='<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px">';
- CN_COLS.forEach(col=>{const its=cnDATA().filter(x=>x.col===col.k);
+ CN_COLS.forEach(col=>{const its=cnDATA().filter(x=>_cnBoardCol(x.col)===col.k);
   h+='<div class="cnCol" style="flex:0 0 210px;min-width:210px;background:#F1F5F9;border-radius:12px;padding:8px">';
   h+='<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);padding:4px 6px 8px"><i class="ti '+col.i+'"></i>'+esc(col.k)+'<span style="margin-left:auto;font-size:10px;background:#fff;color:var(--text-muted,#64748B);border-radius:8px;padding:1px 7px">'+its.length+'</span></div>';
   h+='<div class="cnColBody" data-col="'+esc(col.k)+'" style="min-height:40px;display:flex;flex-direction:column;gap:7px">';
@@ -3998,19 +4001,19 @@ function cnAct(piece_id,action,to_status,from_status,comment,btn){
  }catch(e){ reEnable(); _cnToast('ผิดพลาด'); }
 }
 function mountCnReview(){var w=$('cnReviewWrap');if(!w)return;
- var tong=cnDATA().filter(function(x){return x.col==='ตองตรวจ';}),zern=cnDATA().filter(function(x){return x.col==='เซินรีวิว';}),fix=cnDATA().filter(function(x){return x.col==='แก้ไข';}),sent=cnDATA().filter(function(x){return x.col==='ส่งงานแล้ว';});
+ var tong=cnDATA().filter(function(x){return x.col==='อยู่ระหว่างการตรวจ'||x.col==='ตองตรวจ';}),zern=cnDATA().filter(function(x){return x.col==='เซินรีวิว';}),fix=cnDATA().filter(function(x){return x.col==='แก้ไข';}),sent=cnDATA().filter(function(x){return x.col==='ส่งงานแล้ว';});
  var revBlock=function(it,toApprove){return '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px">'+_cnActBtn(it,'อนุมัติ · ส่งต่อ','ti-check','ok','review_approve',toApprove)+_cnActBtn(it,'ขอแก้','ti-message-circle','warn','review_request_change','แก้ไข')+_cnActBtn(it,'ตีกลับ','ti-x','danger','review_reject','แก้ไข')+'</div><textarea data-revc="'+esc(String(it.id))+'" placeholder="คอมเมนต์ (บันทึก audit)" style="width:100%;padding:8px 10px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;min-height:42px"></textarea>';};
  var h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFF7ED;border-radius:10px;border:1px solid #FCD9A8"><i class="ti ti-shield-check" style="color:#B45309;font-size:18px"></i><span style="font-size:12px;color:#92400E">รีวิวตามจริง 2 ชั้น: <b>ตองตรวจ → เซินรีวิว</b> · งานการแพทย์เพิ่ม fact-check แพทย์ · ทุกการกดบันทึก audit ลง Supabase</span></div>';
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:6px 0 10px"><i class="ti ti-inbox" style="color:#64748B"></i> ส่งงานแล้ว · รอเข้ารีวิว ('+sent.length+')</div>'+(sent.map(function(it){return _cnCard(it,_cnActBtn(it,'รับเข้ารีวิว (ตอง)','ti-arrow-right','ok','move','ตองตรวจ'));}).join('')||emptyCard('ไม่มีงานรอ'));
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:6px 0 10px"><i class="ti ti-inbox" style="color:#64748B"></i> ส่งงานแล้ว · รอเข้ารีวิว ('+sent.length+')</div>'+(sent.map(function(it){return _cnCard(it,_cnActBtn(it,'รับเข้ารีวิว (ตอง)','ti-arrow-right','ok','move','อยู่ระหว่างการตรวจ'));}).join('')||emptyCard('ไม่มีงานรอ'));
  h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-user-check" style="color:#4D7C0F"></i> ชั้น 1 · ตองตรวจ ('+tong.length+')</div>'+(tong.map(function(it){return _cnCard(it,revBlock(it,'เซินรีวิว'));}).join('')||emptyCard('ไม่มีงาน'));
  h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-user-star" style="color:#185FA5"></i> ชั้น 2 · เซินรีวิว ('+zern.length+')</div>'+(zern.map(function(it){return _cnCard(it,revBlock(it,'ผ่านการรีวิว'));}).join('')||emptyCard('ไม่มีงาน'));
- h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-rotate" style="color:#64748B"></i> แก้ไข ('+fix.length+')</div>'+(fix.map(function(it){return _cnCard(it,_cnActBtn(it,'ส่งรีวิวอีกครั้ง','ti-send','ok','submit','ตองตรวจ'));}).join('')||emptyCard('ไม่มีงานรอแก้'));
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 10px"><i class="ti ti-rotate" style="color:#64748B"></i> แก้ไข ('+fix.length+')</div>'+(fix.map(function(it){return _cnCard(it,_cnActBtn(it,'ส่งรีวิวอีกครั้ง','ti-send','ok','submit','อยู่ระหว่างการตรวจ'));}).join('')||emptyCard('ไม่มีงานรอแก้'));
  w.innerHTML=h;_cnBind(w);
  w.querySelectorAll('[data-cnrev]').forEach(function(b){b.onclick=function(e){e.stopPropagation();var pid=b.dataset.piece;var ta=w.querySelector('textarea[data-revc="'+pid+'"]');cnAct(pid,b.dataset.action,b.dataset.to,b.dataset.from,ta?ta.value:'',b);};});
  _cnSetCt('cnreview',tong.length+zern.length);}
 
 function mountCnQueue(){const w=$('cnQueueWrap');if(!w)return;
- const appr=cnDATA().filter(it=>it.col==='ผ่านการรีวิว');const pub=cnDATA().filter(it=>it.col==='โพสเรียบร้อย');
+ const appr=cnDATA().filter(it=>it.col==='ผ่านการรีวิว'||it.col==='รอตั้งโพสต์');const pub=cnDATA().filter(it=>it.col==='โพสเรียบร้อย');
  let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#EFF6FF;border-radius:10px;border:1px solid #BFDBFE"><i class="ti ti-hand-stop" style="color:#1D4ED8"></i><span style="font-size:12px;color:#1E40AF">Confirm-mode: โพสต์ต้องกดยืนยันทุกครั้ง · อย่าลืมอัปลิงก์โพสต์จริงกลับ planner (FB/IG/TT/LINE)</span></div>';
  h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px"><i class="ti ti-circle-check" style="color:#047857"></i> ผ่านการรีวิว · รอโพสต์ ('+appr.length+')</div>'+(appr.map(it=>_cnCard(it,'<div style="display:flex;gap:7px;flex-wrap:wrap">'+_cnBtn('ตั้งเวลาโพสต์','ti-clock','')+_cnBtn('โพสต์เลย','ti-send','ok')+'</div>')).join('')||emptyCard('ยังไม่มีงานพร้อมโพสต์'));
  h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin:16px 0 10px"><i class="ti ti-checks" style="color:#64748B"></i> โพสเรียบร้อย ('+pub.length+')</div>'+(pub.map(it=>_cnCard(it,'<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">'+Object.keys(CN_PLAT).map(p=>'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti '+CN_PLAT[p]+'"></i></span>').join('')+'<span style="font-size:12px;color:var(--text-muted,#64748B)">Engagement '+(it.eng!=null?it.eng+'%':'-')+'</span></div>')).join('')||emptyCard('ยังไม่มีโพสต์'));
