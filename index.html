@@ -76,7 +76,9 @@ body{font-family:'Noto Sans Thai','Inter',-apple-system,BlinkMacSystemFont,syste
 }
 .view{display:none}.view.active{display:block}
 
-.wrap{padding:24px 28px 60px;max-width:1280px;margin:0 auto}
+.wrap{padding:24px 28px 60px;max-width:1280px;margin:0 auto;transition:max-width .2s ease}
+/* ซ่อน sidebar แล้ว เนื้อหาขยายกว้างตาม (ใช้พื้นที่เต็มจอ) */
+#app.sb-collapsed .wrap{max-width:1680px}
 @media(max-width:768px){.wrap{padding:60px 16px 40px}}
 
 /* ===== GREETING HEADER ===== */
@@ -3921,7 +3923,14 @@ let CN_UPLOADS=[];
 let CN_LIVE=null;
 function cnGet(key,mock){ var a=CN_LIVE&&CN_LIVE[key]; return (a&&a.length)?a:mock; }
 function cnNorm(p){ p.col=p.status||p.col; if(p.publish_date)p.date=String(p.publish_date).slice(0,10); if(p.eng!=null)p.eng=+p.eng; return p; }
-function cnDATA(){ return cnGet('pieces', CN_DATA_MOCK); }
+let CN_TRELLO=null; /* การ์ดจาก Trello (เสริมจาก V3) · โหลดผ่าน cnLoadTrello() */
+function cnDATA(){
+  if(CN_TRELLO&&CN_TRELLO.length){ /* มีของจริงจาก Trello → ทิ้ง mock ไม่ให้ปน · V3(จริง)+Trello */
+    var v3=(CN_LIVE&&CN_LIVE.pieces&&CN_LIVE.pieces.length)?CN_LIVE.pieces.filter(function(p){return p.source!=='trello';}):[];
+    return v3.concat(CN_TRELLO);
+  }
+  return cnGet('pieces', CN_DATA_MOCK);
+}
 function cnPROMO(){ var a=CN_LIVE&&CN_LIVE.promo; if(a&&a.length) return a.map(function(p){return {id:p.promo_id,n:p.name,dept:p.dept,price:+p.price||0,tier:p.tier||'',target:+p.target_cases||0,est:+p.est_revenue||0,lead:(p.is_lead===true||p.is_lead==='true'),st:p.approval_status||''};}); return CN_PROMO_MOCK; }
 function cnCHECKIN(){ var a=CN_LIVE&&CN_LIVE.checkin; if(a&&a.length){ var latest=null; a.forEach(function(x){ if(!latest||String(x.log_date)>String(latest))latest=x.log_date; }); return a.filter(function(x){return x.log_date===latest;}).map(function(x){return {who:x.who,inT:(x.checkin_time||'-'),punc:(x.punctuality||''),plan:(x.plan||''),eod:(+x.eod_pct||0)};}); } return CN_CHECKIN_MOCK; }
 function cnKPI(){ var a=CN_LIVE&&CN_LIVE.kpi; if(a&&a.length) return a.map(function(k){return {who:k.who,o:+k.output||0,w:+k.weighted||0,d:+k.discipline||0,q:+k.quality||0,p:+k.platform||0};}); return CN_KPI_MOCK; }
@@ -3930,6 +3939,12 @@ function cnBRIEF(){ var a=CN_LIVE&&CN_LIVE.brief; if(a&&a.length){ var s2=a.slic
 function cnLoadLive(){ try{ if(typeof sb==='undefined')return; }catch(e){ return; }
   sb.functions.invoke('content_list',{body:{}}).then(function(r){ if(r&&r.data&&!r.error){ CN_LIVE=r.data; try{if(CN_LIVE.pieces)CN_LIVE.pieces.forEach(cnNorm);}catch(e){console.warn('content cnNorm failed',e);} try{if(CN_LIVE.pieces&&CN_LIVE.status_overrides)CN_LIVE.pieces.forEach(function(p){var o=CN_LIVE.status_overrides[p.id];if(o){p.status=o;p.col=o;}});}catch(e){}
     [mountCnBrief,mountCnCheckin,mountCnPlan,mountCnBoard,mountCnDraft,mountCnReview,mountCnQueue,mountCnCampaign,mountCnKpi,mountCnMonthly,mountCnHighlight,mountCnInflu,mountCnPerf,mountCnSync].forEach(function(f){try{f();}catch(e){}}); } }).catch(function(){}); }
+function cnLoadTrello(){ try{ if(typeof sb==='undefined')return; }catch(e){ return; } /* ดึงบอร์ด Trello สด → เสริมการ์ดเข้ากระดานผลิต */
+  sb.functions.invoke('content_trello',{body:{}}).then(function(r){ if(r&&r.data&&!r.error&&Array.isArray(r.data.pieces)){
+    try{r.data.pieces.forEach(cnNorm);}catch(e){}
+    CN_TRELLO=r.data.pieces;
+    [mountCnBoard,mountCnPlan,mountCnReview,mountCnQueue,mountCnHighlight,mountCnPerf].forEach(function(f){try{f();}catch(e){}});
+  } else if(r&&r.data&&r.data.error){ console.warn('content_trello',r.data.error); } }).catch(function(){}); }
 
 function _cnToast(m){let t=$('cnToast');if(!t){t=document.createElement('div');t.id='cnToast';t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0D2F4F;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 8px 24px rgba(13,47,79,.3);max-width:90vw;transition:opacity .2s';document.body.appendChild(t);}t.textContent=m;t.style.opacity='1';clearTimeout(t._h);t._h=setTimeout(()=>{t.style.opacity='0';},2400);}
 function _cnDept(d){const c=CN_DEPT[d]||'#64748B';return '<span style="font-size:10px;font-weight:700;color:'+c+';background:'+c+'1a;padding:2px 8px;border-radius:10px">'+esc(d)+'</span>';}
@@ -4002,6 +4017,16 @@ function cnPiece(id){
  var links=_cnLinks(it);
  if(links)h+='<div style="margin-top:13px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">ลิงก์โพสต์</div><div style="display:flex;gap:13px;font-size:20px">'+links+'</div></div>';
  if(it.caption)h+='<div style="margin-top:13px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">Caption</div><div style="font-size:13px;color:var(--text,#0F172A);white-space:pre-wrap;background:#F8FAFC;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:10px 12px;line-height:1.5">'+esc(it.caption)+'</div></div>';
+ /* ===== Trello: เนื้อหา + คอมเมนต์ทั้งหมด ===== */
+ if(it.source==='trello'){
+   h+='<div style="margin-top:13px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:800;color:#0079BF;background:#E4F0F6;border:1px solid #B6D9EA;padding:2px 8px;border-radius:8px"><i class="ti ti-brand-trello"></i> Trello</span>'+(it.url?'<a href="'+esc(it.url)+'" target="_blank" rel="noopener" style="font-size:12px;color:#0079BF;text-decoration:none">เปิดการ์ดใน Trello <i class="ti ti-external-link"></i></a>':'')+'</div>';
+ }
+ if(it.desc)h+='<div style="margin-top:13px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">เนื้อหา</div><div style="font-size:13px;color:var(--text,#0F172A);white-space:pre-wrap;background:#F8FAFC;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:10px 12px;line-height:1.5">'+esc(it.desc)+'</div></div>';
+ if(it.comments&&it.comments.length){
+   h+='<div style="margin-top:13px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px"><i class="ti ti-message-2"></i> คอมเมนต์ ('+it.comments.length+')</div>';
+   h+=it.comments.map(function(cm){var nm=esc(cm.by||'-');var dt=cm.at?esc(String(cm.at).slice(0,10)):'';return '<div style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:9px 11px;margin-bottom:7px"><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:4px"><span style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F)">'+nm+'</span><span style="font-size:11px;color:var(--text-muted,#64748B)">'+dt+'</span></div><div style="font-size:13px;color:var(--text,#0F172A);white-space:pre-wrap;line-height:1.5">'+esc(cm.text||'')+'</div></div>';}).join('');
+   h+='</div>';
+ }
  _cnModal(title,h);
 }
 function cnPerson(who){
@@ -4089,7 +4114,7 @@ function mountCnBoard(){const w=$('cnBoardWrap');if(!w)return;
   h+='<div class="cnCol" style="flex:0 0 210px;min-width:210px;background:#F1F5F9;border-radius:12px;padding:8px">';
   h+='<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);padding:4px 6px 8px"><i class="ti '+col.i+'"></i>'+esc(col.k)+'<span style="margin-left:auto;font-size:10px;background:#fff;color:var(--text-muted,#64748B);border-radius:8px;padding:1px 7px">'+its.length+'</span></div>';
   h+='<div class="cnColBody" data-col="'+esc(col.k)+'" style="min-height:40px;display:flex;flex-direction:column;gap:7px">';
-  its.forEach(function(it){h+='<div class="cnKan" draggable="true" data-id="'+esc(String(it.id))+'" data-cnpiece="'+esc(String(it.id))+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)"><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.35;margin-bottom:6px">'+esc(it.title)+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+_cnDept(it.dept)+_cnWhoLink(it.who)+'</div></div>';});
+  its.forEach(function(it){h+='<div class="cnKan" draggable="true" data-id="'+esc(String(it.id))+'" data-cnpiece="'+esc(String(it.id))+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)"><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.35;margin-bottom:6px">'+esc(it.title)+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+_cnDept(it.dept)+_cnWhoLink(it.who)+(it.source==='trello'?'<span title="จาก Trello" style="font-size:9px;font-weight:700;color:#0079BF;background:#E4F0F6;padding:1px 6px;border-radius:7px"><i class="ti ti-brand-trello"></i></span>':'')+(it.comment_count?'<span title="คอมเมนต์" style="font-size:10px;color:var(--text-muted,#64748B);display:inline-flex;align-items:center;gap:2px"><i class="ti ti-message-2"></i>'+it.comment_count+'</span>':'')+'</div></div>';});
   h+='</div></div>';});
  h+='</div>';
  w.innerHTML=h;_cnBind(w);_cnSetCt('cnboard',all.length);
@@ -4411,7 +4436,7 @@ function start(){
  renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
  renderBankTabs(); $('bkPeriod').value=_curMonth(); $('bkGen').onclick=bkGenerate; $('bkCsv').onclick=bkDownloadCsv; loadBankHistory();
  if($('rcDate')&&!$('rcDate').value)$('rcDate').value=new Date().toISOString().slice(0,10); $('rcGen').onclick=rcGenerate;
- mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountPromo();mountDept();mountMkt();mountHub360();mountExpansion();mountPtAudit();mountAiHQ();mountPeopleAi();mountCnPlan();mountCnBoard();mountCnDraft();mountCnReview();mountCnQueue();mountCnCampaign();mountCnKpi();mountCnMonthly();mountCnHighlight();mountCnBrief();mountCnCheckin();mountCnInflu();mountCnPerf();mountCnSync();cnLoadLive();cnLoadHR();
+ mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountPromo();mountDept();mountMkt();mountHub360();mountExpansion();mountPtAudit();mountAiHQ();mountPeopleAi();mountCnPlan();mountCnBoard();mountCnDraft();mountCnReview();mountCnQueue();mountCnCampaign();mountCnKpi();mountCnMonthly();mountCnHighlight();mountCnBrief();mountCnCheckin();mountCnInflu();mountCnPerf();mountCnSync();cnLoadLive();cnLoadTrello();cnLoadHR();
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');
