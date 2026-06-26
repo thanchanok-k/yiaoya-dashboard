@@ -4218,13 +4218,11 @@ $('toLogin').onclick=(e)=>{ e.preventDefault(); regHide(); };
 
 let _regCandidate=null; // ผลลัพธ์จาก register_match ที่ยืนยันแล้ว
 
-/* สมัครจากหน้า login = ยังไม่ login → edge fn line_login ต้องมี session (gate authenticated)
-   ใช้ anonymous sign-in ก่อน (กลไกเดียวกับ login.html) · ต้องเปิด Anonymous ใน Supabase Auth */
+/* สมัครจากหน้า login = ยังไม่มีบัญชี · backend เปิด register_* เป็น public action แล้ว
+   จึงเรียกได้ตรง ๆ ผ่าน anon key — ไม่บังคับมี session · ถ้าเปิด anonymous ไว้ก็ใช้ได้ (best-effort) */
 async function _ensureAnonSession(){
- const {data}=await sb.auth.getSession();
- if(data&&data.session) return;
- const {error}=await sb.auth.signInAnonymously();
- if(error) throw new Error('ระบบยังไม่เปิดให้สมัครจากเว็บ (Anonymous sign-in) — แจ้ง HR/แอดมินค่ะ');
+ try{ const {data}=await sb.auth.getSession(); if(data&&data.session) return;
+   await sb.auth.signInAnonymously(); }catch(_){ /* anonymous ปิดอยู่ก็ไม่เป็นไร — backend รับ public */ }
 }
 
 function _regReadForm(){

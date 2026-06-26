@@ -39,7 +39,8 @@ async function run(){
     if(!liff.isLoggedIn()){ liff.login(); return; }
     const token = liff.getAccessToken();
     let { data:sess } = await sb.auth.getSession();
-    if(!sess.session){ const r=await sb.auth.signInAnonymously(); if(r.error){ stopSpin(); msg('ระบบยังไม่เปิด anonymous sign-in<br><small>Supabase → Auth → อนุญาต anonymous</small>'); return; } }
+    // verify/request เป็น public action แล้ว (backend) — ไม่บังคับมี session · ถ้าเปิด anonymous ไว้ก็ใช้ (best-effort)
+    if(!sess.session){ try{ await sb.auth.signInAnonymously(); }catch(_){} }
     const { data, error } = await sb.functions.invoke('line_login',{ body:{ action:'verify', access_token: token } });
     if(error||data?.error){ stopSpin(); msg('ยืนยันตัวตนไม่สำเร็จ: '+(data?.error||error.message)); return; }
     localStorage.setItem('yy_line_id', JSON.stringify({ uid:data.uid, display_name:data.display_name, employee_name:data.employee_name||data.display_name, employee_id:data.employee_id||'', role:data.role||'staff', verified:data.verified }));
