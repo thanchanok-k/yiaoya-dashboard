@@ -417,6 +417,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-label">ระบบ</div>
       <div class="sb-item" data-view="events"><i class="ti ti-activity"></i>เหตุการณ์<span class="ct" id="ct-events"></span></div>
       <div class="sb-item" data-view="ecosystem"><i class="ti ti-affiliate"></i>สถานะระบบ</div>
+      <div class="sb-item" data-view="feedback"><i class="ti ti-message-2-star"></i>ความเห็น/ทดลองใช้<span class="ct" id="ct-feedback"></span></div>
     </nav>
     <div class="sb-foot">
       <div class="sb-user"><div class="sb-av" id="sbAv">AD</div>
@@ -947,8 +948,45 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sec"><span class="sec-bar"></span>สถานะการเชื่อมต่อระบบ<span class="sec-c" id="sysCount2"></span></div>
       <div class="sys-wrap card" id="integration2"></div>
     </section>
+    <section class="view" data-view="feedback">
+      <div class="sec"><span class="sec-bar"></span>ความเห็น / ช่วงทดลองใช้<span class="sec-c"><span class="dot"></span>realtime</span></div>
+      <div class="card" style="padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:12.5px;color:var(--text-muted,#64748B);line-height:1.7">
+          ทีมส่งความเห็นได้จากปุ่ม <b style="color:var(--teal,#3DC5B7)"><i class="ti ti-message-2"></i> ส่งความเห็น</b> มุมขวาล่างทุกหน้า ·
+          วงจร: ใหม่ &rarr; กำลังแก้ &rarr; แก้แล้ว(รอเทส) &rarr; ใช้ได้ ·
+          เมื่อขึ้น <b>แก้แล้ว</b> ให้ทดสอบแล้วกด <b>โอเค ใช้ได้แล้ว</b> หรือ <b>ยังไม่ใช่</b>
+        </div>
+      </div>
+      <div id="fbFilters" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px"></div>
+      <div id="fbList"></div>
+    </section>
   </div></div>
  </div>
+</div>
+
+<!-- ===== Trial Feedback: ปุ่มลอย + ฟอร์มส่งความเห็น ===== -->
+<button id="fbFab" style="display:none;position:fixed;right:20px;bottom:20px;z-index:9000;background:var(--teal,#3DC5B7);color:#fff;border:none;border-radius:30px;padding:12px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 8px 22px rgba(13,47,79,.28);display:none;align-items:center;gap:8px"><i class="ti ti-message-2"></i> ส่งความเห็น</button>
+<div id="fbModal" style="display:none;position:fixed;inset:0;z-index:9001;background:rgba(13,47,79,.45);align-items:flex-end;justify-content:center">
+  <div style="background:#fff;width:100%;max-width:460px;border-radius:18px 18px 0 0;padding:20px;box-shadow:0 -8px 30px rgba(0,0,0,.2);max-height:90vh;overflow:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-weight:800;color:var(--navy,#0D2F4F);font-size:16px"><i class="ti ti-message-2"></i> ส่งความเห็น</div>
+      <button id="fbClose" style="background:none;border:none;font-size:24px;cursor:pointer;color:#94A3B8;line-height:1">×</button>
+    </div>
+    <div id="fbCtx" style="font-size:12px;color:var(--text-muted,#64748B);margin-bottom:14px"></div>
+    <div style="font-size:12.5px;font-weight:600;color:var(--navy,#0D2F4F);margin-bottom:6px">ประเภท</div>
+    <div id="fbCat" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px"></div>
+    <textarea id="fbMsg" rows="4" placeholder="พิมพ์ความเห็น เช่น ตัวเลขนี้ไม่ตรง / อยากให้เพิ่ม... / กดแล้วไม่ทำงาน" style="width:100%;box-sizing:border-box;border:1.5px solid #E2E8F0;border-radius:11px;padding:11px 13px;font-size:14px;font-family:inherit;resize:vertical"></textarea>
+    <div style="font-size:12.5px;font-weight:600;color:var(--navy,#0D2F4F);margin:13px 0 6px">แท็ก <span style="font-weight:400;color:#94A3B8">(ไม่บังคับ · คั่นด้วยจุลภาค เช่น ราคา, ด่วน)</span></div>
+    <input id="fbTags" type="text" placeholder="หน้านี้ถูกแท็กให้อัตโนมัติแล้ว · เพิ่มแท็กอื่นได้" style="width:100%;box-sizing:border-box;border:1.5px solid #E2E8F0;border-radius:11px;padding:10px 13px;font-size:13.5px;font-family:inherit">
+    <div style="display:flex;align-items:center;gap:10px;margin:13px 0 4px">
+      <label for="fbFiles" style="display:inline-flex;align-items:center;gap:7px;border:1.5px dashed #CBD5E1;border-radius:11px;padding:9px 14px;font-size:13px;font-weight:600;color:#475569;cursor:pointer"><i class="ti ti-paperclip"></i> แนบรูป (สูงสุด 4)</label>
+      <input id="fbFiles" type="file" accept="image/*" multiple style="display:none">
+      <span id="fbFilesHint" style="font-size:12px;color:#94A3B8"></span>
+    </div>
+    <div id="fbThumbs" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px"></div>
+    <div id="fbErr" style="font-size:12px;color:#B91C1C;min-height:16px;margin:6px 2px"></div>
+    <button id="fbSend" style="width:100%;background:var(--navy,#0D2F4F);color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">ส่งความเห็น</button>
+  </div>
 </div>
 
 <script type="module">
@@ -959,6 +997,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',hiring:'สัญญาณการจ้างงาน',accessmgr:'จัดการสิทธิ์พนักงาน',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',fosales:'ยอดขายหน้าร้าน',roomutil:'การใช้ห้อง · คอร์สค้าง · คอขวด',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',payterms:'สัญญา/ค่าจ้างรายคน',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',peopleai:'วิเคราะห์คน · AI',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',ptaudit:'ทีมกายภาพ · ใช้เครื่อง',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',promo:'ออกแบบโปรโมชั่น',cnplan:'ปฏิทินคอนเทนต์',cnboard:'กระดานผลิต (Kanban)',cndraft:'สร้าง · ดราฟต์ · อัปโหลด',cnreview:'คิวรีวิว · อนุมัติ',cnqueue:'คิวโพสต์',cncampaign:'แคมเปญ · โปรโมชั่น',cnkpi:'KPI ทีมคอนเทนต์',cnmonthly:'สรุปผลงานรายเดือน',cnhighlight:'คอนเทนต์ Highlight',cnbrief:'Morning Brief',cncheckin:'Check-in / EOD',cninflu:'Influencer DB',cnperf:'Performance · รายโพสต์',cnsync:'สถานะเชื่อมต่อ · Sync',dept:'รายได้ตามแผนก',aisettings:'AI Settings · ตั้งค่าออโต้',aiapprovals:'AI Approvals · คิวอนุมัติ',equipment:'ยืม-คืนอุปกรณ์',compliance:'Compliance ประจำปี',scorecard:'สกอร์การ์ดหมอ',welfare:'สวัสดิการพนักงาน',dfschedule:'ตาราง DF หมอ',legal:'แฟ้มคดี/กฎหมาย',contracts:'สัญญาจ้าง',leadmkt:'Lead & การตลาด',leadpipe:'Lead Pipeline (FO)',myday:'ศูนย์ทำงานวันนี้',dailyclose:'ยอดปิดจบวัน'};
 VIEW_TITLE.accessmgr='จัดการสิทธิ์พนักงาน';
+VIEW_TITLE.feedback='ความเห็น/ทดลองใช้';
 
 function showView(v){
  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
@@ -967,6 +1006,7 @@ function showView(v){
  $('sidebar').classList.remove('open');
  if(v==='ptaudit')loadAud('ptaWrap');
  if(v==='peopleai'&&$('paAudWrap'))loadAud('paAudWrap');
+ if(v==='feedback')loadFeedback();
  window.scrollTo(0,0);
 }
 
@@ -1045,7 +1085,7 @@ const NAV_TREE=[
    {label:'ลับ · HQ (เฉพาะผู้บริหาร)', views:['legal','contracts','leadpipe']},
  /* AI Operator — ตั้งค่า toggle/automation + คิวอนุมัติงาน AI (control plane 30_ai_operator.sql) */
  {label:'AI Operator', views:['aisettings','aiapprovals']}, /* accessmgr ย้ายไปกลุ่มทะเบียนพนักงาน — HR ไม่เห็นเครื่องมือ AI */
- {label:'ระบบ', views:['events','ecosystem']},
+ {label:'ระบบ', views:['events','ecosystem','feedback']},
 ];
 function navAllViews(){ const a=[]; NAV_TREE.forEach(d=>{ if(d.subs)d.subs.forEach(s=>a.push(...s.views)); else a.push(...(d.views||[])); }); return a; }
 function buildNav(){
@@ -4276,7 +4316,7 @@ function mountCnSync(){
 }
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
- buildNav(); navAudit(); navAuditRegistry();
+ buildNav(); navAudit(); navAuditRegistry(); fbInit();
  sb.auth.getUser().then(({data})=>{
    const e=(data&&data.user&&data.user.email)||'admin';
    // ลำดับความสำคัญ: ตัวตนจาก LINE (ถ้าล็อกอินผ่าน LINE) → ROLE_MAP อีเมล → director
@@ -4457,6 +4497,142 @@ async function _regCommit(f,employee_id,want_update){
   if(btn)btn.disabled=false; $('regMatchBtn').disabled=false;
  }
 }
+/* ===== Trial Feedback (ช่วงทดลองใช้) ===== */
+/* [key, label, ti-icon] — line art เท่านั้น ไม่ใช้ emoji */
+const FB_CATS=[['suggest','เสนอแนะ','ti-bulb'],['data','ข้อมูลไม่ตรง','ti-chart-bar'],['bug','ใช้งานไม่ได้','ti-bug'],['other','อื่น ๆ','ti-note']];
+const FB_CAT_LABEL=Object.fromEntries(FB_CATS.map(c=>[c[0],c[1]]));
+const FB_CAT_ICON=Object.fromEntries(FB_CATS.map(c=>[c[0],c[2]]));
+/* status: [label, bg, fg, ti-icon] */
+const FB_STAT={new:['ใหม่','#EFF6FF','#1D4ED8','ti-circle-dot'],in_progress:['กำลังแก้','#FEF3C7','#B45309','ti-tool'],fixed:['แก้แล้ว · รอเทส','#FEF9C3','#A16207','ti-clock-check'],verified:['ใช้ได้','#DCFCE7','#15803D','ti-circle-check']};
+let FB_CAT='suggest', FB_FILTER='open', FB_PAGE='', FB_FILES=[];
+function fbReporter(){ return ($('sbName')&&$('sbName').textContent)||'ผู้ใช้'; }
+function fbRenderThumbs(){
+ $('fbThumbs').innerHTML=FB_FILES.map((f,i)=>'<div style="position:relative"><img src="'+URL.createObjectURL(f)+'" style="width:60px;height:60px;object-fit:cover;border-radius:9px;border:1px solid #E2E8F0"><button data-i="'+i+'" class="fbThumbX" style="position:absolute;top:-6px;right:-6px;background:#B91C1C;color:#fff;border:none;border-radius:50%;width:19px;height:19px;font-size:12px;line-height:1;cursor:pointer">×</button></div>').join('');
+ $('fbThumbs').querySelectorAll('.fbThumbX').forEach(b=>b.onclick=()=>{FB_FILES.splice(+b.dataset.i,1);fbRenderThumbs();$('fbFilesHint').textContent=FB_FILES.length?FB_FILES.length+' รูป':'';});
+}
+function fbCurView(){ const a=document.querySelector('.view.active'); return a?a.dataset.view:'overview'; }
+function fbOpenModal(){
+ const v=fbCurView();
+ $('fbCtx').innerHTML='หน้า: <b>'+esc(VIEW_TITLE[v]||v)+'</b> · ผู้ส่ง: <b>'+esc(fbReporter())+'</b>';
+ FB_CAT='suggest';
+ $('fbCat').innerHTML=FB_CATS.map(c=>'<button data-c="'+c[0]+'" class="fbcat" style="border:1.5px solid #E2E8F0;background:'+(c[0]===FB_CAT?'var(--navy,#0D2F4F)':'#fff')+';color:'+(c[0]===FB_CAT?'#fff':'#475569')+';border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit"><i class="ti '+c[2]+'"></i> '+c[1]+'</button>').join('');
+ $('fbCat').querySelectorAll('.fbcat').forEach(b=>b.onclick=()=>{FB_CAT=b.dataset.c;$('fbCat').querySelectorAll('.fbcat').forEach(x=>{const on=x.dataset.c===FB_CAT;x.style.background=on?'var(--navy,#0D2F4F)':'#fff';x.style.color=on?'#fff':'#475569';});});
+ $('fbMsg').value=''; $('fbTags').value=''; $('fbErr').textContent='';
+ FB_FILES=[]; $('fbFiles').value=''; $('fbFilesHint').textContent=''; fbRenderThumbs();
+ $('fbModal').style.display='flex';
+}
+async function fbSend(){
+ const msg=$('fbMsg').value.trim();
+ if(!msg){ $('fbErr').textContent='พิมพ์ความเห็นก่อนนะคะ'; return; }
+ const btn=$('fbSend'); btn.disabled=true; btn.textContent='กำลังส่ง…'; $('fbErr').textContent='';
+ const v=fbCurView();
+ const tags=$('fbTags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,8);
+ // อัปโหลดรูปเข้า bucket 'feedback' โฟลเดอร์ <uid>/ (RLS บังคับ) — เก็บ path ไว้ (signed URL ตอนแสดง)
+ let image_paths=[];
+ try{
+   if(FB_FILES.length){
+     const { data:u }=await sb.auth.getUser(); const uid=u&&u.user&&u.user.id;
+     if(!uid) throw new Error('ยังไม่ได้เข้าระบบ');
+     for(let i=0;i<FB_FILES.length;i++){
+       const f=FB_FILES[i]; const ext=(f.name.split('.').pop()||'png').toLowerCase();
+       const path=uid+'/'+Date.now()+'_'+i+'.'+ext;
+       const { error:ue }=await sb.storage.from('feedback').upload(path,f,{upsert:false,contentType:f.type});
+       if(ue) throw ue; image_paths.push(path);
+     }
+   }
+ }catch(e){ btn.disabled=false; btn.textContent='ส่งความเห็น'; $('fbErr').textContent='อัปโหลดรูปไม่สำเร็จ: '+(e.message||e); return; }
+ const { error }=await sb.from('trial_feedback').insert({
+   source:'dashboard', view_key:v, view_label:VIEW_TITLE[v]||v,
+   page_url:(location.hash||location.pathname||'').slice(0,300),
+   category:FB_CAT, message:msg, reporter_name:fbReporter(),
+   tags, image_paths
+ });
+ btn.disabled=false; btn.textContent='ส่งความเห็น';
+ if(error){ $('fbErr').textContent='ส่งไม่สำเร็จ: '+error.message; return; }
+ $('fbModal').style.display='none';
+ alert('ขอบคุณค่ะ ส่งความเห็นแล้ว ทีมจะรีวิวและแจ้งสถานะกลับให้');
+ if(fbCurView()==='feedback') loadFeedback();
+}
+async function fbAction(id,from,to){
+ const patch={status:to};
+ if(to==='verified') patch.verified_at=new Date().toISOString();
+ const { error }=await sb.from('trial_feedback').update(patch).eq('id',id);
+ if(error){ alert('ไม่สำเร็จ: '+error.message); return; }
+ await sb.from('trial_feedback_log').insert({feedback_id:id,kind:'status',from_status:from,to_status:to,actor_name:fbReporter(),note:to==='verified'?'ยืนยันว่าใช้ได้แล้ว':'เปิดเรื่องใหม่ (ยังไม่โอเค)'});
+ loadFeedback();
+}
+async function fbSignMap(rows){
+ const all=[]; rows.forEach(r=>(r.image_paths||[]).forEach(p=>all.push(p)));
+ const map={}; if(!all.length) return map;
+ try{ const { data }=await sb.storage.from('feedback').createSignedUrls(all,3600);
+   (data||[]).forEach(d=>{ if(d&&d.signedUrl&&d.path) map[d.path]=d.signedUrl; }); }catch(e){}
+ return map;
+}
+async function loadFeedback(){
+ const counts={open:0,new:0,in_progress:0,fixed:0,verified:0,all:0};
+ const { data, error }=await sb.from('trial_feedback').select('*').order('created_at',{ascending:false});
+ if(error){ $('fbList').innerHTML='<div class="card" style="padding:16px;color:#B91C1C">โหลดไม่ได้: '+esc(error.message)+'</div>'; return; }
+ const rows=data||[];
+ rows.forEach(r=>{counts.all++;counts[r.status]=(counts[r.status]||0)+1;if(r.status!=='verified')counts.open++;});
+ const FILT=[['open','ค้างอยู่',counts.open],['new','ใหม่',counts.new],['in_progress','กำลังแก้',counts.in_progress],['fixed','รอเทส',counts.fixed],['verified','ใช้ได้',counts.verified],['all','ทั้งหมด',counts.all]];
+ // แถวกรองตามหน้า (page tag) — ดึงหน้าที่มีคอมเม้นจริง
+ const pages=[...new Set(rows.map(r=>r.view_label||r.view_key).filter(Boolean))].sort();
+ if(FB_PAGE && !pages.includes(FB_PAGE)) FB_PAGE='';
+ const pageSel='<select id="fbPageSel" style="border:1.5px solid '+(FB_PAGE?'var(--teal,#3DC5B7)':'#E2E8F0')+';border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:700;color:var(--navy,#0D2F4F);font-family:inherit;cursor:pointer"><option value="">ทุกหน้า</option>'+pages.map(p=>'<option value="'+esc(p)+'"'+(p===FB_PAGE?' selected':'')+'>'+esc(p)+'</option>').join('')+'</select>';
+ $('fbFilters').innerHTML=FILT.map(f=>'<button data-f="'+f[0]+'" class="fbfilt" style="border:1.5px solid '+(f[0]===FB_FILTER?'var(--teal,#3DC5B7)':'#E2E8F0')+';background:'+(f[0]===FB_FILTER?'rgba(61,197,183,.12)':'#fff')+';color:'+(f[0]===FB_FILTER?'var(--navy,#0D2F4F)':'#64748B')+';border-radius:20px;padding:6px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">'+f[1]+' '+(f[2]||0)+'</button>').join('')+pageSel;
+ $('fbFilters').querySelectorAll('.fbfilt').forEach(b=>b.onclick=()=>{FB_FILTER=b.dataset.f;loadFeedback();});
+ const ps=$('fbPageSel'); if(ps) ps.onchange=()=>{FB_PAGE=ps.value;loadFeedback();};
+ let show=rows.filter(r=>FB_FILTER==='all'?true:(FB_FILTER==='open'?r.status!=='verified':r.status===FB_FILTER));
+ if(FB_PAGE) show=show.filter(r=>(r.view_label||r.view_key)===FB_PAGE);
+ if(!show.length){ $('fbList').innerHTML='<div class="card" style="padding:22px;text-align:center;color:#94A3B8">— ไม่มีรายการในกลุ่มนี้ —</div>'; fbBadge(counts.fixed); return; }
+ const sig=await fbSignMap(show);
+ $('fbList').innerHTML=show.map(r=>{
+   const st=FB_STAT[r.status]||['?','#eee','#555','ti-help'];
+   const when=String(r.created_at||'').replace('T',' ').slice(0,16);
+   // tags: หน้าที่มา (อัตโนมัติ) + tag เพิ่มเอง
+   const pageTag='<span style="background:rgba(61,197,183,.14);color:#0F766E;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px"><i class="ti ti-tag"></i> '+esc(r.view_label||r.view_key||'-')+'</span>';
+   const extraTags=(r.tags||[]).map(t=>'<span style="background:#F1F5F9;color:#475569;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px">#'+esc(t)+'</span>').join('');
+   const tagRow='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">'+pageTag+extraTags+'</div>';
+   const imgs=(r.image_paths||[]).map(p=>sig[p]?'<a href="'+esc(sig[p])+'" target="_blank" rel="noopener"><img src="'+esc(sig[p])+'" style="width:78px;height:78px;object-fit:cover;border-radius:9px;border:1px solid #E2E8F0"></a>':'').join('');
+   const imgRow=imgs?'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'+imgs+'</div>':'';
+   let actions='';
+   if(r.status==='fixed') actions='<div style="display:flex;gap:8px;margin-top:12px"><button class="fbVerify" data-id="'+r.id+'" style="background:#15803D;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-check"></i> โอเค ใช้ได้แล้ว</button><button class="fbReopen" data-id="'+r.id+'" style="background:#fff;color:#B91C1C;border:1.5px solid #FCA5A5;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">ยังไม่ใช่</button></div>';
+   else if(r.status==='verified') actions='<div style="margin-top:10px"><button class="fbReopen" data-id="'+r.id+'" style="background:none;border:none;color:#94A3B8;font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline">เปิดเรื่องนี้ใหม่</button></div>';
+   const fix=r.fix_note?'<div style="background:#F8FAFC;border-left:3px solid var(--teal,#3DC5B7);border-radius:0 8px 8px 0;padding:9px 12px;margin-top:10px;font-size:12.5px;color:#334155"><b style="color:#15803D"><i class="ti ti-circle-check"></i> ทีมแก้แล้ว:</b> '+esc(r.fix_note)+'</div>':'';
+   return '<div class="card" style="padding:15px 17px;margin-bottom:11px">'+
+     '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:7px">'+
+       '<div style="font-size:11.5px;color:#94A3B8">#'+r.id+' · <i class="ti '+(FB_CAT_ICON[r.category]||'ti-message')+'"></i> '+esc(FB_CAT_LABEL[r.category]||r.category)+'</div>'+
+       '<span style="background:'+st[1]+';color:'+st[2]+';font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap"><i class="ti '+st[3]+'"></i> '+st[0]+'</span>'+
+     '</div>'+
+     '<div style="font-size:14px;color:var(--navy,#0D2F4F);line-height:1.6;white-space:pre-wrap">'+esc(r.message)+'</div>'+
+     imgRow+ tagRow+ fix+
+     '<div style="font-size:11px;color:#94A3B8;margin-top:9px">'+esc(r.reporter_name||'ผู้ใช้')+' · '+when+'</div>'+
+     actions+
+   '</div>';
+ }).join('');
+ $('fbList').querySelectorAll('.fbVerify').forEach(b=>b.onclick=()=>fbAction(+b.dataset.id,'fixed','verified'));
+ $('fbList').querySelectorAll('.fbReopen').forEach(b=>b.onclick=()=>fbAction(+b.dataset.id,'','new'));
+ fbBadge(counts.fixed);
+}
+function fbBadge(n){ const el=$('ct-feedback'); if(!el)return; el.textContent=n>0?n:''; }
+function fbInit(){
+ $('fbFab').style.display='inline-flex';
+ $('fbFab').onclick=fbOpenModal;
+ $('fbClose').onclick=()=>{$('fbModal').style.display='none';};
+ $('fbModal').onclick=e=>{ if(e.target===$('fbModal')) $('fbModal').style.display='none'; };
+ $('fbFiles').onchange=()=>{
+   const picked=[...$('fbFiles').files];
+   const tooBig=picked.find(f=>f.size>5*1024*1024);
+   if(tooBig){ $('fbErr').textContent='รูป "'+tooBig.name+'" ใหญ่เกิน 5MB'; $('fbFiles').value=''; return; }
+   $('fbErr').textContent='';
+   FB_FILES=FB_FILES.concat(picked).slice(0,4); $('fbFiles').value='';
+   $('fbFilesHint').textContent=FB_FILES.length?FB_FILES.length+' รูป':''; fbRenderThumbs();
+ };
+ $('fbSend').onclick=fbSend;
+ sb.from('trial_feedback').select('id',{count:'exact',head:true}).eq('status','fixed').then(({count})=>fbBadge(count||0));
+ try{ sb.channel('fb-rt').on('postgres_changes',{event:'*',schema:'public',table:'trial_feedback'},()=>{ sb.from('trial_feedback').select('id',{count:'exact',head:true}).eq('status','fixed').then(({count})=>fbBadge(count||0)); if(fbCurView()==='feedback')loadFeedback(); }).subscribe(); }catch(e){}
+}
+
 $('logout').onclick=async()=>{localStorage.removeItem('yy_line_id');LINE_ID=null;await sb.auth.signOut();location.reload();};
 /* LINE-login-first: เปิด LINE_FIRST=true เมื่อเสียบ LIFF ID + ตั้ง LINE_CHANNEL_ID_PUR แล้ว
    → ทั้งระบบ (HR/บัญชี/จัดซื้อ) บังคับเข้าผ่าน LINE ก่อน · email/OTP เหลือไว้สำหรับแอดมิน (?admin=1) */
