@@ -746,12 +746,21 @@ function LM_RUN_PAGE_JS() {
         totalNew += Number(c.customers) || 0;
       });
     }
-    var roas = totalBudget > 0 ? totalRev / totalBudget : null;
+    // มูลค่าที่ Meta รายงาน (pixel/conversion value) จากแคมเปญ — ใช้เมื่อ FO ยอดปิดยังว่าง
+    // กำกับชัดว่าเป็นค่าก่อนหักต้นทุน "ไม่ใช่ยอดปิดจริง" กัน mislead ([[ai-hq-pnl-cogs-gap]])
+    var metaRev = 0;
+    campaigns.forEach(function (c) { if (c.revenue_source === 'platform') metaRev += Number(c.revenue) || 0; });
+    var showMeta = (totalRev <= 0 && metaRev > 0);
+    var revVal = showMeta ? metaRev : totalRev;
+    var revSub = showMeta ? 'ตาม Meta · ก่อนหักต้นทุน (ไม่ใช่ยอดปิดจริง)' : (src ? 'ยอดปิดจริง (FO)' : 'จากแคมเปญ');
+    var roasBase = showMeta ? metaRev : totalRev;
+    var roas = totalBudget > 0 && roasBase > 0 ? roasBase / totalBudget : (totalBudget > 0 ? 0 : null);
+    var roasSub = showMeta ? 'ตาม Meta (pixel) · ก่อนหักต้นทุน' : (totalBudget > 0 ? 'รายได้ / งบ' : 'ไม่มีงบ');
 
     $id('lm-stats').innerHTML = [
-      statCard('rev', 'รายได้รวมการตลาด', fmtBaht(totalRev), src ? 'จากรายเดือน' : 'จากแคมเปญ'),
+      statCard('rev', 'รายได้รวมการตลาด', fmtBaht(revVal), revSub),
       statCard('budget', 'งบรวมที่ใช้', fmtBaht(totalBudget), 'ทุกช่องทาง'),
-      statCard('roas', 'ROAS เฉลี่ย', fmtRoas(roas), totalBudget > 0 ? 'รายได้ / งบ' : 'ไม่มีงบ'),
+      statCard('roas', 'ROAS เฉลี่ย', fmtRoas(roas), roasSub),
       statCard('leads', 'Leads รวม', fmtInt(totalLeads), 'ทุกช่องทาง'),
       statCard('newc', 'ลูกค้าใหม่รวม', fmtInt(totalNew), 'สะสม'),
     ].join('');
