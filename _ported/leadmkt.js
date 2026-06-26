@@ -102,6 +102,24 @@ function lm2MapCampaign(p) {
     customers: customers,
     revenue: revenue,
     roi: roi,
+    // ---- field ใหม่จาก backend (อาจ null/ไม่มีบนข้อมูลเก่า — กัน null ด้วย lm2Str) ----
+    raw_name: lm2Str(p.raw_name) || (name || id || ''),
+    prod: lm2Str(p.prod),
+    prod_label: lm2Str(p.prod_label),
+    conv_loc: lm2Str(p.conv_loc),
+    conv_loc_label: lm2Str(p.conv_loc_label),
+    objective: lm2Str(p.objective),
+    objective_label: lm2Str(p.objective_label),
+    perf_goal: lm2Str(p.perf_goal),
+    perf_goal_label: lm2Str(p.perf_goal_label),
+    budget_strat: lm2Str(p.budget_strat),
+    budget_strat_label: lm2Str(p.budget_strat_label),
+    budget_type: lm2Str(p.budget_type),
+    budget_type_label: lm2Str(p.budget_type_label),
+    start_date: lm2Str(p.start_date),
+    program: lm2Str(p.program),
+    name_gen: lm2Str(p.name_gen),
+    parse_flags: lm2ToArr(p.parse_flags),
     _raw: p,
   };
 }
@@ -217,12 +235,27 @@ var LM_BACKEND = {
       monthly.forEach(function (r) { addCn(r.channel); });
       channelNames.sort(function (a, b) { return String(a).localeCompare(String(b), 'th'); });
 
+      // รายชื่อสินค้า (prod_label fallback prod) จาก campaigns ไว้ทำ filter "ตามสินค้า"
+      // value = code (prod) ถ้ามี ไม่งั้น label — กรองฝั่ง client ด้วย prodMatch
+      var prSeen = {}, prodNames = [];
+      campaigns.forEach(function (c) {
+        var code = lm2Str(c.prod);
+        var label = lm2Str(c.prod_label) || code;
+        if (!code && !label) return;
+        var val = code || label;
+        if (prSeen[val]) return;
+        prSeen[val] = true;
+        prodNames.push({ value: val, label: label || val });
+      });
+      prodNames.sort(function (a, b) { return String(a.label).localeCompare(String(b.label), 'th'); });
+
       return {
         channels: channels,
         campaigns: campaigns,
         monthly: monthly,
         months: months,
         channelNames: channelNames,
+        prodNames: prodNames,
       };
     });
   },
@@ -292,6 +325,10 @@ function LM_CSS() {
     '#lm .rev-cell{font-weight:600;color:#166534}',
     '#lm .mono{font-family:"SF Mono",Consolas,monospace;font-size:11px;color:var(--text-muted)}',
     '#lm .name-cell{font-weight:600;color:var(--navy)}',
+    '#lm .name-cell .meta{display:block;font-weight:400;font-size:10px;color:var(--text-faint);margin-top:2px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '#lm .flag-mark{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:var(--warning);cursor:help;vertical-align:middle}',
+    '#lm .fix-note{display:inline-block;margin-left:6px;font-size:10px;font-weight:500;color:var(--text-faint);cursor:help;vertical-align:middle}',
+    '#lm .dim-cell{color:var(--text-muted)}',
     '#lm .table-wrap{overflow-x:auto}',
     // ROI/ROAS pill (สี = ดี/แย่)
     '#lm .pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;font-variant-numeric:tabular-nums}',
@@ -346,6 +383,10 @@ function LM_MARKUP() {
     '<div class="stats" id="lm-stats"></div>',
     // filters
     '<div class="filters">',
+    '  <div class="filter">',
+    '    <label>ตามสินค้า</label>',
+    '    <select id="lm-filter-prod" onchange="lmRender()"><option value="">ทุกสินค้า</option></select>',
+    '  </div>',
     '  <div class="filter">',
     '    <label>เดือน</label>',
     '    <select id="lm-filter-month" onchange="lmRender()"><option value="">ทุกเดือน</option></select>',
@@ -447,12 +488,12 @@ function LM_RUN_PAGE_JS() {
     $id('lm-content').className = 'loading';
     $id('lm-content').innerHTML = 'กำลังโหลด...';
     LM_BACKEND.lmList().then(function (res) {
-      _lmData = res || { channels: [], campaigns: [], monthly: [], months: [], channelNames: [] };
+      _lmData = res || { channels: [], campaigns: [], monthly: [], months: [], channelNames: [], prodNames: [] };
       populateFilters();
       renderAll();
     }).catch(function (e) {
       console.error('[leadmkt] load failed', e);
-      _lmData = { channels: [], campaigns: [], monthly: [], months: [], channelNames: [] };
+      _lmData = { channels: [], campaigns: [], monthly: [], months: [], channelNames: [], prodNames: [] };
       $id('lm-content').className = '';
       $id('lm-content').innerHTML = '<div class="empty"><div class="empty-title">โหลดข้อมูลไม่สำเร็จ</div><div class="empty-sub">' + escapeHtml((e && e.message) || 'unknown') + '</div></div>';
       renderStats();
@@ -476,12 +517,26 @@ function LM_RUN_PAGE_JS() {
         cSel.appendChild(o);
       });
     }
+    var pSel = $id('lm-filter-prod');
+    if (pSel && pSel.options.length <= 1) {
+      (_lmData.prodNames || []).forEach(function (pr) {
+        var o = document.createElement('option');
+        o.value = pr.value; o.textContent = pr.label;
+        pSel.appendChild(o);
+      });
+    }
   }
 
   function curFilters() {
     var mSel = $id('lm-filter-month');
     var cSel = $id('lm-filter-channel');
-    return { month: mSel ? mSel.value : '', channel: cSel ? cSel.value : '' };
+    var pSel = $id('lm-filter-prod');
+    return { month: mSel ? mSel.value : '', channel: cSel ? cSel.value : '', prod: pSel ? pSel.value : '' };
+  }
+  // match สินค้าแบบกว้าง (code prod หรือ label) — value ใน dropdown = code ถ้ามี ไม่งั้น label
+  function prodMatch(row, filterProd) {
+    if (!filterProd) return true;
+    return row.prod === filterProd || row.prod_label === filterProd;
   }
   // match ช่องทางแบบกว้าง (ชื่อ หรือ id)
   function chMatch(rowChannel, rowChannelId, filterName) {
@@ -501,6 +556,7 @@ function LM_RUN_PAGE_JS() {
     var f = curFilters();
     var rows = (_lmData && _lmData.campaigns) ? _lmData.campaigns.slice() : [];
     if (f.channel) rows = rows.filter(function (r) { return chMatch(r.channel, r.channel_id, f.channel); });
+    if (f.prod) rows = rows.filter(function (r) { return prodMatch(r, f.prod); });
     // หมายเหตุ: แคมเปญไม่มีมิติเดือน → ตัวกรองเดือนไม่กระทบ
     rows.sort(function (a, b) {
       var av = a.roi == null ? -Infinity : a.roi;
@@ -700,9 +756,57 @@ function LM_RUN_PAGE_JS() {
       totLeads += Number(c.leads) || 0;
       totCust += Number(c.customers) || 0;
       totRev += Number(c.revenue) || 0;
+
+      // ป้ายชื่อหลัก (อ่านง่าย): prod_label + program/objective ถ้ามี ไม่งั้น campaign_name เดิม
+      var primary = '';
+      if (c.prod_label || c.program || c.objective_label) {
+        var bits = [];
+        if (c.prod_label) bits.push(c.prod_label);
+        if (c.program) bits.push(c.program);
+        else if (c.objective_label) bits.push(c.objective_label);
+        primary = bits.join(' · ');
+      }
+      if (!primary) primary = c.campaign_name;
+
+      // ชื่อดิบเต็ม (raw_name) — เก็บไว้ใน title tooltip ของ cell เสมอ ดูได้ตลอดว่าอ้างถึงอะไร
+      var fullRaw = c.raw_name || c.campaign_name || '';
+
+      // marker flag (ไม่ใช้ emoji — line-art / ข้อความ muted ตามกฎโปรเจกต์)
+      // แยก 2 ระดับ: typo จริง (เตือนสีส้ม) vs normalize/convention (โน้ตเทาจาง)
+      var flags = lm2ToArr(c.parse_flags);
+      var FLAG_LABEL = {
+        program_typo_fixed: 'สะกดชื่อโปรแกรมผิด (แก้ให้แล้ว)',
+        PG_double_colon: 'PG มี colon เกิน (แก้ให้แล้ว)',
+        bgt_had_strat_value: 'ใส่กลยุทธ์งบผิดช่อง BGT (ย้ายให้แล้ว)',
+        cl_was_objective_normalized: 'ย้าย CL ที่เป็นวัตถุประสงค์ไปช่อง objective',
+        date_from_bare_month: 'วันเริ่มเป็นเดือนเปลือย (รุ่นย่อ)',
+      };
+      var TYPO_FLAGS = { program_typo_fixed: 1, PG_double_colon: 1, bgt_had_strat_value: 1 };
+      function flagText(arr) {
+        return arr.map(function (f) { return FLAG_LABEL[f] || f; }).join(' · ');
+      }
+      var typos = flags.filter(function (f) { return TYPO_FLAGS[f]; });
+      var norms = flags.filter(function (f) { return !TYPO_FLAGS[f]; });
+      var flagMark = '';
+      if (typos.length) {
+        flagMark += ' <span class="flag-mark" title="' + escapeHtml('ตั้งชื่อผิด format: ' + flagText(typos)) + '"><i class="ti ti-flag"></i> [ตั้งชื่อผิด format]</span>';
+      }
+      if (norms.length) {
+        flagMark += ' <span class="fix-note" title="' + escapeHtml('ปรับให้อัตโนมัติ: ' + flagText(norms)) + '"><i class="ti ti-wand"></i> ปรับอัตโนมัติ</span>';
+      }
+
+      // meta line: รหัสแคมเปญ (คงของเดิม) + ชื่อดิบเต็ม
+      var metaBits = [];
+      if (c.campaign_id && c.campaign_id !== c.campaign_name) metaBits.push(c.campaign_id);
+      if (fullRaw && fullRaw !== primary) metaBits.push(fullRaw);
+      var metaLine = metaBits.length ? '<span class="meta">' + escapeHtml(metaBits.join(' · ')) + '</span>' : '';
+
       return [
         '<tr>',
-        '  <td class="name-cell">' + escapeHtml(c.campaign_name) + (c.campaign_id && c.campaign_id !== c.campaign_name ? ' <span class="mono">' + escapeHtml(c.campaign_id) + '</span>' : '') + '</td>',
+        '  <td class="name-cell" title="' + escapeHtml(fullRaw) + '">' + escapeHtml(primary) + flagMark + metaLine + '</td>',
+        '  <td class="dim-cell">' + (c.prod_label ? escapeHtml(c.prod_label) : (c.prod ? escapeHtml(c.prod) : '—')) + '</td>',
+        '  <td class="dim-cell">' + (c.conv_loc_label ? escapeHtml(c.conv_loc_label) : '—') + '</td>',
+        '  <td class="dim-cell">' + (c.objective_label ? escapeHtml(c.objective_label) : '—') + '</td>',
         '  <td>' + (c.channel ? escapeHtml(c.channel) : '—') + '</td>',
         '  <td>' + (c.account ? escapeHtml(c.account) : '—') + '</td>',
         '  <td>' + (c.page ? escapeHtml(c.page) : '—') + '</td>',
@@ -720,12 +824,12 @@ function LM_RUN_PAGE_JS() {
       '<div class="table-wrap">',
       '<table class="data-table">',
       '  <thead><tr>',
-      '    <th>แคมเปญ</th><th>ช่องทาง</th><th>บัญชี</th><th>เพจ</th><th class="num">งบใช้จริง</th><th class="num">Leads</th>',
+      '    <th>แคมเปญ</th><th>สินค้า</th><th>ปลายทาง</th><th>วัตถุประสงค์</th><th>ช่องทาง</th><th>บัญชี</th><th>เพจ</th><th class="num">งบใช้จริง</th><th class="num">Leads</th>',
       '    <th class="num">ลูกค้าจริง</th><th class="num">รายได้</th><th class="num">ROI</th>',
       '  </tr></thead>',
       '  <tbody>' + body + '</tbody>',
       '  <tfoot><tr>',
-      '    <td colspan="4">รวม</td>',
+      '    <td colspan="7">รวม</td>',
       '    <td class="num">' + fmtBaht(totSpend) + '</td>',
       '    <td class="num">' + fmtInt(totLeads) + '</td>',
       '    <td class="num">' + fmtInt(totCust) + '</td>',

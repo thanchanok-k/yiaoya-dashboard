@@ -1,3 +1,6 @@
 supabase/
 .DS_Store
 .claude/
+
+# offline preview harness (do not deploy)
+_preview_leadmkt.html
