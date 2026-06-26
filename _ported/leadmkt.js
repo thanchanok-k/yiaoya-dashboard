@@ -283,7 +283,9 @@ var LM_BACKEND = {
         var n = c.raw_name || c.campaign_name || c.campaign_id || '';
         var m = /(PL:.*)$/.exec(n);          // ตัด prefix ใด ๆ ก่อน |PL:
         var canon = m ? m[1] : n;
-        return canon.replace(/\s+/g, '').toUpperCase();
+        // ★ ใส่ "บัญชี" ใน key ด้วย — กันแคมเปญชื่อเดียวกันคนละบัญชีถูกยุบรวม (ทำให้ leads/รายได้/งบ ของอีกบัญชีหาย)
+        var acct = String(c.account || c.account_id || '').replace(/\s+/g, '').toUpperCase();
+        return acct + '||' + canon.replace(/\s+/g, '').toUpperCase();
       }
       // คะแนนความ "สมบูรณ์" ของ record: มี ROAS/รายได้ > มี prod > งบสูง — เลือกตัวที่สมบูรณ์สุดเมื่อชนกัน
       function lm2CmpScore(c) {
@@ -305,6 +307,8 @@ var LM_BACKEND = {
           var maxSpend = Math.max(Number(c.spend) || 0, Number(prev.spend) || 0);
           var win = lm2CmpScore(c) >= lm2CmpScore(prev) ? c : prev;
           win.spend = maxSpend;
+          // recompute ROI จากงบสุดท้าย (กัน ROI ไม่ตรงกับ spend ที่โชว์ในแถวเดียวกัน)
+          win.roi = (win.spend > 0 && (Number(win.revenue) || 0) > 0) ? ((Number(win.revenue) - win.spend) / win.spend) * 100 : null;
           campaigns[cmpIdx[key]] = win;
         }
       });

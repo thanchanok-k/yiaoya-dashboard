@@ -3072,8 +3072,9 @@ function mountAdCreative(){
   const summary='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">'+chips+'</div>';
   const bar=(l,v,vv,c)=>{const p=pct(v,vv);return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="font-size:10px;color:var(--text-muted,#64748B);width:30px">'+l+'</span><div style="flex:1;height:6px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+c+'"></div></div><span style="font-size:10px;color:var(--navy,#0D2F4F);font-weight:700;width:30px;text-align:right">'+p+'%</span></div>';};
   const card=r=>{
-   const code=r.creative_id||'';const ig=r.ig_permalink||r.permalink||'#';
-   const thumb=code?'https://www.instagram.com/p/'+code+'/media/?size=l':'';
+   const code=r.creative_id||'';var ig=r.ig_permalink||r.permalink||'#';
+   ig=/^https:\/\//.test(ig)?esc(ig):'#';   // กัน XSS: รับเฉพาะ https + esc (กัน javascript:/breakout)
+   const thumb=code?'https://www.instagram.com/p/'+encodeURIComponent(code)+'/media/?size=l':'';
    const engR=pct(r.post_engagement,r.impressions);const bc=bcol(r.adset_name);
    const cpmsg=r.messages?B(r.spend/r.messages):'—';
    const prev='<a href="'+ig+'" target="_blank" rel="noopener" style="display:block;position:relative;height:144px;border-radius:13px 13px 0 0;overflow:hidden;background:linear-gradient(135deg,'+bc+',#3DC5B7);text-decoration:none">'
@@ -3253,10 +3254,10 @@ function mountDept(){
    const X=i=>pad+(n<=1?(W-pad*2)/2:i*(W-pad-12)/(n-1)); const Y=v=>H-26-(v/mx)*(H-52);
    let g='';for(let k=0;k<=4;k++){const yy=H-26-(k/4)*(H-52);g+='<line x1="'+pad+'" y1="'+yy+'" x2="'+(W-12)+'" y2="'+yy+'" stroke="#EEF2F6"/><text x="'+(pad-6)+'" y="'+(yy+3)+'" font-size="9" fill="#94A3B8" text-anchor="end">'+Math.round(mx*k/4/1000)+'k</text>';}
    mons.forEach((m,i)=>{if(n>10&&i%2)return;g+='<text x="'+X(i)+'" y="'+(H-9)+'" font-size="8.5" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
-   series.forEach(s=>{const pts=s.vals.map((v,i)=>X(i)+','+Y(v)).join(' ');g+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="1.6"/>';s.vals.forEach((v,i)=>{g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="2.4" fill="'+s.color+'"><title>'+s.name+' '+mSh(mons[i])+': '+B(v)+'</title></circle>';});});
+   series.forEach(s=>{const pts=s.vals.map((v,i)=>X(i)+','+Y(v)).join(' ');g+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="1.6"/>';s.vals.forEach((v,i)=>{g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="2.4" fill="'+s.color+'"><title>'+esc(s.name)+' '+mSh(mons[i])+': '+B(v)+'</title></circle>';});});
    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';};
  const donut=parts=>{const tot=parts.reduce((a,p)=>a+p.value,0)||1,R=66,C=2*Math.PI*R;let off=0;
-   const seg=parts.map(p=>{const dash=p.value/tot*C,el='<circle cx="100" cy="100" r="'+R+'" fill="none" stroke="'+p.color+'" stroke-width="26" stroke-dasharray="'+dash+' '+(C-dash)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 100 100)"><title>'+p.label+' '+B(p.value)+' ('+Math.round(p.value/tot*100)+'%)</title></circle>';off+=dash;return el;}).join('');
+   const seg=parts.map(p=>{const dash=p.value/tot*C,el='<circle cx="100" cy="100" r="'+R+'" fill="none" stroke="'+p.color+'" stroke-width="26" stroke-dasharray="'+dash+' '+(C-dash)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 100 100)"><title>'+esc(p.label)+' '+B(p.value)+' ('+Math.round(p.value/tot*100)+'%)</title></circle>';off+=dash;return el;}).join('');
    return '<svg viewBox="0 0 200 200" style="width:170px;height:170px;flex:none">'+seg+'<text x="100" y="94" font-size="11" fill="#64748B" text-anchor="middle">รวม</text><text x="100" y="114" font-size="15" fill="#0D2F4F" text-anchor="middle" font-weight="800">'+B(tot)+'</text></svg>';};
  const spark=vals=>{const W=80,H=22,mx=Math.max(1,...vals);const pts=vals.map((v,i)=>(vals.length<=1?W/2:i*W/(vals.length-1))+','+(H-2-(v/mx)*(H-4))).join(' ');return '<svg viewBox="0 0 '+W+' '+H+'" style="width:80px;height:22px"><polyline points="'+pts+'" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';};
  $('deptWrap').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลดข้อมูลแผนก…</span></div>';
@@ -3540,7 +3541,7 @@ function mountMkt(){
    const X=i=>pad+(n<=1?(W-pad*2)/2:i*(W-pad-14)/(n-1));const Y=v=>H-26-(v/mx)*(H-50);
    let g='';for(let k=0;k<=4;k++){const yy=H-26-(k/4)*(H-50);g+='<line x1="'+pad+'" y1="'+yy+'" x2="'+(W-14)+'" y2="'+yy+'" stroke="#EEF2F6"/><text x="'+(pad-6)+'" y="'+(yy+3)+'" font-size="9" fill="#94A3B8" text-anchor="end">'+(kfmt?Bk(mx*k/4):Math.round(mx*k/4))+'</text>';}
    mons.forEach((m,i)=>{if(n>12&&i%2)return;g+='<text x="'+X(i)+'" y="'+(H-9)+'" font-size="8" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
-   series.forEach(s=>{const pts=s.vals.map((v,i)=>X(i)+','+Y(v)).join(' ');g+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="1.6"/>';s.vals.forEach((v,i)=>{g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="2.3" fill="'+s.color+'"><title>'+s.name+' '+mSh(mons[i])+': '+(kfmt?B(v):N(v))+'</title></circle>';});});
+   series.forEach(s=>{const pts=s.vals.map((v,i)=>X(i)+','+Y(v)).join(' ');g+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="1.6"/>';s.vals.forEach((v,i)=>{g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="2.3" fill="'+s.color+'"><title>'+esc(s.name)+' '+mSh(mons[i])+': '+(kfmt?B(v):N(v))+'</title></circle>';});});
    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';};
  const barChart=(mons,vals,color)=>{const W=860,H=180,pad=46,n=mons.length;const mx=Math.max(1,...vals);
    const bw=(W-pad-14)/n*0.6;let g='';for(let k=0;k<=3;k++){const yy=H-24-(k/3)*(H-46);g+='<line x1="'+pad+'" y1="'+yy+'" x2="'+(W-14)+'" y2="'+yy+'" stroke="#EEF2F6"/><text x="'+(pad-6)+'" y="'+(yy+3)+'" font-size="9" fill="#94A3B8" text-anchor="end">'+B(mx*k/3)+'</text>';}
@@ -3594,11 +3595,11 @@ function mountHub360(){
    const X=i=>pad+(n<=1?(W-pad*2)/2:i*(W-pad-14)/(n-1));const Y=v=>H-26-(v/mx)*(H-50);
    let g='';for(let k=0;k<=4;k++){const yy=H-26-(k/4)*(H-50);g+='<line x1="'+pad+'" y1="'+yy+'" x2="'+(W-14)+'" y2="'+yy+'" stroke="#EEF2F6"/><text x="'+(pad-6)+'" y="'+(yy+3)+'" font-size="9" fill="#94A3B8" text-anchor="end">'+Bk(mx*k/4)+'</text>';}
    mons.forEach((m,i)=>{if(n>12&&i%2)return;g+='<text x="'+X(i)+'" y="'+(H-9)+'" font-size="8" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
-   series.forEach(s=>{const pts=s.vals.map((v,i)=>X(i)+','+Y(v)).join(' ');g+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="1.6"/>';s.vals.forEach((v,i)=>g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="2.4" fill="'+s.color+'"><title>'+s.name+' '+mSh(mons[i])+': '+B(v)+'</title></circle>');});
+   series.forEach(s=>{const pts=s.vals.map((v,i)=>X(i)+','+Y(v)).join(' ');g+='<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="1.6"/>';s.vals.forEach((v,i)=>g+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="2.4" fill="'+s.color+'"><title>'+esc(s.name)+' '+mSh(mons[i])+': '+B(v)+'</title></circle>');});
    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';};
  const stackBar=(mons,depts,fn)=>{const W=860,H=240,pad=40,n=mons.length;const tot=mons.map(m=>depts.reduce((a,d)=>a+fn(m,d),0));const mx=Math.max(1,...tot);
    const bw=(W-pad-14)/n*0.62;let g='';for(let k=0;k<=4;k++){const yy=H-24-(k/4)*(H-44);g+='<line x1="'+pad+'" y1="'+yy+'" x2="'+(W-14)+'" y2="'+yy+'" stroke="#EEF2F6"/><text x="'+(pad-6)+'" y="'+(yy+3)+'" font-size="9" fill="#94A3B8" text-anchor="end">'+Math.round(mx*k/4)+'</text>';}
-   mons.forEach((m,i)=>{const x=pad+(n<=1?0:i*(W-pad-14)/n)+4;let yb=H-24;depts.forEach(d=>{const v=fn(m,d);if(v<=0)return;const hh=v/mx*(H-44);g+='<rect x="'+x+'" y="'+(yb-hh)+'" width="'+bw+'" height="'+hh+'" fill="'+dcol(d)+'"><title>'+mSh(m)+' · '+d+': '+v+' คน</title></rect>';yb-=hh;});if(n<=14)g+='<text x="'+(x+bw/2)+'" y="'+(H-9)+'" font-size="8" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
+   mons.forEach((m,i)=>{const x=pad+(n<=1?0:i*(W-pad-14)/n)+4;let yb=H-24;depts.forEach(d=>{const v=fn(m,d);if(v<=0)return;const hh=v/mx*(H-44);g+='<rect x="'+x+'" y="'+(yb-hh)+'" width="'+bw+'" height="'+hh+'" fill="'+dcol(d)+'"><title>'+mSh(m)+' · '+esc(d)+': '+v+' คน</title></rect>';yb-=hh;});if(n<=14)g+='<text x="'+(x+bw/2)+'" y="'+(H-9)+'" font-size="8" fill="#64748B" text-anchor="middle">'+mSh(m)+'</text>';});
    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';};
  $('hubWrap').innerHTML='<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังรวมข้อมูลทุกแหล่ง…</span></div>';
  Promise.all([sb.functions.invoke('mkt_monthly'),sb.functions.invoke('dept_sales'),sb.functions.invoke('mkt_channel')]).then(([mk,ds,ch])=>{
