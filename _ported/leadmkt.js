@@ -149,9 +149,12 @@ function lm2MapCampaign(p) {
   // รายได้: FO ยอดปิด ถ้าไม่มี → ใช้ค่าที่ Meta รายงาน (conversion_value / meta_revenue) เป็น "ROAS ตามที่แพลตฟอร์มรายงาน"
   var revenue = lm2Num(p.revenue || p.revenue_total || p.sales || p.income);
   var metaRev = lm2Num(p.meta_revenue || p.conversion_value || p.conversion_values || p.purchase_value);
-  var revSource = '';
-  if (revenue > 0) revSource = 'fo';
-  else if (metaRev > 0) { revenue = metaRev; revSource = 'platform'; }
+  // ใช้ revenue_source จาก backend ก่อน (publisher ตั้ง 'platform' เมื่อรายได้มาจาก Meta pixel) ไม่งั้นเดาเอง
+  var revSource = lm2Str(p.revenue_source);
+  if (!revSource) {
+    if (revenue > 0) revSource = 'fo';
+    else if (metaRev > 0) { revenue = metaRev; revSource = 'platform'; }
+  } else if (revenue === 0 && metaRev > 0) { revenue = metaRev; }
   // ROI% : ใช้ field ถ้ามี ไม่งั้น derive จาก (รายได้-งบ)/งบ*100
   var roi = lm2NumOrNull(p.roi || p.roi_pct || p.roi_percent);
   if (roi == null) roi = spend > 0 && revenue > 0 ? ((revenue - spend) / spend) * 100 : null;
@@ -274,13 +277,28 @@ var LM_BACKEND = {
         var canon = m ? m[1] : n;
         return canon.replace(/\s+/g, '').toUpperCase();
       }
+      // คะแนนความ "สมบูรณ์" ของ record: มี ROAS/รายได้ > มี prod > งบสูง — เลือกตัวที่สมบูรณ์สุดเมื่อชนกัน
+      function lm2CmpScore(c) {
+        var s = 0;
+        if ((Number(c.revenue) || 0) > 0 || c.revenue_source === 'platform') s += 1e12;  // มีรายได้/ROAS = ดีสุด
+        if (c.prod) s += 1e9;                                                              // แกะ prod ได้
+        s += (Number(c.spend) || 0);                                                       // tie-break ด้วยงบ
+        return s;
+      }
       var cmpIdx = {}, campaigns = [];
       rawCmp.forEach(function (p) {
         var c = lm2MapCampaign(p);
         var key = lm2CanonKey(c);
         if (!key) return;
         if (cmpIdx[key] == null) { cmpIdx[key] = campaigns.length; campaigns.push(c); }
-        else { var prev = campaigns[cmpIdx[key]]; if ((Number(c.spend) || 0) > (Number(prev.spend) || 0)) campaigns[cmpIdx[key]] = c; }
+        else {
+          var prev = campaigns[cmpIdx[key]];
+          // เก็บงบสูงสุดไว้เสมอ (ครอบคลุมประวัติ) แต่เลือก record หลักจากตัวที่สมบูรณ์กว่า แล้วยกงบสูงมาด้วย
+          var maxSpend = Math.max(Number(c.spend) || 0, Number(prev.spend) || 0);
+          var win = lm2CmpScore(c) >= lm2CmpScore(prev) ? c : prev;
+          win.spend = maxSpend;
+          campaigns[cmpIdx[key]] = win;
+        }
       });
 
       // รายเดือน — de-dup ตาม month|channel
@@ -404,6 +422,7 @@ function LM_CSS() {
     '#lm .name-cell .meta{display:block;font-weight:400;font-size:10px;color:var(--text-faint);margin-top:2px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '#lm .flag-mark{display:inline-block;margin-left:6px;font-size:10px;font-weight:600;color:var(--warning);cursor:help;vertical-align:middle}',
     '#lm .fix-note{display:inline-block;margin-left:6px;font-size:10px;font-weight:500;color:var(--text-faint);cursor:help;vertical-align:middle}',
+    '#lm .rev-src{display:inline-block;margin-left:5px;font-size:9px;font-weight:700;color:var(--teal-dark);background:rgba(61,197,183,.12);border-radius:4px;padding:1px 5px;cursor:help;vertical-align:middle;letter-spacing:.02em}',
     '#lm .dim-cell{color:var(--text-muted)}',
     '#lm .table-wrap{overflow-x:auto}',
     // ROI/ROAS pill (สี = ดี/แย่)
@@ -889,7 +908,10 @@ function LM_RUN_PAGE_JS() {
         '  <td class="num">' + fmtBaht(c.spend) + '</td>',
         '  <td class="num">' + fmtInt(c.leads) + '</td>',
         '  <td class="num">' + fmtInt(c.customers) + '</td>',
-        '  <td class="num rev-cell">' + fmtBaht(c.revenue) + '</td>',
+        '  <td class="num rev-cell">' + fmtBaht(c.revenue) +
+          (c.revenue_source === 'platform'
+            ? ' <span class="rev-src" title="' + escapeHtml('รายได้ที่ Meta รายงาน (pixel/conversion value) — ค่าประมาณก่อนหักต้นทุน ไม่ใช่ยอดปิดจริงจาก FO') + '">Meta</span>'
+            : '') + '</td>',
         '  <td class="num">' + roiPill(c.roi) + '</td>',
         '</tr>',
       ].join('');
