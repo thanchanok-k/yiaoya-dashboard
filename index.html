@@ -978,7 +978,8 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
     <textarea id="fbMsg" rows="4" placeholder="พิมพ์ความเห็น เช่น ตัวเลขนี้ไม่ตรง / อยากให้เพิ่ม... / กดแล้วไม่ทำงาน" style="width:100%;box-sizing:border-box;border:1.5px solid #E2E8F0;border-radius:11px;padding:11px 13px;font-size:14px;font-family:inherit;resize:vertical"></textarea>
     <div style="font-size:12.5px;font-weight:600;color:var(--navy,#0D2F4F);margin:13px 0 6px">แท็ก <span style="font-weight:400;color:#94A3B8">(ไม่บังคับ · คั่นด้วยจุลภาค เช่น ราคา, ด่วน)</span></div>
     <input id="fbTags" type="text" placeholder="หน้านี้ถูกแท็กให้อัตโนมัติแล้ว · เพิ่มแท็กอื่นได้" style="width:100%;box-sizing:border-box;border:1.5px solid #E2E8F0;border-radius:11px;padding:10px 13px;font-size:13.5px;font-family:inherit">
-    <div style="display:flex;align-items:center;gap:10px;margin:13px 0 4px">
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:13px 0 4px">
+      <button id="fbShot" type="button" style="display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--teal,#3DC5B7);background:rgba(61,197,183,.1);border-radius:11px;padding:9px 14px;font-size:13px;font-weight:700;color:#0F766E;cursor:pointer;font-family:inherit"><i class="ti ti-camera"></i> ถ่ายหน้าจอนี้</button>
       <label for="fbFiles" style="display:inline-flex;align-items:center;gap:7px;border:1.5px dashed #CBD5E1;border-radius:11px;padding:9px 14px;font-size:13px;font-weight:600;color:#475569;cursor:pointer"><i class="ti ti-paperclip"></i> แนบรูป (สูงสุด 4)</label>
       <input id="fbFiles" type="file" accept="image/*" multiple style="display:none">
       <span id="fbFilesHint" style="font-size:12px;color:#94A3B8"></span>
@@ -4506,6 +4507,28 @@ const FB_CAT_ICON=Object.fromEntries(FB_CATS.map(c=>[c[0],c[2]]));
 const FB_STAT={new:['ใหม่','#EFF6FF','#1D4ED8','ti-circle-dot'],in_progress:['กำลังแก้','#FEF3C7','#B45309','ti-tool'],fixed:['แก้แล้ว · รอเทส','#FEF9C3','#A16207','ti-clock-check'],verified:['ใช้ได้','#DCFCE7','#15803D','ti-circle-check']};
 let FB_CAT='suggest', FB_FILTER='open', FB_PAGE='', FB_FILES=[];
 function fbReporter(){ return ($('sbName')&&$('sbName').textContent)||'ผู้ใช้'; }
+async function fbCapture(){
+ if(FB_FILES.length>=4){ $('fbErr').textContent='แนบได้สูงสุด 4 รูป'; return; }
+ const btn=$('fbShot'); const orig=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="ti ti-loader-2"></i> กำลังถ่าย…';
+ const modal=$('fbModal'); modal.style.display='none';   // ซ่อนฟอร์มก่อนแคป จะได้เห็นหน้าจริง
+ try{
+   const { default:html2canvas }=await import('https://esm.sh/html2canvas@1.4.1');
+   const opt={useCORS:true, logging:false, backgroundColor:'#F1F5F9', scale:1};
+   // แคปเฉพาะส่วนที่เห็น ถ้ารู้ขนาด viewport · ไม่งั้น fallback แคปทั้งหน้า
+   if(window.innerWidth>0 && window.innerHeight>0){
+     opt.x=window.scrollX; opt.y=window.scrollY;
+     opt.width=window.innerWidth; opt.height=window.innerHeight;
+   }
+   const canvas=await html2canvas(document.body,opt);
+   if(!canvas.width||!canvas.height) throw new Error('แคปได้ภาพว่าง ลองใหม่อีกครั้ง');
+   const blob=await new Promise(res=>canvas.toBlob(res,'image/png',0.92));
+   if(!blob) throw new Error('แปลงรูปไม่ได้');
+   const file=new File([blob],'screenshot_'+Date.now()+'.png',{type:'image/png'});
+   FB_FILES=FB_FILES.concat(file).slice(0,4);
+   $('fbFilesHint').textContent=FB_FILES.length+' รูป'; $('fbErr').textContent=''; fbRenderThumbs();
+ }catch(e){ $('fbErr').textContent='ถ่ายหน้าจอไม่สำเร็จ: '+(e.message||e); }
+ modal.style.display='flex'; btn.disabled=false; btn.innerHTML=orig;
+}
 function fbRenderThumbs(){
  $('fbThumbs').innerHTML=FB_FILES.map((f,i)=>'<div style="position:relative"><img src="'+URL.createObjectURL(f)+'" style="width:60px;height:60px;object-fit:cover;border-radius:9px;border:1px solid #E2E8F0"><button data-i="'+i+'" class="fbThumbX" style="position:absolute;top:-6px;right:-6px;background:#B91C1C;color:#fff;border:none;border-radius:50%;width:19px;height:19px;font-size:12px;line-height:1;cursor:pointer">×</button></div>').join('');
  $('fbThumbs').querySelectorAll('.fbThumbX').forEach(b=>b.onclick=()=>{FB_FILES.splice(+b.dataset.i,1);fbRenderThumbs();$('fbFilesHint').textContent=FB_FILES.length?FB_FILES.length+' รูป':'';});
@@ -4620,6 +4643,7 @@ function fbInit(){
  $('fbFab').onclick=fbOpenModal;
  $('fbClose').onclick=()=>{$('fbModal').style.display='none';};
  $('fbModal').onclick=e=>{ if(e.target===$('fbModal')) $('fbModal').style.display='none'; };
+ $('fbShot').onclick=fbCapture;
  $('fbFiles').onchange=()=>{
    const picked=[...$('fbFiles').files];
    const tooBig=picked.find(f=>f.size>5*1024*1024);
