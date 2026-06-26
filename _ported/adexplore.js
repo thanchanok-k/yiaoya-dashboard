@@ -1,13 +1,44 @@
 // _ported/adexplore.js — "โฆษณา · เจาะลึก (Explorer)" · interactive multi-platform ad analytics
 // ดึง ad_daily ผ่าน meta_sync mode=explore (ทุก platform: meta/google/tiktok โผล่เองเมื่อมีข้อมูล)
-// เลือกช่วงเวลา + กรอง platform/แบรนด์/เพจ + เปลี่ยนมุมมอง (group by) + metrics ครบ (CTR/CPC/CPM)
-// pattern: mountAdexplore render เข้า #wrap-adexplore · ใช้ window.sb · ห้าม redeclare global
+// เลือกช่วงเวลา (preset หรือ custom วันเอง) + กรอง แผนก/platform/แบรนด์/เพจ + group by + metrics ครบ
+// แผนก 4: KneeCare(Ortho)/Yiaoya/Resto Pilates/Massage (แมปจาก PAGE tag ในชื่อแคมเปญ + ชื่อบัญชี)
+// pattern: window.mountAdexplore render เข้า #wrap-adexplore · ใช้ window.sb · ห้าม redeclare global
 
 (function () {
-  var ST = { days: 90, platform: '', account: '', page: '', groupBy: 'campaign', rows: [], ads: [], expanded: {}, loading: false, err: '' };
+  var ST = { days: 90, since: '', until: '', dept: '', platform: '', account: '', page: '', groupBy: 'dept', rows: [], ads: [], expanded: {}, loading: false, err: '' };
   var RANGES = [['7', '7 วัน'], ['30', '30 วัน'], ['90', '90 วัน'], ['365', '1 ปี'], ['1200', 'ทั้งหมด']];
-  var GROUPS = [['platform', 'แพลตฟอร์ม'], ['account', 'แบรนด์/บัญชี'], ['campaign', 'แคมเปญ'], ['page', 'เพจ'], ['month', 'รายเดือน']];
+  var GROUPS = [['dept', 'แผนก'], ['platform', 'แพลตฟอร์ม'], ['account', 'แบรนด์/บัญชี'], ['campaign', 'แคมเปญ'], ['page', 'เพจ'], ['month', 'รายเดือน']];
   var PLAT_NAME = { meta: 'Meta (FB/IG)', google: 'Google Ads', tiktok: 'TikTok Ads' };
+
+  // ── แมป 4 แผนก: PAGE tag ในชื่อแคมเปญก่อน → ชื่อบัญชี fallback ──
+  function deptOf(r) {
+    var p = String(r.page || '').toUpperCase();
+    if (p.indexOf('KNEE') >= 0 || p.indexOf('ORTHO') >= 0) return 'KneeCare (Ortho)';
+    if (p.indexOf('PILATES') >= 0 || p.indexOf('RESTO') >= 0) return 'Resto Pilates';
+    if (p.indexOf('MASSAGE') >= 0 || p.indexOf('NUAD') >= 0 || p.indexOf('SPA') >= 0) return 'Massage';
+    if (p.indexOf('YIAOYA') >= 0) return 'Yiaoya';
+    var a = String(r.account || '').toLowerCase();
+    if (a.indexOf('knee') >= 0 || a.indexOf('ortho') >= 0) return 'KneeCare (Ortho)';
+    if (a.indexOf('resto') >= 0 || a.indexOf('pilates') >= 0) return 'Resto Pilates';
+    if (a.indexOf('massage') >= 0) return 'Massage';
+    if (a.indexOf('yiaoya') >= 0) return 'Yiaoya';
+    return 'อื่นๆ / ไม่ระบุ';
+  }
+
+  // ── ถอดรหัสชื่อแคมเปญ (tag |CO:..|CL:..|PG:..|BGT:..|PAGE:..|) → อ่านออกว่า "ยิงอะไร" ──
+  var CO_MAP = { SALE: 'ขายของ', SALES: 'ขายของ', ENGAGEMENT: 'มีส่วนร่วม', ENGAGE: 'มีส่วนร่วม', LEADS: 'เก็บลีด', LEAD: 'เก็บลีด', TRAFFIC: 'ดึงคนเข้าชม', AWARENESS: 'สร้างการรับรู้', REACH: 'เข้าถึงคนเยอะ', MESSAGES: 'ทักแชท', MESSAGE: 'ทักแชท' };
+  var CL_MAP = { INBOX: 'ทักแชท (Inbox)', LEAD: 'ฟอร์มเก็บลีด', TRAFFIC: 'เข้าเว็บ/เพจ', CALL: 'โทรหา', WHATSAPP: 'WhatsApp', MESSENGER: 'Messenger' };
+  function tag(name, key) { var m = new RegExp('(?:^|\\|)\\s*' + key + ':([^|]+)', 'i').exec(name || ''); return m ? m[1].trim().toUpperCase() : ''; }
+  function decodeCampaign(name) {
+    var co = tag(name, 'CO'), cl = tag(name, 'CL'), pg = tag(name, 'PG'), bgt = tag(name, 'BGT'), pageT = tag(name, 'PAGE');
+    var parts = [];
+    if (co) parts.push('ยิงเพื่อ: ' + (CO_MAP[co] || co));
+    if (cl) parts.push('วิธี: ' + (CL_MAP[cl] || cl));
+    if (pg) parts.push('เน้น: ' + pg.replace(/\./g, ' '));
+    if (bgt) parts.push('งบ: ' + (bgt === 'DAILY' ? 'รายวัน' : bgt === 'LIFETIME' ? 'ตลอดแคมเปญ' : bgt));
+    if (pageT) parts.push('เพจ: ' + pageT);
+    return parts;
+  }
 
   function $w() { return document.getElementById('wrap-adexplore'); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -19,9 +50,10 @@
   function load() {
     var sb = getSb(); if (!sb || !sb.functions) { ST.err = 'ไม่พบการเชื่อมต่อ'; return render(); }
     ST.loading = true; render();
+    var body = (ST.since && ST.until) ? { mode: 'explore', since: ST.since, until: ST.until } : { mode: 'explore', days: Number(ST.days) };
     Promise.all([
-      sb.functions.invoke('meta_sync', { body: { mode: 'explore', days: Number(ST.days) } }),
-      sb.functions.invoke('ad_creative').catch(function () { return { data: {} }; })   // ad-level (reach/วิดีโอ) สำหรับ drill
+      sb.functions.invoke('meta_sync', { body: body }),
+      sb.functions.invoke('ad_creative').catch(function () { return { data: {} }; })
     ]).then(function (arr) {
       var d = (arr[0] && arr[0].data) || {};
       ST.rows = (d.ok && Array.isArray(d.rows)) ? d.rows : [];
@@ -33,6 +65,7 @@
 
   function filtered() {
     return ST.rows.filter(function (r) {
+      if (ST.dept && deptOf(r) !== ST.dept) return false;
       if (ST.platform && r.platform !== ST.platform) return false;
       if (ST.account && r.account !== ST.account) return false;
       if (ST.page && (r.page || '') !== ST.page) return false;
@@ -41,6 +74,7 @@
   }
 
   function keyOf(r) {
+    if (ST.groupBy === 'dept') return deptOf(r);
     if (ST.groupBy === 'platform') return PLAT_NAME[r.platform] || r.platform || '—';
     if (ST.groupBy === 'account') return r.account || '—';
     if (ST.groupBy === 'page') return r.page || '(ไม่ระบุเพจ)';
@@ -66,7 +100,6 @@
     return arr;
   }
 
-  // รายโฆษณา (ad-level) ของแคมเปญ — จาก ad_creative (มี reach + ดูวิดีโอจบ%)
   function adsFor(camp) {
     return ST.ads.filter(function (r) { return (r.campaign || '') === camp; }).map(function (r) {
       var impr = Number(r.impressions) || 0, clk = Number(r.clicks) || 0, vv = Number(r.video_views) || 0;
@@ -74,9 +107,13 @@
     }).sort(function (a, b) { return b.spend - a.spend; });
   }
 
+  // ค่าที่ใช้เติม dropdown — รองรับ dept (คำนวณ) ด้วย
   function uniq(field) {
-    var s = {}; var out = [];
-    ST.rows.forEach(function (r) { var v = field === 'page' ? (r.page || '') : r[field]; if (v && !s[v]) { s[v] = 1; out.push(v); } });
+    var s = {}, out = [];
+    ST.rows.forEach(function (r) {
+      var v = field === 'dept' ? deptOf(r) : (field === 'page' ? (r.page || '') : r[field]);
+      if (v && !s[v]) { s[v] = 1; out.push(v); }
+    });
     out.sort(); return out;
   }
 
@@ -87,79 +124,75 @@
     var o = '<option value="">' + esc(ph) + '</option>' + opts.map(function (v) { return '<option value="' + esc(v) + '"' + (cur === v ? ' selected' : '') + '>' + esc(PLAT_NAME[v] || v) + '</option>'; }).join('');
     return '<select id="' + id + '" style="padding:7px 10px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;background:#fff;color:var(--navy,#0D2F4F);max-width:200px">' + o + '</select>';
   }
+  function dinput(id, val) {
+    return '<input type="date" id="' + id + '" value="' + esc(val) + '" style="padding:6px 8px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;color:var(--navy,#0D2F4F)">';
+  }
 
   function render() {
     var w = $w(); if (!w) return;
     if (ST.loading) { w.innerHTML = '<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลดข้อมูลโฆษณา…</span></div>'; return; }
     if (ST.err) { w.innerHTML = '<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>' + esc(ST.err) + '</span></div>'; return; }
 
+    var custom = !!(ST.since && ST.until);
     var rows = filtered();
     var agg = aggregate(rows);
     var tot = agg.reduce(function (a, o) { return { spend: a.spend + o.spend, impr: a.impr + o.impr, clicks: a.clicks + o.clicks, conv: a.conv + o.conv }; }, { spend: 0, impr: 0, clicks: 0, conv: 0 });
-    var tctr = tot.impr ? (tot.clicks / tot.impr * 100) : 0;
-    var tcpc = tot.clicks ? (tot.spend / tot.clicks) : 0;
-    var tcpm = tot.impr ? (tot.spend / tot.impr * 1000) : 0;
+    var tctr = tot.impr ? (tot.clicks / tot.impr * 100) : 0, tcpc = tot.clicks ? (tot.spend / tot.clicks) : 0, tcpm = tot.impr ? (tot.spend / tot.impr * 1000) : 0;
 
     var h = '';
-    // แถบควบคุม
-    h += '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:6px">';
-    h += '<div style="display:flex;gap:6px;flex-wrap:wrap">' + RANGES.map(function (r) { return btn(ST.days == r[0], r[1], 'data-rng="' + r[0] + '"'); }).join('') + '</div>';
-    h += '</div>';
+    // ช่วงเวลา: preset + custom เลือกวันเอง
+    h += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'
+      + RANGES.map(function (r) { return btn(!custom && ST.days == r[0], r[1], 'data-rng="' + r[0] + '"'); }).join('')
+      + '<span style="color:var(--text-muted,#64748B);font-size:12px;margin:0 4px">|</span>'
+      + dinput('axFrom', ST.since) + '<span style="font-size:12px;color:var(--text-muted,#64748B)">ถึง</span>' + dinput('axTo', ST.until)
+      + btn(custom, 'ใช้ช่วงนี้', 'id="axApply"') + '</div>';
+    // ตัวกรอง
     h += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'
+      + sel('axDept', ST.dept, uniq('dept'), 'ทุกแผนก')
       + sel('axPlat', ST.platform, uniq('platform'), 'ทุกแพลตฟอร์ม')
-      + sel('axAcc', ST.account, uniq('account'), 'ทุกแบรนด์')
-      + sel('axPage', ST.page, uniq('page'), 'ทุกเพจ')
-      + '</div>';
+      + sel('axAcc', ST.account, uniq('account'), 'ทุกแบรนด์/บัญชี')
+      + sel('axPage', ST.page, uniq('page'), 'ทุกเพจ') + '</div>';
+    // มุมมอง
     h += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px"><span style="font-size:12px;color:var(--text-muted,#64748B)">มุมมอง:</span>'
       + GROUPS.map(function (g) { return btn(ST.groupBy === g[0], g[1], 'data-grp="' + g[0] + '"'); }).join('') + '</div>';
 
-    // การ์ดสรุป
     var card = function (l, v, sub) { return '<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:11px 14px;flex:1;min-width:120px"><div style="font-size:10.5px;color:var(--text-muted,#64748B);font-weight:600;text-transform:uppercase">' + l + '</div><div style="font-size:20px;font-weight:800;color:var(--navy,#0D2F4F)">' + v + '</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">' + (sub || '') + '</div></div>'; };
     h += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'
-      + card('ค่าโฆษณา', baht(tot.spend), ST.days == '1200' ? 'ทั้งหมด' : ST.days + ' วัน')
+      + card('ค่าโฆษณา', baht(tot.spend), custom ? (ST.since + ' → ' + ST.until) : (ST.days == '1200' ? 'ทั้งหมด' : ST.days + ' วัน'))
       + card('Impressions', intf(tot.impr), 'CTR ' + pct(tctr))
       + card('คลิก', intf(tot.clicks), 'CPC ' + baht(tcpc))
       + card('CPM', baht(tcpm), 'ต่อ 1,000 impr')
       + card('Conversions', intf(tot.conv), 'จากแอด')
       + '</div>';
 
-    // ตาราง
     var gname = (GROUPS.filter(function (g) { return g[0] === ST.groupBy; })[0] || ['', 'รายการ'])[1];
     var isCamp = ST.groupBy === 'campaign';
     var body = agg.map(function (o) {
       var caret = isCamp ? '<span style="color:#3DC5B7;font-weight:700">' + (ST.expanded[o.key] ? '▾ ' : '▸ ') + '</span>' : '';
       var tr = '<tr ' + (isCamp ? 'data-camp="' + esc(o.key) + '" style="cursor:pointer"' : '') + '>'
         + '<td class="name-cell" title="' + esc(o.key) + '">' + caret + esc(o.key.length > 60 ? o.key.slice(0, 60) + '…' : o.key) + '</td>'
-        + '<td class="num">' + baht(o.spend) + '</td>'
-        + '<td class="num">' + intf(o.impr) + '</td>'
-        + '<td class="num">' + intf(o.clicks) + '</td>'
-        + '<td class="num">' + pct(o.ctr) + '</td>'
-        + '<td class="num">' + baht(o.cpc) + '</td>'
-        + '<td class="num">' + baht(o.cpm) + '</td>'
-        + '<td class="num">' + intf(o.conv) + '</td>'
-        + '</tr>';
+        + '<td class="num">' + baht(o.spend) + '</td><td class="num">' + intf(o.impr) + '</td><td class="num">' + intf(o.clicks) + '</td>'
+        + '<td class="num">' + pct(o.ctr) + '</td><td class="num">' + baht(o.cpc) + '</td><td class="num">' + baht(o.cpm) + '</td><td class="num">' + intf(o.conv) + '</td></tr>';
       if (isCamp && ST.expanded[o.key]) {
+        var dc = decodeCampaign(o.key);
+        var decoded = dc.length ? '<div style="padding:7px 10px 2px 26px;font-size:11.5px;color:#0F766E">' + dc.map(function (x) { return '<span style="background:#E1F5EE;border-radius:6px;padding:2px 8px;margin-right:5px;display:inline-block;margin-bottom:4px">' + esc(x) + '</span>'; }).join('') + '</div>' : '';
         var ads = adsFor(o.key);
-        tr += '<tr style="background:#F1F8F7"><td colspan="8" style="padding:0 0 0 24px"><table style="width:100%;border-collapse:collapse"><thead><tr style="color:var(--text-muted,#64748B);font-size:10.5px"><th style="text-align:left;padding:4px 8px">↳ รายโฆษณา</th><th style="text-align:right;padding:4px 8px">ค่าแอด</th><th style="text-align:right;padding:4px 8px">Impr</th><th style="text-align:right;padding:4px 8px">Reach</th><th style="text-align:right;padding:4px 8px">CTR</th><th style="text-align:right;padding:4px 8px">ดูจบ</th><th style="text-align:right;padding:4px 8px">แชท</th></tr></thead><tbody>'
-          + (ads.length ? ads.map(function (a) { return '<tr style="font-size:11.5px"><td style="padding:4px 8px;color:var(--navy,#0D2F4F)">' + esc(a.ad.length > 50 ? a.ad.slice(0, 50) + '…' : a.ad) + '</td><td style="text-align:right;padding:4px 8px">' + baht(a.spend) + '</td><td style="text-align:right;padding:4px 8px">' + intf(a.impr) + '</td><td style="text-align:right;padding:4px 8px">' + intf(a.reach) + '</td><td style="text-align:right;padding:4px 8px">' + pct(a.ctr) + '</td><td style="text-align:right;padding:4px 8px">' + pct(a.watch) + '</td><td style="text-align:right;padding:4px 8px;font-weight:700">' + intf(a.msg) + '</td></tr>'; }).join('') : '<tr><td colspan="7" style="padding:6px 8px;font-size:11px;color:var(--text-muted,#64748B)">ไม่มีข้อมูลรายโฆษณา (ad_creative) ของแคมเปญนี้ในช่วงที่เก็บ</td></tr>')
-          + '</tbody></table></td></tr>';
+        var adRows = ads.length ? ads.map(function (a) { return '<tr style="font-size:11.5px"><td style="padding:4px 8px;color:var(--navy,#0D2F4F)">' + esc(a.ad.length > 50 ? a.ad.slice(0, 50) + '…' : a.ad) + '</td><td style="text-align:right;padding:4px 8px">' + baht(a.spend) + '</td><td style="text-align:right;padding:4px 8px">' + intf(a.impr) + '</td><td style="text-align:right;padding:4px 8px">' + intf(a.reach) + '</td><td style="text-align:right;padding:4px 8px">' + pct(a.ctr) + '</td><td style="text-align:right;padding:4px 8px">' + pct(a.watch) + '</td><td style="text-align:right;padding:4px 8px;font-weight:700">' + intf(a.msg) + '</td></tr>'; }).join('') : '<tr><td colspan="7" style="padding:6px 8px;font-size:11px;color:var(--text-muted,#64748B)">ไม่มีข้อมูลรายโฆษณา (ad_creative) ของแคมเปญนี้ในช่วงที่เก็บ</td></tr>';
+        tr += '<tr style="background:#F1F8F7"><td colspan="8" style="padding:0 0 6px">' + decoded + '<table style="width:100%;border-collapse:collapse"><thead><tr style="color:var(--text-muted,#64748B);font-size:10.5px"><th style="text-align:left;padding:4px 8px 4px 26px">↳ รายโฆษณา</th><th style="text-align:right;padding:4px 8px">ค่าแอด</th><th style="text-align:right;padding:4px 8px">Impr</th><th style="text-align:right;padding:4px 8px">Reach</th><th style="text-align:right;padding:4px 8px">CTR</th><th style="text-align:right;padding:4px 8px">ดูจบ</th><th style="text-align:right;padding:4px 8px">แชท</th></tr></thead><tbody>' + adRows + '</tbody></table></td></tr>';
       }
       return tr;
     }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted,#64748B);padding:18px">ไม่มีข้อมูลในช่วง/ตัวกรองนี้</td></tr>';
-    h += '<div class="sec-title">' + esc(gname) + ' · ' + agg.length + ' รายการ (เรียงตามค่าแอด)' + (isCamp ? ' <span style="font-size:11px;font-weight:400;color:var(--text-muted,#64748B)">— กดแถวเพื่อดูรายโฆษณา + reach</span>' : '') + '</div>';
-    h += '<div class="table-wrap"><table class="data-table"><thead><tr>'
-      + '<th>' + esc(gname) + '</th><th class="num">ค่าแอด</th><th class="num">Impr</th><th class="num">คลิก</th><th class="num">CTR</th><th class="num">CPC</th><th class="num">CPM</th><th class="num">Conv</th>'
-      + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+    h += '<div class="sec-title">' + esc(gname) + ' · ' + agg.length + ' รายการ (เรียงตามค่าแอด)' + (isCamp ? ' <span style="font-size:11px;font-weight:400;color:var(--text-muted,#64748B)">— กดแถวเพื่อดูว่ายิงอะไร + รายโฆษณา</span>' : '') + '</div>';
+    h += '<div class="table-wrap"><table class="data-table"><thead><tr><th>' + esc(gname) + '</th><th class="num">ค่าแอด</th><th class="num">Impr</th><th class="num">คลิก</th><th class="num">CTR</th><th class="num">CPC</th><th class="num">CPM</th><th class="num">Conv</th></tr></thead><tbody>' + body + '</tbody></table></div>';
 
     w.innerHTML = h;
 
-    // bind
-    w.querySelectorAll('[data-rng]').forEach(function (b) { b.onclick = function () { ST.days = b.getAttribute('data-rng'); load(); }; });
+    w.querySelectorAll('[data-rng]').forEach(function (b) { b.onclick = function () { ST.days = b.getAttribute('data-rng'); ST.since = ''; ST.until = ''; load(); }; });
     w.querySelectorAll('[data-grp]').forEach(function (b) { b.onclick = function () { ST.groupBy = b.getAttribute('data-grp'); render(); }; });
     w.querySelectorAll('[data-camp]').forEach(function (tr) { tr.onclick = function () { var c = tr.getAttribute('data-camp'); ST.expanded[c] = !ST.expanded[c]; render(); }; });
-    var ap = document.getElementById('axPlat'); if (ap) ap.onchange = function () { ST.platform = ap.value; render(); };
-    var aa = document.getElementById('axAcc'); if (aa) aa.onchange = function () { ST.account = aa.value; render(); };
-    var ag = document.getElementById('axPage'); if (ag) ag.onchange = function () { ST.page = ag.value; render(); };
+    var ax = document.getElementById('axApply'); if (ax) ax.onclick = function () { var f = document.getElementById('axFrom'), t = document.getElementById('axTo'); if (f && t && f.value && t.value) { ST.since = f.value; ST.until = t.value; load(); } };
+    var bindSel = function (id, k) { var el = document.getElementById(id); if (el) el.onchange = function () { ST[k] = el.value; render(); }; };
+    bindSel('axDept', 'dept'); bindSel('axPlat', 'platform'); bindSel('axAcc', 'account'); bindSel('axPage', 'page');
   }
 
   window.mountAdexplore = function () { if ($w()) { if (!ST.rows.length && !ST.loading) load(); else render(); } };
