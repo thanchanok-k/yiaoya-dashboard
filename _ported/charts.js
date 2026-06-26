@@ -58,6 +58,15 @@
       t.style.left = x + 'px'; t.style.top = y + 'px';
     }, { passive: true });
     document.addEventListener('mouseout', function (e) { if (e.target.closest && e.target.closest('[data-tip]')) { t.style.opacity = '0'; t.style.transform = 'translateY(2px)'; } }, { passive: true });
+    // toggle chart : คลิก chip → เปิด/ปิดเส้น แล้ว re-render กราฟในที่เดิม
+    document.addEventListener('click', function (e) {
+      var chip = e.target.closest && e.target.closest('[data-yc-tg]'); if (!chip) return;
+      var id = chip.getAttribute('data-yc-tg'), key = chip.getAttribute('data-key'), cfg = _tg[id]; if (!cfg) return;
+      if (cfg._active[key]) delete cfg._active[key]; else cfg._active[key] = 1;
+      var svgBox = document.getElementById(id + '_svg'); if (svgBox) svgBox.innerHTML = tgSvg(cfg);
+      var wrap = document.getElementById(id);
+      if (wrap) wrap.querySelectorAll('[data-yc-tg]').forEach(function (b) { b.classList.toggle('off', !cfg._active[b.getAttribute('data-key')]); });
+    });
   }
   // สร้าง attribute data-tip (escape ปลอดภัย) — html: swatch สี + label + value
   function tip(label, value, color) {
@@ -65,6 +74,7 @@
       '<span style=\'color:#9FE1CB\'>' + esc(label) + '</span> <b style=\'margin-left:4px\'>' + esc(value) + '</b>';
     return ' data-tip="' + s.replace(/"/g, '&quot;') + '" style="cursor:pointer"';
   }
+  var _tg = {}, _tgSeq = 0; // registry ของ toggle chart (ใช้ re-render ตอนคลิก chip)
 
   // ---- CSS (ฉีดครั้งเดียว)
   var CSS =
@@ -117,7 +127,15 @@
     '.yc-filter select,.yc-filter input{font:inherit;font-size:13px;color:#0F172A;border:1px solid #E2E8F0;border-radius:8px;padding:7px 10px;background:#fff;min-width:120px}' +
     '.yc-filter select:focus,.yc-filter input:focus{outline:none;border-color:#3DC5B7}' +
     '.yc-filter .go{background:#3DC5B7;color:#fff;border:none;border-radius:8px;padding:8px 18px;font:inherit;font-weight:700;font-size:13px;cursor:pointer}' +
-    '.yc-filter .go:hover{background:#2BA89B}';
+    '.yc-filter .go:hover{background:#2BA89B}' +
+    // ---- toggle chart (เลือกเส้นแสดงพร้อมกัน)
+    '.yc-tg-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}' +
+    '.yc-tg-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #E2E8F0;background:#fff;border-radius:20px;padding:5px 11px;font:inherit;font-size:12px;color:#0F172A;cursor:pointer;transition:.12s}' +
+    '.yc-tg-chip .dot{width:9px;height:9px;border-radius:50%;flex:none}' +
+    '.yc-tg-chip .ax{font-size:10px;color:#94A3B8;font-weight:700}' +
+    '.yc-tg-chip:hover{border-color:#3DC5B7}' +
+    '.yc-tg-chip.off{background:#F8FAFC;color:#94A3B8;border-color:#EEF2F6}' +
+    '.yc-tg-chip.off .dot{background:#CBD5E1 !important}';
 
   function ensureCSS() {
     if (typeof document === 'undefined' || document.getElementById('ychart-css')) return;
@@ -363,6 +381,55 @@
     }).join('') + '</div>';
   }
 
+  // ============================================================ toggle chart (กราฟรวม เลือกดูได้)
+  // YChart.toggleChart({id, labels, series:[{key,name,vals,color,axis:'left'|'right'}], active:[keys]})
+  //   คลิก chip → เปิด/ปิดเส้น · รองรับแกนคู่ (ซ้าย=คน, ขวา=บาท) · re-render เองผ่าน delegated click
+  function toggleChart(o) {
+    ensureCSS(); o = o || {};
+    var id = o.id || ('yctg' + (++_tgSeq));
+    var cfg = { id: id, labels: o.labels || [], series: o.series || [], height: o.height || 300, _active: {} };
+    var act = (o.active && o.active.length) ? o.active : cfg.series.map(function (s) { return s.key; });
+    act.forEach(function (k) { cfg._active[k] = 1; });
+    _tg[id] = cfg;
+    return '<div class="yc-tg" id="' + id + '">' + tgChips(cfg) + '<div class="yc-tg-svg" id="' + id + '_svg">' + tgSvg(cfg) + '</div></div>';
+  }
+  function tgChips(cfg) {
+    return '<div class="yc-tg-chips">' + cfg.series.map(function (s, i) {
+      var c = s.color || col(i), on = cfg._active[s.key];
+      return '<button class="yc-tg-chip' + (on ? '' : ' off') + '" data-yc-tg="' + esc(cfg.id) + '" data-key="' + esc(s.key) + '">' +
+        '<span class="dot" style="background:' + c + '"></span>' + esc(s.name) + (s.axis === 'right' ? ' <span class="ax">฿</span>' : '') + '</button>';
+    }).join('') + '</div>';
+  }
+  function tgSvg(cfg) {
+    var labels = cfg.labels, sel = cfg.series.filter(function (s) { return cfg._active[s.key]; });
+    if (!sel.length) return empty('เลือกอย่างน้อย 1 รายการเพื่อแสดงกราฟ', 'ti-eye-off');
+    var W = 900, H = cfg.height, padL = 46, padR = 46, padB = 28, padT = 12, n = labels.length;
+    var leftS = sel.filter(function (s) { return s.axis !== 'right'; });
+    var rightS = sel.filter(function (s) { return s.axis === 'right'; });
+    var flat = function (arr) { return arr.flatMap(function (s) { return s.vals.map(num); }).concat([0]); };
+    var lMax = Math.max(1, Math.max.apply(null, flat(leftS)));
+    var rMax = Math.max(1, Math.max.apply(null, flat(rightS)));
+    var X = function (i) { return padL + (n <= 1 ? (W - padL - padR) / 2 : i * (W - padL - padR) / (n - 1)); };
+    var Yl = function (v) { return H - padB - (num(v) / lMax) * (H - padB - padT); };
+    var Yr = function (v) { return H - padB - (num(v) / rMax) * (H - padB - padT); };
+    var g = '';
+    for (var k = 0; k <= 4; k++) {
+      var yy = H - padB - (k / 4) * (H - padB - padT);
+      g += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '" stroke="' + C.grid + '"/>';
+      if (leftS.length) g += '<text x="' + (padL - 6) + '" y="' + (yy + 3) + '" font-size="9" fill="' + C.faint + '" text-anchor="end">' + fmt(lMax * k / 4) + '</text>';
+      if (rightS.length) g += '<text x="' + (W - padR + 6) + '" y="' + (yy + 3) + '" font-size="9" fill="' + C.faint + '" text-anchor="start">' + fmt(rMax * k / 4) + '</text>';
+    }
+    labels.forEach(function (m, i) { if (n > 12 && i % 2) return; g += '<text x="' + X(i) + '" y="' + (H - 9) + '" font-size="8.5" fill="' + C.muted + '" text-anchor="middle">' + esc(m) + '</text>'; });
+    if (rightS.length) g += '<text x="' + (W - padR + 6) + '" y="' + (padT + 2) + '" font-size="9" fill="' + C.faint + '" text-anchor="start">฿</text>';
+    sel.forEach(function (s, si) {
+      var c = s.color || col(cfg.series.indexOf(s)), Y = s.axis === 'right' ? Yr : Yl;
+      var pts = s.vals.map(function (v, i) { return X(i) + ',' + Y(v); }).join(' ');
+      g += '<polyline points="' + pts + '" fill="none" stroke="' + c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      s.vals.forEach(function (v, i) { g += '<circle cx="' + X(i) + '" cy="' + Y(v) + '" r="3" fill="#fff" stroke="' + c + '" stroke-width="2"' + tip(s.name + ' · ' + labels[i], (s.axis === 'right' ? baht(v) : full(v)), c) + '></circle>'; });
+    });
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto">' + g + '</svg>';
+  }
+
   // ============================================================ settings controls
   // pills : ตัวเลือกแบบ segment (เช่น ช่วงเวลา 14/30/90 วัน) — onPick = ชื่อฟังก์ชัน global, ส่งค่า v กลับ
   // YChart.pills({items:[{v,label}], active, onPick})
@@ -422,7 +489,7 @@
     esc: esc, num: num, fmt: fmt, full: full, baht: baht, pct: pct,
     kpi: kpi, kpiRow: kpiRow, card: card, grid: grid, legend: legend,
     donut: donut, line: line, bars: bars, spark: spark, gauge: gauge, radar: radar,
-    topList: topList, barList: barList, empty: empty, ensureCSS: ensureCSS,
+    topList: topList, barList: barList, toggleChart: toggleChart, empty: empty, ensureCSS: ensureCSS,
     pills: pills, iconBtn: iconBtn, filterBar: filterBar, toCSV: toCSV, download: download, tip: tip
   };
 })(typeof window !== 'undefined' ? window : this);

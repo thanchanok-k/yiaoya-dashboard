@@ -85,6 +85,24 @@ function mountFooverview() {
   // filter bar : ช่วงด่วน (pills) + เลือกช่วงวันที่เอง (date range)
   fov_renderBar();
   fov_loadRange(fov_d1, fov_d2);
+  fov_fetchRevenue();   // ยอดขายรายวัน (fo.branch_daily) → overlay ในกราฟรวม
+}
+
+// ยอดขายรวมรายวัน (sum ทุกสาขา) เก็บเป็น map date(YYYY-MM-DD) → บาท · ใช้ในกราฟรวม (แกนขวา)
+var fov_revByDate = {};
+function fov_fetchRevenue() {
+  var sb = fov_sb(); if (!sb || !sb.functions) return;
+  sb.functions.invoke('hr_list?type=fo.branch_daily.updated&limit=2000').then(function (res) {
+    var items = ((res && res.data) || {}).items || [];
+    var m = {};
+    items.forEach(function (p) {
+      var d = String(p.date || p.branch_day_date || p.day || '').slice(0, 10);
+      if (!d) return;
+      m[d] = (m[d] || 0) + fov_num(p.revenue_total);
+    });
+    fov_revByDate = m;
+    if (fov_lastRows.length) fov_renderCharts(fov_lastRows); // มียอดขายแล้ว → วาดกราฟรวมใหม่
+  }).catch(function () { /* ไม่มียอดขาย → กราฟรวมแสดงเฉพาะจำนวนผู้ป่วย */ });
 }
 
 // ---- state ช่วงวันที่ ----
@@ -210,6 +228,22 @@ function fov_renderCharts(rows) {
     { label: 'ออร์โธ', value: sum('count_ortho'), color: Y.C.amberSoft }
   ];
 
+  // กราฟรวม · เลือกดูได้ (toggle) — ผู้ป่วยใหม่/เก่า + แยกแผนก + ยอดขายรวม (แกนขวา)
+  var isoKeys = asc.map(function (r) { return String(r.submitted_at).slice(0, 10); });
+  var hasRev = isoKeys.some(function (d) { return fov_revByDate[d]; });
+  var comboSeries = [
+    { key: 'new', name: 'ผู้ป่วยใหม่', vals: asc.map(function (r) { return fov_num(r.count_new); }), color: Y.C.tealSoft },
+    { key: 'old', name: 'ผู้ป่วยเก่า', vals: asc.map(function (r) { return fov_num(r.count_returning); }), color: Y.C.navySoft },
+    { key: 'pt', name: 'กายภาพบำบัด', vals: asc.map(function (r) { return fov_num(r.count_pt); }), color: Y.color(2) },
+    { key: 'pil', name: 'Pilates', vals: asc.map(function (r) { return fov_num(r.count_pilates); }), color: Y.color(3) },
+    { key: 'ortho', name: 'ออร์โธ', vals: asc.map(function (r) { return fov_num(r.count_ortho); }), color: Y.color(4) }
+  ];
+  if (hasRev) comboSeries.push({ key: 'rev', name: 'ยอดขายรวม', vals: isoKeys.map(function (d) { return fov_revByDate[d] || 0; }), color: Y.C.amberSoft, axis: 'right' });
+  var comboCard = Y.card({
+    title: 'กราฟรวม · เลือกดูได้', icon: 'ti-chart-dots-2', sub: 'กด chip เลือกเส้นที่จะแสดงพร้อมกัน · ' + perLab, action: dlBtn,
+    body: Y.toggleChart({ id: 'fovCombo', labels: labels, height: 290, active: ['new', 'old'], series: comboSeries })
+  });
+
   // line : แนวโน้มผู้ป่วยรายวัน (ใหม่ vs เก่า — 2 เส้น)
   var lineCard = Y.card({
     title: 'แนวโน้มผู้ป่วยรายวัน', icon: 'ti-chart-line', sub: 'ใหม่ / เก่า · ' + perLab, action: dlBtn,
@@ -265,8 +299,9 @@ function fov_renderCharts(rows) {
     body: Y.barList(svcTotals.slice().sort(function (a, b) { return b.value - a.value; }), { valueFmt: Y.full })
   });
 
-  // 2 คอลัมน์ตลอด (กราฟใหญ่พอดี ไม่สูงเกิน) + แถวสรุป 3 ช่อง
+  // กราฟรวม (เต็มกว้าง) ด้านบน + 2 คอลัมน์ + แถวสรุป 3 ช่อง
   box.innerHTML = kpis + '<div style="display:flex;flex-direction:column;gap:14px">' +
+    comboCard +
     Y.grid([lineCard, barCard], { min: 440 }) +
     Y.grid([svcCard, donutCard], { min: 440 }) +
     Y.grid([gaugeCard, rankCard], { min: 320 }) +
