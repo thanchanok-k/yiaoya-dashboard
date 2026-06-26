@@ -33,7 +33,7 @@ const stopSpin=()=>{const s=document.getElementById('spin');if(s)s.style.display
 
 async function run(){
   if(!LIFF_ID){ stopSpin(); msg('ยังไม่ได้ตั้งค่า LIFF'); document.querySelector('.card').insertAdjacentHTML('beforeend',
-    `<div class="warn"><b>ขั้นตอนเปิดใช้งาน (เซิน):</b><br>1. LINE Developers → สร้าง LIFF app บน OA จัดซื้อ<br>2. Endpoint URL = หน้านี้ · Size = Full · Scope = <code>profile</code><br>3. เอา <b>LIFF ID</b> วางในไฟล์ <code>login.html</code> บรรทัด <code>LIFF_ID</code><br>4. เอา <b>Channel ID</b> ตั้ง secret <code>LINE_CHANNEL_ID_PUR</code> บน Supabase<br>5. เปิด anonymous sign-in ใน Supabase Auth</div>`); return; }
+    `<div class="warn"><b>ขั้นตอนเปิดใช้งาน (เซิน):</b><br>1. ใช้ <b>OA HR (พนักงาน)</b> — channel เดียวกับที่เก็บ <code>line_user_id</code> พนักงาน (ไม่ใช่ OA จัดซื้อ/Recruit) เพื่อให้ uid ตรง record เดิม<br>2. LINE Developers → ใช้ <b>LIFF เดิม</b> (ค่า <code>LIFF_ID_LOGIN</code> ใน Settings ของ HR) หรือสร้าง LIFF ใหม่บน channel นี้ · Endpoint = หน้านี้ · Size = Full · Scope = <code>profile</code><br>3. เอา <b>LIFF ID</b> วางในไฟล์ <code>login.html</code> บรรทัด <code>LIFF_ID</code><br>4. เอา <b>Channel ID ของ OA HR</b> ตั้ง secret <code>LINE_CHANNEL_ID_HR</code> บน Supabase</div>`); return; }
   try{
     await liff.init({ liffId: LIFF_ID });
     if(!liff.isLoggedIn()){ liff.login(); return; }
