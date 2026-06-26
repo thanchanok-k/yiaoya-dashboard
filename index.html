@@ -4809,7 +4809,7 @@ function fbInit(){
 $('logout').onclick=async()=>{localStorage.removeItem('yy_line_id');LINE_ID=null;await sb.auth.signOut();location.reload();};
 /* LINE-login-first: เปิด LINE_FIRST=true เมื่อเสียบ LIFF ID + ตั้ง LINE_CHANNEL_ID_PUR แล้ว
    → ทั้งระบบ (HR/บัญชี/จัดซื้อ) บังคับเข้าผ่าน LINE ก่อน · email/OTP เหลือไว้สำหรับแอดมิน (?admin=1) */
-const LINE_FIRST=false;
+const LINE_FIRST=true;
 function _validLine(){ return !!(LINE_ID&&LINE_ID.uid&&LINE_ID.employee_id); }
 const _adminBypass=/[?&]admin=1/.test(location.search);
 sb.auth.getSession().then(({data})=>{

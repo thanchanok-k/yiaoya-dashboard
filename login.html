@@ -46,7 +46,7 @@ async function run(){
     localStorage.setItem('yy_line_id', JSON.stringify({ uid:data.uid, display_name:data.display_name, employee_name:data.employee_name||data.display_name, employee_id:data.employee_id||'', role:data.role||'staff', verified:data.verified }));
     stopSpin();
     if(!data.linked){ showRequestForm(data, token); }
-    else { msg(`ยินดีต้อนรับ ${data.employee_name||data.display_name} ✓`);
+    else { msg(`ยินดีต้อนรับ ${data.employee_name||data.display_name}`);
       document.querySelector('.card').insertAdjacentHTML('beforeend','<a class="btn" href="index.html">เข้าหน้าระบบ →</a>'); }
   }catch(e){ stopSpin(); msg('ผิดพลาด: '+e); }
 }
@@ -54,7 +54,7 @@ async function run(){
 // ฟอร์มขอสิทธิ์เข้าระบบ (พนักงานใหม่ที่ LINE ยังไม่ผูก) → ส่ง access.requested ให้ HR อนุมัติ
 function showRequestForm(data, token){
   const esc=(s)=>String(s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-  msg(`สวัสดีคุณ ${esc(data.display_name)} 👋<br><small>บัญชี LINE นี้ยังไม่มีสิทธิ์ — กรอกคำขอเข้าระบบ แล้ว HR จะอนุมัติให้ค่ะ</small>`);
+  msg(`สวัสดีคุณ ${esc(data.display_name)}<br><small>บัญชี LINE นี้ยังไม่มีสิทธิ์ — กรอกคำขอเข้าระบบ แล้ว HR จะอนุมัติให้ค่ะ</small>`);
   document.querySelector('.card').insertAdjacentHTML('beforeend', `
     <div id="reqf" style="margin-top:16px;text-align:left">
       <input id="rq_name" placeholder="ชื่อ-นามสกุล" value="${esc(data.display_name)}">
@@ -71,7 +71,7 @@ function showRequestForm(data, token){
         full_name:rq_name.value.trim(), branch_id:rq_branch.value.trim(), position:rq_pos.value.trim(), note:rq_note.value.trim() }});
       if(error||r?.error){ btn.disabled=false; btn.textContent='ส่งคำขอเข้าระบบ'; alert('ส่งไม่สำเร็จ: '+(r?.error||error.message)); return; }
       document.getElementById('reqf').remove();
-      msg(`✅ ส่งคำขอเรียบร้อย<br><small>รอ HR อนุมัติ · ระบบจะแจ้งกลับทาง LINE เมื่ออนุมัติแล้วค่ะ</small>`);
+      msg(`ส่งคำขอเรียบร้อย<br><small>รอ HR อนุมัติ · ระบบจะแจ้งกลับทาง LINE เมื่ออนุมัติแล้วค่ะ</small>`);
     }catch(e){ btn.disabled=false; btn.textContent='ส่งคำขอเข้าระบบ'; alert('ผิดพลาด: '+e); }
   };
 }
