@@ -888,20 +888,28 @@ function EM2_RUN_PAGE_JS() {
     const fd = document.getElementById('filter-department');
     const fl = document.getElementById('filter-level');
     const fs = document.getElementById('filter-supervisor');
+    // option label: ชื่อนำหน้า code วงเล็บ — ถ้าไม่มีชื่อหรือชื่อซ้ำ code โชว์ code อย่างเดียว
+    function emOpt(id, name) {
+      const code = (id == null ? '' : String(id)).trim();
+      const nm = (name == null ? '' : String(name)).trim();
+      const txt = (!nm || nm === code) ? code : `${nm} (${code})`;
+      return `<option value="${escapeAttr(code)}">${escapeHtml(txt)}</option>`;
+    }
+    const EM_LV_LABEL = { mgmt: 'บริหาร', staff: 'ปฏิบัติการ' };
     fb.innerHTML = '<option value="">ทุกสาขา</option>';
     fp.innerHTML = '<option value="">ทุกตำแหน่ง</option>';
     fd.innerHTML = '<option value="">ทุกแผนก</option>';
     fl.innerHTML = '<option value="">ทุกระดับ</option>';
     fs.innerHTML = '<option value="">ทุกหัวหน้า</option>';
-    (allLookups.branches || []).forEach(b => { fb.innerHTML += `<option value="${b.id}">${b.id} — ${escapeHtml(b.name)}</option>`; });
-    (allLookups.positions || []).forEach(p => { fp.innerHTML += `<option value="${p.id}">${p.id} — ${escapeHtml(p.name)}</option>`; });
-    (allLookups.departments || []).forEach(d => { fd.innerHTML += `<option value="${d.id}">${d.id} — ${escapeHtml(d.name)}</option>`; });
-    (allLookups.supervisors || []).forEach(s => { fs.innerHTML += `<option value="${s.id}">${s.id} — ${escapeHtml(s.name)}</option>`; });
+    (allLookups.branches || []).forEach(b => { fb.innerHTML += emOpt(b.id, b.name); });
+    (allLookups.positions || []).forEach(p => { fp.innerHTML += emOpt(p.id, p.name); });
+    (allLookups.departments || []).forEach(d => { fd.innerHTML += emOpt(d.id, d.name); });
+    (allLookups.supervisors || []).forEach(s => { fs.innerHTML += emOpt(s.id, s.name); });
     // ระดับ (level) — distinct จาก positions lookup
     const _levels = [];
     (allLookups.positions || []).forEach(p => { if (p.level && _levels.indexOf(p.level) < 0) _levels.push(p.level); });
     _levels.sort((a, b) => String(a).localeCompare(String(b), 'th'));
-    _levels.forEach(lv => { fl.innerHTML += `<option value="${escapeAttr(lv)}">${escapeHtml(lv)}</option>`; });
+    _levels.forEach(lv => { const t = EM_LV_LABEL[lv] ? `${EM_LV_LABEL[lv]} (${lv})` : lv; fl.innerHTML += `<option value="${escapeAttr(lv)}">${escapeHtml(t)}</option>`; });
     const mp = document.getElementById('m-position-id');
     const md = document.getElementById('m-department-id');
     const mb = document.getElementById('m-primary-branch');
@@ -914,15 +922,22 @@ function EM2_RUN_PAGE_JS() {
     ms.innerHTML = '<option value="">— ไม่มี —</option>';
     mdel.innerHTML = '<option value="">— ไม่มี —</option>';
     mab.innerHTML = '<option value="">— สาขา —</option>';
-    (allLookups.positions || []).forEach(p => { mp.innerHTML += `<option value="${p.id}">${p.id} — ${escapeHtml(p.name)} (${p.level})</option>`; });
-    (allLookups.departments || []).forEach(d => { md.innerHTML += `<option value="${d.id}">${d.id} — ${escapeHtml(d.name)}</option>`; });
+    (allLookups.positions || []).forEach(p => {
+      const lv = EM_LV_LABEL[p.level] ? `${EM_LV_LABEL[p.level]} (${p.level})` : (p.level || '');
+      const nm = (p.name == null ? '' : String(p.name)).trim();
+      const base = (!nm || nm === String(p.id)) ? String(p.id) : `${nm} (${p.id})`;
+      mp.innerHTML += `<option value="${escapeAttr(String(p.id))}">${escapeHtml(lv ? `${base} · ${lv}` : base)}</option>`;
+    });
+    (allLookups.departments || []).forEach(d => { md.innerHTML += emOpt(d.id, d.name); });
     (allLookups.branches || []).forEach(b => {
-      mb.innerHTML += `<option value="${b.id}">${b.id} — ${escapeHtml(b.name)}</option>`;
-      mab.innerHTML += `<option value="${b.id}">${b.id} — ${escapeHtml(b.name)}</option>`;
+      const o = emOpt(b.id, b.name);
+      mb.innerHTML += o;
+      mab.innerHTML += o;
     });
     (allLookups.supervisors || []).forEach(s => {
-      ms.innerHTML += `<option value="${s.id}">${s.id} — ${escapeHtml(s.name)}</option>`;
-      mdel.innerHTML += `<option value="${s.id}">${s.id} — ${escapeHtml(s.name)}</option>`;
+      const o = emOpt(s.id, s.name);
+      ms.innerHTML += o;
+      mdel.innerHTML += o;
     });
   }
 
