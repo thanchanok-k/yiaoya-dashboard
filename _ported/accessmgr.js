@@ -15,7 +15,7 @@
   ];
 
   let MY_ROLE = 'viewer', MY_UID = null, MODE = 'person', LOADED = false;
-  let MENU = {}, MENUS = [], ROLES = [], ROLEBASE = {}, EMPS = [], EMPROLE = {}, EMPADD = {};
+  let MENU = {}, MENUS = [], ROLES = [], ROLEBASE = {}, EMPS = [], EMPROLE = {}, EMPADD = {}, EMPLOCK = {};
   let CUR_EMP = null, EMP_FILTER = '', ADD_FILTER = '', BASE_ROLE = null, OPEN_DOMS = null;
   let RERENDER = null; // callback rerender ของบริบทปัจจุบัน (page หรือ modal)
 
@@ -35,13 +35,14 @@
   }
 
   async function loadAll() {
-    const [mr, ar, ra, emp, er, aa] = await Promise.all([
+    const [mr, ar, ra, emp, er, aa, el] = await Promise.all([
       sb.from('menu_registry').select('view_key,label,domain,owner_reserved,sensitive,description,sort_order').order('sort_order'),
       sb.from('access_role').select('role_key,label,sort_order').order('sort_order'),
       sb.from('role_access').select('role_key,view_key'),
       sb.from('employees').select('employee_id,full_name,position,status'),
       sb.from('emp_access_role').select('employee_id,access_role'),
       sb.from('app_access').select('view_key,employee_id'),
+      sb.from('emp_locks').select('employee_id,position_locked,role_locked'),
     ]);
     if (mr.error) throw new Error(mr.error.message);
     MENUS = mr.data || []; MENU = {}; MENUS.forEach(m => { MENU[m.view_key] = m; });
@@ -50,6 +51,7 @@
     EMPS = (emp.data || []).filter(e => e.employee_id).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'th'));
     EMPROLE = {}; (er.data || []).forEach(r => { EMPROLE[r.employee_id] = r.access_role; });
     EMPADD = {}; (aa.data || []).forEach(r => { if (r.employee_id) (EMPADD[r.employee_id] = EMPADD[r.employee_id] || new Set()).add(r.view_key); });
+    EMPLOCK = {}; (el && el.data || []).forEach(r => { if (r.employee_id) EMPLOCK[r.employee_id] = { position_locked: r.position_locked, role_locked: r.role_locked }; });
     LOADED = true;
   }
 
@@ -76,9 +78,8 @@
   }
 
   function roleOptions(curRole) {
-    return ROLES.map(r => {
-      const disabled = (MY_ROLE === 'hr_director' && roleHasReserved(r.role_key)) ? ' disabled' : '';
-      return `<option value="${esc(r.role_key)}"${r.role_key === curRole ? ' selected' : ''}${disabled}>${esc(r.label)}</option>`;
+    return ROLES.filter(r => MY_ROLE === 'owner' || !roleHasReserved(r.role_key)).map(r => {
+      return `<option value="${esc(r.role_key)}"${r.role_key === curRole ? ' selected' : ''}>${esc(r.label)}</option>`;
     }).join('');
   }
 
@@ -153,17 +154,17 @@
   function initOpenDoms(mode) {
     OPEN_DOMS = new Set();
     DOMAINS.forEach(([dk]) => {
-      const onAll = MENUS.filter(m => m.domain === dk).filter(m => menuOn(m, mode).on).length;
+      const onAll = MENUS.filter(m => m.domain === dk && (MY_ROLE === 'owner' || !m.owner_reserved)).filter(m => menuOn(m, mode).on).length;
       if (onAll > 0) OPEN_DOMS.add(dk);
     });
-    if (OPEN_DOMS.size === 0) { const first = DOMAINS.find(([dk]) => MENUS.some(m => m.domain === dk)); if (first) OPEN_DOMS.add(first[0]); }
+    if (OPEN_DOMS.size === 0) { const first = DOMAINS.find(([dk]) => MENUS.some(m => m.domain === dk && (MY_ROLE === 'owner' || !m.owner_reserved))); if (first) OPEN_DOMS.add(first[0]); }
   }
   function accordionHTML(mode) {
     const q = (ADD_FILTER || '').trim().toLowerCase();
     if (OPEN_DOMS === null) initOpenDoms(mode);
     let html = '';
     DOMAINS.forEach(([dk, dic, dl]) => {
-      const all = MENUS.filter(m => m.domain === dk);
+      const all = MENUS.filter(m => m.domain === dk && (MY_ROLE === 'owner' || !m.owner_reserved));
       if (!all.length) return;
       const rows = q ? all.filter(m => (m.label || '').toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q) || m.view_key.toLowerCase().includes(q)) : all;
       if (!rows.length) return;
@@ -219,8 +220,10 @@
     if (!CUR_EMP) return '<div style="flex:1;padding:30px;color:#94A3B8">เลือกพนักงานเพื่อตั้งสิทธิ์</div>';
     const e = EMPS.find(x => x.employee_id === CUR_EMP) || {};
     const role = EMPROLE[CUR_EMP] || '';
-    const roleDis = canSetRole() ? '' : ' disabled';
+    const roleLocked = !!(EMPLOCK[CUR_EMP] && EMPLOCK[CUR_EMP].role_locked);
+    const roleDis = (canSetRole() && !roleLocked) ? '' : ' disabled';
     const roleHint = canSetRole() ? 'เลือกบทบาทเพื่อกำหนดสิทธิ์พื้นฐาน — เมนูที่มาจากบทบาทจะติดป้าย “จากบทบาท” อัตโนมัติ (ล็อกไว้) · ติ๊กเพิ่มได้เฉพาะเมนูอื่น' : 'เปลี่ยนบทบาทได้เฉพาะผู้บริหาร (owner)';
+    const lockNote = roleLocked ? `<div style="font-size:10px;color:#B45309;margin-top:4px;white-space:nowrap">${ic('ti-lock')} บทบาทถูกล็อก — ปลดล็อกได้ที่หน้าทะเบียนพนักงาน</div>` : '';
     const initials = (e.full_name || CUR_EMP).trim().slice(0, 2);
     return `<div style="flex:1;min-width:300px">
       <div class="card" style="padding:12px 14px;margin-bottom:11px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -232,6 +235,7 @@
         <div style="text-align:right">
           <div style="font-size:10px;color:#94A3B8;margin-bottom:3px">บทบาท (สิทธิ์พื้นฐาน)</div>
           <select id="am-role"${roleDis} style="min-width:170px;padding:7px 9px;border:1px solid var(--border,#E5E7EB);border-radius:8px;font-size:13px"><option value="">— เลือกบทบาท —</option>${roleOptions(role)}</select>
+          ${lockNote}
         </div>
       </div>
       <div id="am-summary">${summaryInner()}</div>
@@ -304,7 +308,7 @@
   function bindPanel() {
     ensureStyle();
     const rs = document.getElementById('am-role');
-    if (rs) rs.onchange = async () => { await setEmpRole(rs.value); OPEN_DOMS = null; RERENDER && RERENDER(); };
+    if (rs) rs.onchange = async () => { if (EMPLOCK[CUR_EMP] && EMPLOCK[CUR_EMP].role_locked) return; await setEmpRole(rs.value); OPEN_DOMS = null; RERENDER && RERENDER(); };
     const br = document.getElementById('am-baserole');
     if (br) br.onchange = () => { BASE_ROLE = br.value; OPEN_DOMS = null; RERENDER && RERENDER(); };
     const as = document.getElementById('am-add-search');

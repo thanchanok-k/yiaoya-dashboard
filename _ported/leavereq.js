@@ -353,8 +353,44 @@ function LV2_CSS() {
     '#lv .skel-block{height:14px;border-radius:4px;margin:6px 0;background:linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%);background-size:200% 100%;animation:lv-skeleton-shimmer 1.4s ease-in-out infinite}',
     '#lv .skel-table{padding:12px}',
     '#lv .stale-badge{display:inline-block;padding:2px 8px;border-radius:99px;background:#FEF3C7;color:#92400E;font-size:10px;font-weight:600;margin-left:8px;letter-spacing:.3px}',
+    // ============================================================
+    // Calendar (ปฏิทิน) tab — team month grid + per-person timesheet
+    // ============================================================
+    '#lv .lv-cal-toolbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px}',
+    '#lv .lv-cal-modes{display:flex;gap:4px;padding:4px;background:#F1F5F9;border-radius:8px}',
+    '#lv .lv-cal-mode{padding:6px 14px;border:none;background:transparent;border-radius:6px;font-family:inherit;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .15s}',
+    '#lv .lv-cal-mode.active{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.05)}',
+    '#lv .lv-cal-person-pick{display:flex;flex-direction:column;gap:4px}',
+    '#lv .lv-cal-person-pick label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:500}',
+    '#lv .lv-cal-person-pick select{height:32px;box-sizing:border-box;padding:0 28px 0 10px;border:1px solid var(--border-strong);border-radius:6px;font-family:inherit;font-size:13px;color:var(--text);background:var(--surface);min-width:200px;cursor:pointer}',
+    '#lv .lv-cal-nav{display:flex;align-items:center;gap:8px;margin-left:auto}',
+    '#lv .lv-cal-navbtn{border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);font-size:18px;line-height:1;color:var(--text)}',
+    '#lv .lv-cal-navbtn:hover{border-color:var(--navy)}',
+    '#lv .lv-cal-monthlabel{font-size:14px;font-weight:600;color:var(--text);min-width:150px;text-align:center}',
+    '#lv .lv-cal-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;font-size:11px;color:var(--text-muted)}',
+    '#lv .lv-cal-legend .lv-cal-leg{display:inline-flex;align-items:center;gap:5px}',
+    '#lv .lv-cal-legend .lv-cal-leg .sw{width:11px;height:11px;border-radius:3px;display:inline-block}',
+    '#lv .lv-cal-grid-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}',
+    '#lv .lv-cal-grid{width:100%;border-collapse:separate;border-spacing:0;min-width:640px;table-layout:fixed}',
+    '#lv .lv-cal-grid th{padding:6px 4px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;text-align:center;border-bottom:1px solid var(--border)}',
+    '#lv .lv-cal-grid td{vertical-align:top;border:1px solid var(--border);height:96px;width:14.28%;padding:4px;background:var(--surface);position:relative}',
+    '#lv .lv-cal-grid td.weekend{background:#F8FAFC}',
+    '#lv .lv-cal-grid td.other-month{background:#FBFCFD}',
+    '#lv .lv-cal-grid td.today{box-shadow:inset 0 0 0 2px var(--teal)}',
+    '#lv .lv-cal-daynum{font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:3px}',
+    '#lv .lv-cal-grid td.other-month .lv-cal-daynum{color:var(--text-faint)}',
+    '#lv .lv-cal-chip{display:block;font-size:10px;font-weight:500;padding:1px 6px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid transparent}',
+    '#lv .lv-cal-chip.pending{opacity:.6;border-style:dashed}',
+    '#lv .lv-cal-chip.more{background:#F1F5F9;color:var(--text-muted);font-weight:600}',
+    '#lv .lv-cal-block{display:block;font-size:11px;font-weight:600;padding:4px 6px;border-radius:5px;border:1px solid transparent;text-align:center}',
+    '#lv .lv-cal-block.pending{opacity:.6;border-style:dashed}',
+    '#lv .lv-cal-dot{position:absolute;bottom:4px;right:4px;width:8px;height:8px;border-radius:50%}',
+    '#lv .lv-cal-dot.present{background:var(--success)}',
+    '#lv .lv-cal-dot.late{background:var(--warning)}',
+    '#lv .lv-cal-dot.absent{background:var(--danger)}',
+    '#lv .lv-cal-note{margin-top:10px;font-size:11px;color:var(--text-faint);font-style:italic}',
     // responsive — ตารางเลื่อนแนวนอนบนมือถือ (จาก _shared_styles @media)
-    '@media (max-width:900px){#lv .stats.cols-3,#lv .stats.cols-4,#lv .stats.cols-5{grid-template-columns:repeat(2,1fr)}#lv .field-grid{grid-template-columns:1fr}#lv table{display:block;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}}',
+    '@media (max-width:900px){#lv .stats.cols-3,#lv .stats.cols-4,#lv .stats.cols-5{grid-template-columns:repeat(2,1fr)}#lv .field-grid{grid-template-columns:1fr}#lv table{display:block;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}#lv .lv-cal-grid{display:table;white-space:normal}#lv .lv-cal-nav{margin-left:0}#lv .lv-cal-grid td{height:80px}}',
   ].join('\n');
 }
 
@@ -366,6 +402,7 @@ function LV2_MARKUP() {
     '  <button class="tab-btn active" id="tab-pending" onclick="lvSetTab(\'pending\')"></button>',
     '  <button class="tab-btn" id="tab-history" onclick="lvSetTab(\'history\')"></button>',
     '  <button class="tab-btn" id="tab-balance" onclick="lvSetTab(\'balance\')"></button>',
+    '  <button class="tab-btn" id="tab-calendar" onclick="lvSetTab(\'calendar\')"></button>',
     '</div>',
     '',
     '<div class="stats cols-5" id="stats"></div>',
@@ -409,6 +446,28 @@ function LV2_MARKUP() {
     '    <button class="btn-icon" onclick="lvShowHelp(HELP)" title="ช่วยเหลือ" id="help-btn" style="border:1px solid var(--border-strong);border-radius:50%"></button>',
     '  </div>',
     '  <div id="content" class="loading">กำลังโหลด...</div>',
+    '</div>',
+    '',
+    '<!-- Calendar (ปฏิทิน) — แยก container · แสดงเฉพาะ tab calendar -->',
+    '<div id="lv-cal-wrap" style="display:none">',
+    '  <div class="lv-cal-toolbar">',
+    '    <div class="lv-cal-modes">',
+    '      <button class="lv-cal-mode active" id="lv-cal-mode-team" onclick="lvCalSetMode(\'team\')">ทั้งทีม</button>',
+    '      <button class="lv-cal-mode" id="lv-cal-mode-person" onclick="lvCalSetMode(\'person\')">รายคน</button>',
+    '    </div>',
+    '    <div class="lv-cal-person-pick" id="lv-cal-person-pick" style="display:none">',
+    '      <label>พนักงาน</label>',
+    '      <select id="lv-cal-person-sel" onchange="lvCalRender()"></select>',
+    '    </div>',
+    '    <div class="lv-cal-nav">',
+    '      <button class="btn-icon lv-cal-navbtn" onclick="lvCalShiftMonth(-1)" title="เดือนก่อน">‹</button>',
+    '      <div class="lv-cal-monthlabel" id="lv-cal-monthlabel"></div>',
+    '      <button class="btn-icon lv-cal-navbtn" onclick="lvCalShiftMonth(1)" title="เดือนถัดไป">›</button>',
+    '    </div>',
+    '  </div>',
+    '  <div class="lv-cal-legend" id="lv-cal-legend"></div>',
+    '  <div class="lv-cal-grid-scroll"><div id="lv-cal-body"></div></div>',
+    '  <div class="lv-cal-note" id="lv-cal-note" style="display:none">สถานะเข้าสาย/ตรงเวลา — กำลังเชื่อมต่อข้อมูลลงเวลา</div>',
     '</div>',
     '',
     '<!-- Detail Modal -->',
@@ -588,12 +647,251 @@ function LV2_RUN_PAGE_JS() {
   document.getElementById('tab-pending').innerHTML = ICONS.bell + ' รออนุมัติ <span class="count" id="cnt-pending">—</span>';
   document.getElementById('tab-history').innerHTML = ICONS.list + ' ประวัติ <span class="count" id="cnt-history">—</span>';
   document.getElementById('tab-balance').innerHTML = ICONS.chart + ' ยอดลาคงเหลือ <span class="count" id="cnt-balance">—</span>';
+  document.getElementById('tab-calendar').innerHTML = ICONS.cal + ' ปฏิทิน';
+
+  // ============================================================
+  // ===== ปฏิทิน (Calendar) tab — team grid + per-person timesheet =====
+  // ใช้ leave data จาก lv2FetchAll() (cache _lv2Cache) · ไม่มี network call ใหม่
+  // นอกจาก lvFetchAttendanceRange (stub รอ backend)
+  // ============================================================
+  var _lvCalMode = 'team';                 // 'team' | 'person'
+  var _lvCalRef = new Date();              // เดือนที่กำลังแสดง (ตั้งต้น = วันนี้)
+  _lvCalRef = new Date(_lvCalRef.getFullYear(), _lvCalRef.getMonth(), 1);
+
+  const LV_TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const LV_TH_DOW = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+  // ป้ายไทย + token สี ต่อ leave_type (default/other = neutral grey)
+  const LV_CAL_TYPES = {
+    public:    { label: 'หยุดนักขัตฤกษ์', c: 'var(--c-public)',    bg: 'var(--c-public-bg)' },
+    company:   { label: 'หยุดบริษัท',     c: 'var(--c-company)',   bg: 'var(--c-company-bg)' },
+    branch:    { label: 'หยุดสาขา',       c: 'var(--c-branch)',    bg: 'var(--c-branch-bg)' },
+    religious: { label: 'ลาศาสนา',        c: 'var(--c-religious)', bg: 'var(--c-religious-bg)' },
+    personal:  { label: 'ลากิจ',          c: 'var(--c-religious)', bg: 'var(--c-religious-bg)' },
+    sick:      { label: 'ลาป่วย',         c: 'var(--danger)',      bg: 'var(--danger-bg)' },
+    vacation:  { label: 'ลาพักร้อน',      c: 'var(--c-public)',    bg: 'var(--c-public-bg)' },
+    annual:    { label: 'ลาพักร้อน',      c: 'var(--c-public)',    bg: 'var(--c-public-bg)' },
+    other:     { label: 'อื่นๆ',          c: '#475569',            bg: '#F1F5F9' },
+  };
+  function lvCalType(t) { return LV_CAL_TYPES[t] || LV_CAL_TYPES.other; }
+
+  function lvCalPad2(n) { return (n < 10 ? '0' : '') + n; }
+  function lvCalYmd(d) { return d.getFullYear() + '-' + lvCalPad2(d.getMonth() + 1) + '-' + lvCalPad2(d.getDate()); }
+  function lvCalTodayYmd() { return lvCalYmd(new Date()); }
+
+  // นับเฉพาะ leave ที่ approved/pending (ตัด rejected/cancelled) — pending = render จาง
+  function lvCalVisible(r) {
+    var s = String(r.status || '').toLowerCase();
+    return s === 'approved' || s === 'pending';
+  }
+  // leave ครอบคลุมวัน ymd หรือไม่ (start..end inclusive · เทียบ string YYYY-MM-DD ปลอดภัย)
+  function lvCalCovers(r, ymd) {
+    var s = r.start_date || '', e = r.end_date || s;
+    if (!s) return false;
+    return ymd >= s && ymd <= e;
+  }
+
+  // STUB: team-wide attendance endpoint ยังไม่มี → คืน {} เปล่า (ไม่เรียก backend)
+  // map: 'YYYY-MM-DD' → { status:'present'|'late'|'absent' }
+  // เมื่อ backend พร้อม wiring โดยเปลี่ยน body เป็น:
+  //   return sb.functions.invoke('hr_attendance', {body:{action:'range', employee_id:employeeId, from:fromYmd, to:toYmd}})
+  //     .then(function(res){ return (res && res.data && res.data.attendance) || {}; });
+  function lvFetchAttendanceRange(employeeId, fromYmd, toYmd) {
+    return Promise.resolve({});
+  }
+
+  // สร้าง array ของ 42 วัน (6 สัปดาห์) เริ่มวันอาทิตย์ ครอบคลุมเดือน _lvCalRef
+  function lvCalGridDays() {
+    var first = new Date(_lvCalRef.getFullYear(), _lvCalRef.getMonth(), 1);
+    var startDow = first.getDay(); // 0 = Sun
+    var start = new Date(first);
+    start.setDate(1 - startDow);
+    var days = [];
+    for (var i = 0; i < 42; i++) {
+      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }
+
+  function lvCalMonthLabel() {
+    return LV_TH_MONTHS[_lvCalRef.getMonth()] + ' ' + (_lvCalRef.getFullYear() + 543);
+  }
+
+  function lvCalSetMode(mode) {
+    _lvCalMode = mode;
+    document.getElementById('lv-cal-mode-team').classList.toggle('active', mode === 'team');
+    document.getElementById('lv-cal-mode-person').classList.toggle('active', mode === 'person');
+    lvCalRender();
+  }
+  window.lvCalSetMode = lvCalSetMode;
+
+  function lvCalShiftMonth(delta) {
+    _lvCalRef = new Date(_lvCalRef.getFullYear(), _lvCalRef.getMonth() + delta, 1);
+    lvCalRender();
+  }
+  window.lvCalShiftMonth = lvCalShiftMonth;
+
+  // entry point — โหลด leave จาก cache แล้ว render ตาม mode
+  function lvCalRender() {
+    document.getElementById('lv-cal-monthlabel').textContent = lvCalMonthLabel();
+    var personPick = document.getElementById('lv-cal-person-pick');
+    var noteEl = document.getElementById('lv-cal-note');
+    personPick.style.display = (_lvCalMode === 'person') ? '' : 'none';
+    noteEl.style.display = (_lvCalMode === 'person') ? '' : 'none';
+
+    document.getElementById('lv-cal-body').innerHTML = _skeletonHTML(4);
+    lv2FetchAll().then(function (items) {
+      var leaves = (items || []).filter(lvCalVisible);
+      if (_lvCalMode === 'person') lvCalRenderPerson(leaves);
+      else lvCalRenderTeam(leaves);
+    }).catch(onErr);
+  }
+  window.lvCalRender = lvCalRender;
+
+  // legend สั้นๆ ของ leave-type ที่ใช้บ่อย
+  function lvCalRenderLegend(types) {
+    var html = (types || []).map(function (t) {
+      var info = lvCalType(t);
+      return '<span class="lv-cal-leg"><span class="sw" style="background:' + info.bg + ';border:1px solid ' + info.c + '"></span>' + escapeHtml(info.label) + '</span>';
+    }).join('');
+    document.getElementById('lv-cal-legend').innerHTML = html;
+  }
+
+  // ---- Mode A: ทั้งทีม (month grid + chips) ----
+  function lvCalRenderTeam(leaves) {
+    lvCalRenderLegend(['sick', 'personal', 'vacation', 'public', 'company', 'religious', 'other']);
+
+    var days = lvCalGridDays();
+    var todayYmd = lvCalTodayYmd();
+    var curMonth = _lvCalRef.getMonth();
+
+    var head = '<tr>' + LV_TH_DOW.map(function (d) { return '<th>' + d + '</th>'; }).join('') + '</tr>';
+
+    var rowsHtml = '';
+    for (var w = 0; w < 6; w++) {
+      var cells = '';
+      for (var c = 0; c < 7; c++) {
+        var d = days[w * 7 + c];
+        var ymd = lvCalYmd(d);
+        var dow = d.getDay();
+        var clsArr = [];
+        if (d.getMonth() !== curMonth) clsArr.push('other-month');
+        if (dow === 0 || dow === 6) clsArr.push('weekend');
+        if (ymd === todayYmd) clsArr.push('today');
+
+        // คนที่ลาในวันนี้
+        var onLeave = leaves.filter(function (r) { return lvCalCovers(r, ymd); });
+        var chips = '';
+        var shown = onLeave.slice(0, 3);
+        shown.forEach(function (r) {
+          var info = lvCalType(r.leave_type);
+          var pendCls = (String(r.status).toLowerCase() === 'pending') ? ' pending' : '';
+          var name = r.employee_name || r.employee_id || '';
+          chips += '<span class="lv-cal-chip' + pendCls + '" style="background:' + info.bg + ';color:' + info.c + ';border-color:' + info.c + '" title="' + escapeAttr(name + ' · ' + info.label) + '">' + escapeHtml(name) + '</span>';
+        });
+        if (onLeave.length > 3) {
+          chips += '<span class="lv-cal-chip more">+' + (onLeave.length - 3) + '</span>';
+        }
+
+        cells += '<td class="' + clsArr.join(' ') + '"><div class="lv-cal-daynum">' + d.getDate() + '</div>' + chips + '</td>';
+      }
+      rowsHtml += '<tr>' + cells + '</tr>';
+    }
+
+    document.getElementById('lv-cal-body').innerHTML =
+      '<table class="lv-cal-grid"><thead>' + head + '</thead><tbody>' + rowsHtml + '</tbody></table>';
+  }
+
+  // ---- Mode B: รายคน (timesheet) ----
+  function lvCalRenderPerson(leaves) {
+    lvCalRenderLegend(['sick', 'personal', 'vacation', 'public', 'company', 'religious', 'other']);
+
+    // build/refresh employee dropdown (unique จาก leave items · sort by name)
+    var sel = document.getElementById('lv-cal-person-sel');
+    if (sel.children.length === 0) {
+      var seen = {}, emps = [];
+      (leaves || []).forEach(function (r) {
+        var id = r.employee_id || '';
+        if (!id || seen[id]) return;
+        seen[id] = true;
+        emps.push({ id: id, name: r.employee_name || id });
+      });
+      emps.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+      if (emps.length === 0) {
+        sel.innerHTML = '<option value="">— ไม่มีข้อมูลพนักงาน —</option>';
+      } else {
+        sel.innerHTML = emps.map(function (e) {
+          return '<option value="' + escapeAttr(e.id) + '">' + escapeHtml(e.name) + '</option>';
+        }).join('');
+      }
+    }
+
+    var empId = sel.value;
+    var mine = (leaves || []).filter(function (r) { return (r.employee_id || '') === empId; });
+
+    var days = lvCalGridDays();
+    var fromYmd = lvCalYmd(days[0]);
+    var toYmd = lvCalYmd(days[days.length - 1]);
+    var todayYmd = lvCalTodayYmd();
+    var curMonth = _lvCalRef.getMonth();
+
+    // ดึง attendance (stub → {}) แล้ว render grid (เพื่อให้ dot พร้อมต่อ backend ภายหลัง)
+    lvFetchAttendanceRange(empId, fromYmd, toYmd).then(function (att) {
+      att = att || {};
+      var head = '<tr>' + LV_TH_DOW.map(function (d) { return '<th>' + d + '</th>'; }).join('') + '</tr>';
+      var rowsHtml = '';
+      for (var w = 0; w < 6; w++) {
+        var cells = '';
+        for (var c = 0; c < 7; c++) {
+          var d = days[w * 7 + c];
+          var ymd = lvCalYmd(d);
+          var dow = d.getDay();
+          var clsArr = [];
+          if (d.getMonth() !== curMonth) clsArr.push('other-month');
+          if (dow === 0 || dow === 6) clsArr.push('weekend');
+          if (ymd === todayYmd) clsArr.push('today');
+
+          var block = '';
+          var lv = mine.find(function (r) { return lvCalCovers(r, ymd); });
+          if (lv) {
+            var info = lvCalType(lv.leave_type);
+            var pendCls = (String(lv.status).toLowerCase() === 'pending') ? ' pending' : '';
+            block = '<span class="lv-cal-block' + pendCls + '" style="background:' + info.bg + ';color:' + info.c + ';border-color:' + info.c + '">' + escapeHtml(info.label) + '</span>';
+          }
+
+          // attendance dot (ถ้า map มี entry สำหรับวันนี้) — ตอนนี้ stub คืน {} → ไม่ render
+          var dot = '';
+          var a = att[ymd];
+          if (a && a.status) {
+            dot = '<span class="lv-cal-dot ' + escapeAttr(a.status) + '" title="' + escapeAttr(a.status) + '"></span>';
+          }
+
+          cells += '<td class="' + clsArr.join(' ') + '"><div class="lv-cal-daynum">' + d.getDate() + '</div>' + block + dot + '</td>';
+        }
+        rowsHtml += '<tr>' + cells + '</tr>';
+      }
+      document.getElementById('lv-cal-body').innerHTML =
+        '<table class="lv-cal-grid"><thead>' + head + '</thead><tbody>' + rowsHtml + '</tbody></table>';
+    }).catch(onErr);
+  }
 
   function lvSetTab(tab) {
     currentTab = tab;
-    ['pending', 'history', 'balance'].forEach(t => {
+    ['pending', 'history', 'balance', 'calendar'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', t === tab);
     });
+
+    // calendar tab = ปฏิทินเต็มจอ → ซ่อน stats/filters/content card · โชว์ #lv-cal-wrap
+    const isCal = (tab === 'calendar');
+    document.getElementById('stats').style.display = isCal ? 'none' : '';
+    var filtersEl = document.querySelector('#lv .filters');
+    if (filtersEl) filtersEl.style.display = isCal ? 'none' : '';
+    var sectionEl = document.querySelector('#lv .section');
+    if (sectionEl) sectionEl.style.display = isCal ? 'none' : '';
+    document.getElementById('lv-cal-wrap').style.display = isCal ? '' : 'none';
+    if (isCal) { lvCalRender(); return; }
+
     document.getElementById('filter-type-wrap').style.display = (tab === 'balance') ? 'none' : '';
     document.getElementById('filter-year-wrap').style.display = (tab === 'balance') ? '' : 'none';
 

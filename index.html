@@ -202,6 +202,22 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
 #login input:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(13,47,79,.1)}
 #login button{width:100%;margin-top:20px;padding:11px;background:var(--teal);color:#fff;border:1px solid var(--teal);border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
 #login button:hover{background:var(--teal-dark);border-color:var(--teal-dark)}
+#register{max-width:360px;margin:9vh auto 0;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:30px 28px;box-shadow:0 8px 30px rgba(13,47,79,.07)}
+#register .brand{display:flex;align-items:center;gap:11px;margin-bottom:18px}
+#register .logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;display:grid;place-items:center;font-size:22px}
+#register h2{color:var(--navy);font-size:17px;font-weight:600}#register .tag{color:var(--text-muted);font-size:12px;margin-top:1px}
+#register label{display:block;font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:500;margin:14px 0 5px}
+#register input[type=email],#register input[type=password],#register input[type=text],#register input[type=tel]{width:100%;padding:10px 12px;border:1px solid var(--border-strong);border-radius:8px;font:inherit;font-size:14px;color:var(--text);transition:.15s}
+#register input[type=email]:focus,#register input[type=password]:focus,#register input[type=text]:focus,#register input[type=tel]:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(13,47,79,.1)}
+#register button{width:100%;margin-top:20px;padding:11px;background:var(--teal);color:#fff;border:1px solid var(--teal);border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+#register button:hover{background:var(--teal-dark);border-color:var(--teal-dark)}
+#register button:disabled,#login button:disabled{opacity:.55;cursor:not-allowed}
+.reg-cand{border:1px solid var(--border-strong);border-radius:10px;padding:14px;margin-top:8px;background:rgba(61,197,183,.05)}
+.reg-cand .row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;gap:10px}
+.reg-cand .row span:first-child{color:var(--text-muted)}.reg-cand .row span:last-child{color:var(--text);font-weight:500;text-align:right}
+.reg-chip{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;margin-bottom:8px}
+.reg-confirm-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-top:12px}
+.reg-confirm-row input{width:auto!important;margin:0}
 #err{color:#B91C1C;font-size:12.5px;margin-top:10px;min-height:18px}
 .hidden{display:none}
 </style><style id="hub360fx">
@@ -226,10 +242,30 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
     <div><h2>YY Integration Hub</h2><div class="tag">ศูนย์รวมข้อมูลแบบเรียลไทม์</div></div></div>
   <label>อีเมล</label><input id="email" type="email" placeholder="admin@yiaoya-hub.com" autocomplete="username">
   <label>รหัสผ่าน</label><input id="pass" type="password" placeholder="••••••••" autocomplete="current-password">
+  <div style="text-align:right;margin-top:6px"><a id="forgotLink" href="#" style="font-size:12px;color:var(--teal);text-decoration:none">ลืมรหัสผ่าน?</a></div>
   <button id="btn"><i class="ti ti-login-2"></i> เข้าสู่ระบบ</button>
   <div style="text-align:center;font-size:12px;color:#94a3b8;margin:10px 0">— หรือ —</div>
   <button id="otpBtn" style="background:#3DC5B7;color:#0D2F4F"><i class="ti ti-mail"></i> เข้าด้วยอีเมล (ส่งลิงก์ · ไม่ต้องใช้รหัสผ่าน)</button>
+  <button id="lineLoginBtn" style="background:#06C755;color:#fff;border-color:#06C755;margin-top:10px"><i class="ti ti-brand-line"></i> เข้าสู่ระบบด้วย LINE</button>
   <div id="err"></div>
+  <div style="text-align:center;font-size:12.5px;color:var(--text-muted);margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">ยังไม่มีบัญชี? <a id="toRegister" href="#" style="color:var(--teal);font-weight:600;text-decoration:none">สมัครที่นี่</a></div>
+</div>
+
+<div id="register" class="hidden">
+  <div class="brand"><div class="logo"><i class="ti ti-user-plus"></i></div>
+    <div><h2>สมัครสมาชิก</h2><div class="tag">YY Integration Hub</div></div></div>
+  <div id="regForm">
+    <label>อีเมล</label><input id="regEmail" type="email" placeholder="you@example.com" autocomplete="email">
+    <label>รหัสผ่าน (อย่างน้อย 8 ตัว)</label><input id="regPass" type="password" placeholder="••••••••" autocomplete="new-password">
+    <label>ชื่อ-นามสกุล</label><input id="regName" type="text" placeholder="ชื่อ นามสกุล">
+    <label>เบอร์โทร</label><input id="regPhone" type="tel" placeholder="08x-xxx-xxxx" autocomplete="tel">
+    <label>รหัสพนักงาน (ถ้ามี)</label><input id="regEmpId" type="text" placeholder="ไม่บังคับ">
+    <label>ชื่อเล่น</label><input id="regNick" type="text" placeholder="ไม่บังคับ">
+    <button id="regMatchBtn"><i class="ti ti-search"></i> ค้นหาข้อมูลของฉัน</button>
+  </div>
+  <div id="regResult" class="hidden"></div>
+  <div id="regErr" style="color:#B91C1C;font-size:12.5px;margin-top:10px;min-height:18px"></div>
+  <div style="text-align:center;font-size:12.5px;color:var(--text-muted);margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">มีบัญชีอยู่แล้ว? <a id="toLogin" href="#" style="color:var(--teal);font-weight:600;text-decoration:none">เข้าสู่ระบบ</a></div>
 </div>
 
 <div id="app" class="hidden">
@@ -317,6 +353,8 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="sb-item" data-view="cnkpi"><i class="ti ti-trophy"></i>KPI ทีมคอนเทนต์<span class="ct" id="ct-cnkpi"></span></div>
       <div class="sb-item" data-view="cnmonthly"><i class="ti ti-calendar-stats"></i>สรุปรายเดือน<span class="ct" id="ct-cnmonthly"></span></div>
       <div class="sb-item" data-view="cnhighlight"><i class="ti ti-star"></i>คอนเทนต์ Highlight<span class="ct" id="ct-cnhighlight"></span></div>
+      <div class="sb-item" data-view="cnperf"><i class="ti ti-chart-dots"></i>Performance · รายโพสต์<span class="ct" id="ct-cnperf"></span></div>
+      <div class="sb-item" data-view="cnsync"><i class="ti ti-plug-connected"></i>สถานะเชื่อมต่อ · Sync<span class="ct" id="ct-cnsync"></span></div>
       <div class="sb-item" data-view="cnbrief"><i class="ti ti-sun"></i>Morning Brief<span class="ct" id="ct-cnbrief"></span></div>
       <div class="sb-item" data-view="cncheckin"><i class="ti ti-clock-hour-8"></i>Check-in / EOD<span class="ct" id="ct-cncheckin"></span></div>
       <div class="sb-item" data-view="cninflu"><i class="ti ti-user-star"></i>Influencer DB<span class="ct" id="ct-cninflu"></span></div>
@@ -3805,7 +3843,74 @@ function _cnBind(wrap){
 }
 function _cnSetCt(v,n){const c=$('ct-'+v);if(c)c.textContent=n||'';}
 function _cnSc(v,l,col){return '<div style="flex:1;min-width:130px;background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:13px;padding:13px 15px"><div style="font-size:23px;font-weight:800;color:'+(col||'var(--navy,#0D2F4F)')+'">'+v+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">'+l+'</div></div>';}
-function _cnCard(it,actions){return '<div class="card" style="padding:13px 15px;margin-bottom:10px"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4;margin-bottom:8px">'+esc(it.title)+'</div><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">'+_cnDept(it.dept)+_cnTopic(it.topic)+_cnWho(it.who)+'<span style="font-size:11px;color:var(--text-muted,#64748B)">'+esc(it.fmt)+'</span></div>'+(actions||'')+'</div>';}
+function _cnCard(it,actions){
+ var date=it.date?'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-calendar-event"></i> '+esc(it.date)+'</span>':'';
+ var eng=(it.eng!=null)?_cnEngBadge(it.eng):'';
+ var links=_cnLinks(it);
+ var row2=(date||eng||links)?'<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'+date+eng+(links?'<span style="margin-left:auto;display:flex;gap:9px;align-items:center">'+links+'</span>':'')+'</div>':'';
+ return '<div class="card" style="padding:13px 15px;margin-bottom:10px"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4;margin-bottom:8px">'+esc(it.title)+'</div><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">'+_cnDept(it.dept)+_cnTopic(it.topic)+_cnWhoLink(it.who)+'<span style="font-size:11px;color:var(--text-muted,#64748B)">'+esc(it.fmt||'')+'</span></div>'+row2+(actions||'')+'</div>';
+}
+/* ===== ผลงานรายคน · wiring · กราฟจัดอันดับ (เพิ่มความละเอียด + เชื่อมข้อมูลทุกหน้า) ===== */
+function _cnWhoLink(name){var c=CN_WHO_C[name]||'#64748B';return '<span data-cnwho="'+esc(name)+'" title="ดูผลงานของ '+esc(name)+'" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted,#64748B);cursor:pointer;border-bottom:1px dashed transparent" onmouseover="this.style.borderBottomColor=\''+c+'\'" onmouseout="this.style.borderBottomColor=\'transparent\'"><span style="width:8px;height:8px;border-radius:50%;background:'+c+'"></span>'+esc(name)+'</span>';}
+function _cnLinks(p){if(!p)return '';var L=[['fb_link','ti-brand-facebook','#1877F2'],['ig_link','ti-brand-instagram','#E4405F'],['tt_link','ti-brand-tiktok','#0F172A'],['line_link','ti-brand-line','#06C755']];return L.filter(function(x){return p[x[0]];}).map(function(x){return '<a href="'+esc(p[x[0]])+'" target="_blank" rel="noopener" title="เปิดโพสต์จริง" style="color:'+x[2]+';font-size:15px;text-decoration:none"><i class="ti '+x[1]+'"></i></a>';}).join(' ');}
+function _cnEngBadge(eng){if(eng==null||eng==='')return '';var e=+eng;var top=e>=10;var col=top?'#CA8A04':e>=6?'#0F766E':'#64748B';return '<span style="font-size:10px;font-weight:800;color:'+col+';background:'+col+'1a;padding:2px 7px;border-radius:10px;white-space:nowrap"><i class="ti ti-flame"></i> '+e+'%</span>';}
+function cnGrade(t){return t>=90?['S','#047857']:t>=80?['A','#0F766E']:t>=70?['B','#185FA5']:t>=60?['C','#B45309']:['D','#B91C1C'];}
+function cnPersonAgg(){
+ var pieces=cnDATA(),kpis=cnKPI(),checks=cnCHECKIN();
+ var names={}; (CN_TEAM||[]).forEach(function(n){names[n]=1;}); kpis.forEach(function(k){if(k.who)names[k.who]=1;}); pieces.forEach(function(p){if(p.who)names[p.who]=1;});
+ return Object.keys(names).map(function(who){
+  var mine=pieces.filter(function(p){return p.who===who;});
+  var posted=mine.filter(function(p){return p.col==='โพสเรียบร้อย';});
+  var engArr=mine.filter(function(p){return p.eng!=null;}).map(function(p){return +p.eng;});
+  var avgEng=engArr.length?engArr.reduce(function(a,b){return a+b;},0)/engArr.length:0;
+  var best=mine.filter(function(p){return p.eng!=null;}).sort(function(a,b){return b.eng-a.eng;})[0]||null;
+  var hi=mine.filter(function(p){return p.eng!=null&&p.eng>=10;}).length;
+  var k=kpis.find(function(x){return x.who===who;})||null;
+  var kTotal=k?(k.o+k.w+k.d+k.q+k.p):0;
+  var chk=checks.find(function(x){return x.who===who;})||null;
+  var topics={}; mine.forEach(function(p){if(p.topic)topics[p.topic]=(topics[p.topic]||0)+1;});
+  var engScore=Math.min(100,avgEng/12*100);
+  // composite = KPI 70% + Engagement 30% · ถ้ายังไม่มีข้อมูล engagement → ใช้ KPI ล้วน (ไม่หัก 30% ฟรี) · ไม่มี KPI → eng ล้วน
+  var composite=k?(engArr.length?Math.round(kTotal*0.7+engScore*0.3):kTotal):Math.round(engScore);
+  return {who:who,mine:mine,total:mine.length,posted:posted.length,engArr:engArr,avgEng:avgEng,best:best,hi:hi,k:k,kTotal:kTotal,grade:cnGrade(composite),chk:chk,topics:topics,engScore:engScore,composite:composite};
+ });
+}
+function _cnModalClose(){var m=$('cnModal');if(m)m.remove();}
+function _cnModal(title,html){_cnModalClose();var ov=document.createElement('div');ov.id='cnModal';ov.style.cssText='position:fixed;inset:0;background:rgba(13,47,79,.5);z-index:9998;display:flex;align-items:flex-start;justify-content:center;padding:28px 14px;overflow:auto';ov.onclick=function(e){if(e.target===ov)_cnModalClose();};var box=document.createElement('div');box.className='card';box.style.cssText='max-width:780px;width:100%;padding:0;overflow:hidden;box-shadow:0 24px 70px rgba(13,47,79,.4)';box.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--border,#E2E8F0);position:sticky;top:0;background:var(--surface,#fff);z-index:1">'+title+'<button id="cnModalX" style="margin-left:auto;background:#F1F5F9;border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:15px;color:#64748B;flex-shrink:0">✕</button></div><div style="padding:18px 20px">'+html+'</div>';ov.appendChild(box);document.body.appendChild(ov);$('cnModalX').onclick=_cnModalClose;_cnBind(box);}
+function cnPerson(who){
+ var ranked=cnPersonAgg().slice().sort(function(a,b){return b.composite-a.composite;});
+ var me=ranked.find(function(x){return x.who===who;}); if(!me){_cnToast('ไม่พบข้อมูลของ '+who);return;}
+ var rank=ranked.indexOf(me)+1; var c=CN_WHO_C[who]||'#64748B';
+ var medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'#'+rank;
+ var title='<div style="display:flex;align-items:center;gap:11px;flex:1;min-width:0"><span style="width:36px;height:36px;border-radius:50%;background:'+c+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0">'+esc(who.charAt(0))+'</span><div style="min-width:0"><div style="font-size:17px;font-weight:800;color:var(--navy,#0D2F4F)">'+esc(who)+'</div><div style="font-size:11px;color:var(--text-muted,#64748B)">อันดับ '+medal+' จาก '+ranked.length+' คน · คะแนนรวม '+me.composite+'</div></div></div>';
+ var h='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">'+_cnSc(me.total,'งานทั้งหมด')+_cnSc(me.posted,'โพสต์แล้ว','#047857')+_cnSc((me.avgEng?me.avgEng.toFixed(1):'-')+'%','Eng เฉลี่ย','#CA8A04')+_cnSc(me.hi,'ชิ้น Highlight','#185FA5')+'</div>';
+ if(me.k){var dim=function(label,v,max){var pct=Math.round(v/max*100);var col=pct>=80?'#047857':pct>=60?'#B45309':'#B91C1C';return '<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:var(--text-muted,#64748B)">'+label+'</span><span style="font-weight:700;color:'+col+'">'+v+'/'+max+'</span></div><div style="height:6px;background:#EEF2F6;border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+col+'"></div></div></div>';};
+  h+='<div class="card" style="padding:14px 16px;margin-bottom:14px"><div style="display:flex;align-items:center;margin-bottom:10px"><div style="font-weight:700;color:var(--navy,#0D2F4F)">KPI 5 มิติ</div><span style="margin-left:auto;font-size:13px;font-weight:800;color:#fff;background:'+me.grade[1]+';padding:2px 10px;border-radius:8px">'+me.grade[0]+' · '+me.kTotal+'%</span></div>'+dim('Output',me.k.o,25)+dim('Weighted',me.k.w,25)+dim('Discipline',me.k.d,20)+dim('Quality',me.k.q,15)+dim('Platform',me.k.p,15)+'</div>';}
+ if(me.best){h+='<div class="card" style="padding:13px 16px;margin-bottom:14px;border:1px solid #FDE68A;background:#FFFBEB"><div style="font-size:10px;font-weight:800;color:#CA8A04;margin-bottom:4px"><i class="ti ti-trophy"></i> ผลงานเด่นที่สุด</div><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">'+esc(me.best.title)+'</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+_cnDept(me.best.dept)+_cnEngBadge(me.best.eng)+_cnLinks(me.best)+'</div></div>';}
+ h+='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">งานทั้งหมด ('+me.total+')</div>';
+ if(!me.total){h+=emptyCard('ยังไม่มีงานในระบบ');}
+ else{CN_COLS.forEach(function(col){var its=me.mine.filter(function(p){return p.col===col.k;});if(!its.length)return;
+  h+='<div style="font-size:12px;font-weight:700;color:var(--text-muted,#64748B);margin:10px 0 6px"><i class="ti '+col.i+'"></i> '+esc(col.k)+' ('+its.length+')</div>';
+  its.forEach(function(p){h+='<div style="display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--border,#E2E8F0);border-radius:9px;margin-bottom:6px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.35">'+esc(p.title)+'</div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:4px">'+_cnDept(p.dept)+_cnTopic(p.topic||'')+(p.date?'<span style="font-size:10px;color:var(--text-muted,#64748B)"><i class="ti ti-calendar"></i> '+esc(p.date)+'</span>':'')+'</div></div><div style="display:flex;gap:8px;align-items:center;flex-shrink:0">'+_cnEngBadge(p.eng)+_cnLinks(p)+'</div></div>';});});}
+ _cnModal(title,h);
+}
+function cnLeaderboard(ranked){
+ return '<div class="card" style="padding:16px 18px;margin-bottom:6px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><i class="ti ti-trophy" style="color:#CA8A04;font-size:18px"></i><span style="font-size:15px;font-weight:800;color:var(--navy,#0D2F4F)">จัดอันดับผลงาน — ใครทำได้ดีที่สุด</span></div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:12px">คะแนนรวมผสม = KPI 5 มิติ 70% + Engagement จริง 30% · กดแถบเพื่อดูผลงานรายคน</div>'+ranked.map(function(r,i){
+  var c=CN_WHO_C[r.who]||'#64748B'; var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'<span style="font-size:11px;color:var(--text-muted,#64748B)">#'+(i+1)+'</span>'; var w=Math.round(r.composite/100*100);
+  return '<div data-cnwho="'+esc(r.who)+'" style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;border-radius:8px" onmouseover="this.style.background=\'#F8FAFC\'" onmouseout="this.style.background=\'transparent\'"><div style="width:26px;text-align:center;font-size:15px;flex-shrink:0">'+medal+'</div><span style="width:26px;height:26px;border-radius:50%;background:'+c+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">'+esc(r.who.charAt(0))+'</span><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;gap:8px"><span style="font-size:13px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(r.who)+'</span><span style="font-size:10px;color:var(--text-muted,#64748B);white-space:nowrap">KPI '+(r.k?r.kTotal+'%':'-')+' · Eng '+(r.avgEng?r.avgEng.toFixed(1)+'%':'-')+' · '+r.posted+' โพสต์</span></div><div style="height:14px;background:#EEF2F6;border-radius:7px;overflow:hidden;position:relative"><div style="width:'+w+'%;height:100%;background:linear-gradient(90deg,'+c+'cc,'+c+');border-radius:7px"></div><span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;color:'+(w>22?'#fff':'var(--navy,#0D2F4F)')+'">'+r.composite+'</span></div></div><span style="font-size:13px;font-weight:800;color:#fff;background:'+r.grade[1]+';width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+r.grade[0]+'</span></div>';
+ }).join('')+'</div>';
+}
+function cnCreatorCard(r,rank){
+ var c=CN_WHO_C[r.who]||'#64748B';
+ var dim=function(label,v,max){var pct=Math.round(v/max*100);var col=pct>=80?'#047857':pct>=60?'#B45309':'#B91C1C';return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:var(--text-muted,#64748B)">'+label+'</span><span style="font-weight:700;color:'+col+'">'+v+'/'+max+'</span></div><div style="height:6px;background:#EEF2F6;border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+col+'"></div></div></div>';};
+ var h='<div class="card" data-cnwho="'+esc(r.who)+'" style="padding:15px 16px;cursor:pointer" title="กดดูผลงานทั้งหมด">';
+ h+='<div style="display:flex;align-items:center;gap:9px;margin-bottom:12px"><span style="font-size:12px;font-weight:800;color:var(--text-muted,#64748B);width:20px">#'+rank+'</span><span style="width:32px;height:32px;border-radius:50%;background:'+c+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">'+esc(r.who.charAt(0))+'</span><span style="font-size:15px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(r.who)+'</span><span style="margin-left:auto;display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:800;color:var(--navy,#0D2F4F)">'+r.composite+'</span><span style="font-size:14px;font-weight:800;color:#fff;background:'+r.grade[1]+';width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center">'+r.grade[0]+'</span></span></div>';
+ h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"><span style="font-size:11px;color:#185FA5;background:#EFF6FF;padding:3px 9px;border-radius:9px">'+r.posted+'/'+r.total+' โพสต์</span><span style="font-size:11px;color:#CA8A04;background:#FEF9C3;padding:3px 9px;border-radius:9px">Eng '+(r.avgEng?r.avgEng.toFixed(1)+'%':'-')+'</span>'+(r.hi?'<span style="font-size:11px;color:#854D0E;background:#FEF3C7;padding:3px 9px;border-radius:9px">★ '+r.hi+' Highlight</span>':'')+'</div>';
+ if(r.k){h+=dim('Output',r.k.o,25)+dim('Weighted',r.k.w,25)+dim('Discipline',r.k.d,20)+dim('Quality',r.k.q,15)+dim('Platform',r.k.p,15);}
+ else{h+='<div style="font-size:11px;color:var(--text-muted,#64748B)">ยังไม่มีคะแนน KPI · จัดอันดับจาก engagement</div>';}
+ if(r.best){h+='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border,#E2E8F0);font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-trophy" style="color:#CA8A04"></i> เด่นสุด: '+esc(r.best.title)+' ('+r.best.eng+'%)</div>';}
+ h+='</div>'; return h;
+}
 
 function mountCnBrief(){const w=$('cnBriefWrap');if(!w)return;const b=cnBRIEF();
  let h='<div class="card" style="padding:18px 20px;margin-bottom:14px;border:1px solid #C7E8E3;background:linear-gradient(135deg,#F0FDFA,#fff)"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px"><div><div style="font-size:11px;letter-spacing:1px;color:#0F766E;font-weight:700">MORNING BRIEF · สรุปเช้า</div><div style="font-size:20px;font-weight:800;color:var(--navy,#0D2F4F)">'+esc(b.date)+'</div><div style="font-size:12px;color:var(--text-muted,#64748B);margin-top:2px">ผู้นำประชุม: <b>'+esc(b.lead)+'</b></div></div><button data-cnact="ส่ง Brief เข้า LINE กลุ่ม" style="background:#06C755;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-brand-line"></i> ส่งเข้า LINE</button></div></div>';
@@ -3842,7 +3947,7 @@ function mountCnBoard(){const w=$('cnBoardWrap');if(!w)return;
   h+='<div class="cnCol" style="flex:0 0 210px;min-width:210px;background:#F1F5F9;border-radius:12px;padding:8px">';
   h+='<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);padding:4px 6px 8px"><i class="ti '+col.i+'"></i>'+esc(col.k)+'<span style="margin-left:auto;font-size:10px;background:#fff;color:var(--text-muted,#64748B);border-radius:8px;padding:1px 7px">'+its.length+'</span></div>';
   h+='<div class="cnColBody" data-col="'+esc(col.k)+'" style="min-height:40px;display:flex;flex-direction:column;gap:7px">';
-  its.forEach(it=>{h+='<div class="cnKan" draggable="true" data-id="'+it.id+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.04)"><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.35;margin-bottom:6px">'+esc(it.title)+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+_cnDept(it.dept)+_cnWho(it.who)+'</div></div>';});
+  its.forEach(it=>{h+='<div class="cnKan" draggable="true" data-id="'+it.id+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.04)"><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.35;margin-bottom:6px">'+esc(it.title)+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+_cnDept(it.dept)+_cnWhoLink(it.who)+'</div></div>';});
   h+='</div></div>';});
  h+='</div>';
  w.innerHTML=h;_cnBind(w);_cnSetCt('cnboard',cnDATA().length);
@@ -3892,38 +3997,54 @@ function mountCnCampaign(){const w=$('cnCampaignWrap');if(!w)return;
  h+='<div class="card" style="padding:4px 0">'+cnPROMO().map(p=>'<div style="padding:12px 16px;border-bottom:1px solid var(--border,#E2E8F0)"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(p.n)+(p.lead?' <span style="font-size:9px;color:#CA8A04;background:#FEF9C3;padding:1px 6px;border-radius:5px">LEAD</span>':'')+'</div><div style="font-size:11px;color:var(--text-muted,#64748B);font-family:monospace">'+esc(p.id)+'</div></div>'+stP(p.st)+'</div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px">'+_cnDept(p.dept)+tierP(p.tier)+'<span style="font-size:12px;color:var(--navy,#0D2F4F);font-weight:700">฿'+p.price.toLocaleString()+'</span><span style="font-size:11px;color:var(--text-muted,#64748B)">เป้า '+p.target+' เคส · Est. ฿'+p.est.toLocaleString()+'</span></div></div>').join('')+'</div>';
  w.innerHTML=h;_cnBind(w);_cnSetCt('cncampaign',cnPROMO().length);}
 
-function mountCnKpi(){const w=$('cnKpiWrap');if(!w)return;
- const grade=(t)=>t>=90?['S','#047857']:t>=80?['A','#0F766E']:t>=70?['B','#185FA5']:t>=60?['C','#B45309']:['D','#B91C1C'];
- const rows=cnKPI().map(k=>{const tot=k.o+k.w+k.d+k.q+k.p;return {...k,tot,g:grade(tot)};}).sort((a,b)=>b.tot-a.tot);
- const avg=Math.round(rows.reduce((a,r)=>a+r.tot,0)/rows.length);
- const dim=(label,v,max)=>{const pct=Math.round(v/max*100);const col=pct>=80?'#047857':pct>=60?'#B45309':'#B91C1C';return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:var(--text-muted,#64748B)">'+label+'</span><span style="font-weight:700;color:'+col+'">'+v+'/'+max+'</span></div><div style="height:6px;background:#EEF2F6;border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+col+'"></div></div></div>';};
- let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px">'+_cnSc(rows.length,'ครีเอเตอร์')+_cnSc(avg+'%','คะแนนเฉลี่ย','#0F766E')+_cnSc(rows[0].who,'Top performer','#047857')+'</div>';
- h+='<div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:12px">5 มิติ (เต็ม 100): Output /25 · Weighted /25 · Discipline /20 · Quality /15 · Platform /15 · เกรด S(90+) A(80+) B(70+) C(60+) D(&lt;60) — คำนวณอัตโนมัติจาก DAILY_LOG + MONTHLY_PLANNER</div>';
- h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px">';
- rows.forEach(r=>{h+='<div class="card" style="padding:15px 16px"><div style="display:flex;align-items:center;gap:9px;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:50%;background:'+(CN_WHO_C[r.who]||'#64748B')+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">'+esc(r.who.charAt(0))+'</span><span style="font-size:15px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(r.who)+'</span><span style="margin-left:auto;display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:800;color:var(--navy,#0D2F4F)">'+r.tot+'%</span><span style="font-size:14px;font-weight:800;color:#fff;background:'+r.g[1]+';width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center">'+r.g[0]+'</span></span></div>'+dim('Output',r.o,25)+dim('Weighted',r.w,25)+dim('Discipline',r.d,20)+dim('Quality',r.q,15)+dim('Platform',r.p,15)+'</div>';});
+function mountCnKpi(){var w=$('cnKpiWrap');if(!w)return;
+ var ranked=cnPersonAgg().filter(function(x){return x.k||x.total>0;}).sort(function(a,b){return b.composite-a.composite;});
+ if(!ranked.length){w.innerHTML=emptyCard('ยังไม่มีข้อมูล KPI ทีมคอนเทนต์');_cnSetCt('cnkpi','');return;}
+ var pieces=cnDATA();
+ var teamPub=pieces.filter(function(p){return p.col==='โพสเรียบร้อย';}).length;
+ var engAll=pieces.filter(function(p){return p.eng!=null;}).map(function(p){return +p.eng;});
+ var teamEng=engAll.length?engAll.reduce(function(a,b){return a+b;},0)/engAll.length:0;
+ var withK=ranked.filter(function(r){return r.k;});
+ var avgKpi=withK.length?Math.round(withK.reduce(function(a,r){return a+r.kTotal;},0)/withK.length):0;
+ var h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">'+_cnSc(ranked.length,'ครีเอเตอร์')+_cnSc(teamPub+'/'+pieces.length,'โพสต์แล้ว / ทั้งหมด','#185FA5')+_cnSc(teamEng.toFixed(1)+'%','Engagement เฉลี่ยทีม','#CA8A04')+_cnSc(avgKpi+'%','KPI เฉลี่ยทีม','#0F766E')+_cnSc(ranked[0].who,'อันดับ 1','#047857')+'</div>';
+ h+=cnLeaderboard(ranked);
+ h+='<div style="font-size:11px;color:var(--text-muted,#64748B);margin:14px 0 4px">5 มิติ (เต็ม 100): Output /25 · Weighted /25 · Discipline /20 · Quality /15 · Platform /15 · เกรด S(90+) A(80+) B(70+) C(60+) D(&lt;60) — คำนวณอัตโนมัติจาก DAILY_LOG + MONTHLY_PLANNER</div>';
+ h+='<div style="font-weight:800;color:var(--navy,#0D2F4F);margin:14px 0 10px;font-size:15px"><i class="ti ti-id-badge-2"></i> รายละเอียดรายคน <span style="font-size:11px;font-weight:400;color:var(--text-muted,#64748B)">(กดการ์ดเพื่อดูผลงานทั้งหมด)</span></div>';
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px">';
+ ranked.forEach(function(r,i){h+=cnCreatorCard(r,i+1);});
  h+='</div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cnkpi',rows.length);}
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnkpi',ranked.length);}
 
-function mountCnMonthly(){const w=$('cnMonthlyWrap');if(!w)return;
- const byDept={},byWho={},byTopic={};cnDATA().forEach(it=>{byDept[it.dept]=(byDept[it.dept]||0)+1;byWho[it.who]=(byWho[it.who]||0)+1;byTopic[it.topic]=(byTopic[it.topic]||0)+1;});
- const done=cnDATA().filter(it=>it.col==='โพสเรียบร้อย').length;
- const bars=(obj,colf)=>{const mx=Math.max(1,...Object.values(obj));return Object.keys(obj).sort((a,b)=>obj[b]-obj[a]).map(k=>'<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:var(--navy,#0D2F4F)">'+esc(k)+'</span><span style="font-weight:700">'+obj[k]+'</span></div><div style="height:9px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+Math.round(obj[k]/mx*100)+'%;height:100%;background:'+colf(k)+'"></div></div></div>').join('');};
- let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(cnDATA().length,'งานเดือนนี้')+_cnSc(done,'โพสเรียบร้อย','#047857')+_cnSc(Object.keys(byTopic).length,'หัวข้อที่ทำ','#185FA5')+'</div>';
- h+='<div class="card" style="padding:15px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามแผนก</div>'+bars(byDept,k=>CN_DEPT[k]||'#64748B')+'</div>';
- h+='<div class="card" style="padding:15px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามครีเอเตอร์</div>'+bars(byWho,k=>CN_WHO_C[k]||'#64748B')+'</div>';
- h+='<div class="card" style="padding:15px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามหัวข้อ</div>'+bars(byTopic,()=>'#3DC5B7')+'</div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cnmonthly',cnDATA().length);}
-
-function mountCnHighlight(){const w=$('cnHighlightWrap');if(!w)return;
- const hi=cnDATA().filter(it=>it.eng!=null).sort((a,b)=>b.eng-a.eng);
- let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFFBEB;border-radius:10px;border:1px solid #FDE68A"><i class="ti ti-star" style="color:#CA8A04;font-size:18px"></i><span style="font-size:12px;color:#854D0E">คอนเทนต์ Engagement ≥10% = Highlight · ยอดจริงดึงจาก PLATFORM_ANALYTICS / หน้า ครีเอทีฟ·คลิป (Meta)</span></div>';
- h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">'+hi.map(it=>{const top=it.eng>=10;return '<div class="card" style="padding:14px 16px;border:'+(top?'1px solid #FDE68A':'1px solid var(--border,#E2E8F0)')+'">'+(top?'<div style="font-size:10px;font-weight:800;color:#CA8A04;margin-bottom:6px"><i class="ti ti-star"></i> HIGHLIGHT</div>':'')+'<div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4;margin-bottom:8px">'+esc(it.title)+'</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'+_cnDept(it.dept)+_cnWho(it.who)+'</div><div style="font-size:22px;font-weight:800;color:'+(top?'#CA8A04':'#0F766E')+'">'+it.eng+'%<span style="font-size:11px;font-weight:600;color:var(--text-muted,#64748B)"> engagement</span></div></div>';}).join('')||emptyCard('ยังไม่มีข้อมูลผล')+'</div>';
+function mountCnMonthly(){var w=$('cnMonthlyWrap');if(!w)return;
+ var pieces=cnDATA();
+ var byDept={},byTopic={};pieces.forEach(function(it){if(it.dept)byDept[it.dept]=(byDept[it.dept]||0)+1;if(it.topic)byTopic[it.topic]=(byTopic[it.topic]||0)+1;});
+ var done=pieces.filter(function(it){return it.col==='โพสเรียบร้อย';}).length;
+ var agg=cnPersonAgg().filter(function(x){return x.total>0;}).sort(function(a,b){return b.posted-a.posted||b.avgEng-a.avgEng;});
+ var bars=function(obj,colf){var mx=Math.max(1,...Object.values(obj));return Object.keys(obj).sort(function(a,b){return obj[b]-obj[a];}).map(function(k){return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:var(--navy,#0D2F4F)">'+esc(k)+'</span><span style="font-weight:700">'+obj[k]+'</span></div><div style="height:9px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+Math.round(obj[k]/mx*100)+'%;height:100%;background:'+colf(k)+'"></div></div></div>';}).join('');};
+ var funnel=CN_COLS.map(function(col){return {k:col.k,i:col.i,n:pieces.filter(function(p){return p.col===col.k;}).length};});
+ var fmax=Math.max(1,...funnel.map(function(f){return f.n;}));
+ var h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(pieces.length,'งานเดือนนี้')+_cnSc(done,'โพสเรียบร้อย','#047857')+_cnSc(Math.round(done/Math.max(1,pieces.length)*100)+'%','อัตราจบงาน','#0F766E')+_cnSc(Object.keys(byTopic).length,'หัวข้อที่ทำ','#185FA5')+'</div>';
+ h+='<div class="card" style="padding:16px 18px;margin-bottom:14px"><div style="font-weight:800;color:var(--navy,#0D2F4F);margin-bottom:4px"><i class="ti ti-table"></i> ผลงานรายคน <span style="font-size:11px;font-weight:400;color:var(--text-muted,#64748B)">(กดชื่อเพื่อดูทั้งหมด)</span></div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:12px">ดึงค่าจริงจากคอนเทนต์ที่โพสต์ · เรียงตามจำนวนโพสต์</div>';
+ h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px"><thead><tr style="text-align:left;color:var(--text-muted,#64748B);font-size:11px"><th style="padding:6px 8px">ครีเอเตอร์</th><th style="padding:6px 8px;text-align:center">งาน</th><th style="padding:6px 8px;text-align:center">โพสต์แล้ว</th><th style="padding:6px 8px;text-align:center">Eng เฉลี่ย</th><th style="padding:6px 8px;text-align:center">Highlight</th><th style="padding:6px 8px">ชิ้นเด่น</th></tr></thead><tbody>';
+ agg.forEach(function(r){var c=CN_WHO_C[r.who]||'#64748B';h+='<tr style="border-top:1px solid var(--border,#E2E8F0)"><td style="padding:8px"><span data-cnwho="'+esc(r.who)+'" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:700;color:var(--navy,#0D2F4F)"><span style="width:9px;height:9px;border-radius:50%;background:'+c+'"></span>'+esc(r.who)+'</span></td><td style="padding:8px;text-align:center">'+r.total+'</td><td style="padding:8px;text-align:center;color:#047857;font-weight:700">'+r.posted+'</td><td style="padding:8px;text-align:center;color:#CA8A04;font-weight:700">'+(r.avgEng?r.avgEng.toFixed(1)+'%':'-')+'</td><td style="padding:8px;text-align:center">'+(r.hi||'-')+'</td><td style="padding:8px;color:var(--text-muted,#64748B);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.best?esc(r.best.title)+' ('+r.best.eng+'%)':'-')+'</td></tr>';});
+ h+='</tbody></table></div></div>';
+ h+='<div class="card" style="padding:15px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">สถานะงาน · Production funnel</div>'+funnel.map(function(f){return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:var(--navy,#0D2F4F)"><i class="ti '+f.i+'"></i> '+esc(f.k)+'</span><span style="font-weight:700">'+f.n+'</span></div><div style="height:9px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+Math.round(f.n/fmax*100)+'%;height:100%;background:#3DC5B7"></div></div></div>';}).join('')+'</div>';
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">';
+ h+='<div class="card" style="padding:15px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามแผนก</div>'+bars(byDept,function(k){return CN_DEPT[k]||'#64748B';})+'</div>';
+ h+='<div class="card" style="padding:15px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">งานแยกตามหัวข้อ</div>'+bars(byTopic,function(){return '#3DC5B7';})+'</div>';
  h+='</div>';
- w.innerHTML=h;_cnBind(w);_cnSetCt('cnhighlight',hi.filter(x=>x.eng>=10).length);}
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnmonthly',pieces.length);}
+
+function mountCnHighlight(){var w=$('cnHighlightWrap');if(!w)return;
+ var hi=cnDATA().filter(function(it){return it.eng!=null;}).sort(function(a,b){return b.eng-a.eng;});
+ var h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 13px;background:#FFFBEB;border-radius:10px;border:1px solid #FDE68A"><i class="ti ti-star" style="color:#CA8A04;font-size:18px"></i><span style="font-size:12px;color:#854D0E">คอนเทนต์ Engagement ≥10% = Highlight · ยอดจริงดึงจาก PLATFORM_ANALYTICS / หน้า ครีเอทีฟ·คลิป (Meta) · กดชื่อคนดูผลงานทั้งหมด</span></div>';
+ if(!hi.length){w.innerHTML=h+emptyCard('ยังไม่มีข้อมูลผล');_cnSetCt('cnhighlight','');return;}
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">'+hi.map(function(it){var top=it.eng>=10;return '<div class="card" style="padding:14px 16px;border:'+(top?'1px solid #FDE68A':'1px solid var(--border,#E2E8F0)')+'">'+(top?'<div style="font-size:10px;font-weight:800;color:#CA8A04;margin-bottom:6px"><i class="ti ti-star"></i> HIGHLIGHT</div>':'')+'<div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4;margin-bottom:8px">'+esc(it.title)+'</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'+_cnDept(it.dept)+_cnWhoLink(it.who)+'</div><div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px"><div style="font-size:22px;font-weight:800;color:'+(top?'#CA8A04':'#0F766E')+'">'+it.eng+'%<span style="font-size:11px;font-weight:600;color:var(--text-muted,#64748B)"> eng</span></div><span style="display:flex;gap:8px;align-items:center">'+_cnLinks(it)+'</span></div></div>';}).join('')+'</div>';
+ w.innerHTML=h;_cnBind(w);_cnSetCt('cnhighlight',hi.filter(function(x){return x.eng>=10;}).length);}
 
 function mountCnInflu(){const w=$('cnInfluWrap');if(!w)return;
  let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(cnINFLU().length,'อินฟลูที่ดีลอยู่')+_cnSc('฿'+cnINFLU().reduce((a,x)=>a+x.rate,0).toLocaleString(),'ค่าตัวรวม','#0F766E')+'<div style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:center"><button data-cnact="ลงทะเบียนอินฟลูใหม่" style="background:#3DC5B7;color:#04342C;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มอินฟลู</button></div></div>';
- h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">'+cnINFLU().map(x=>'<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(x.n)+'</div>'+_cnDept(x.dept)+'</div><div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">'+_cnPlat(x.ch)+'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-users"></i> '+esc(x.followers)+'</span></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted,#64748B);border-top:1px solid var(--border,#E2E8F0);padding-top:8px"><span>ค่าตัว ฿'+x.rate.toLocaleString()+' · โควตา '+x.quota+'</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span style="font-size:11px;color:#0F766E;background:#E1F5EE;padding:2px 8px;border-radius:10px">'+esc(x.st)+'</span>'+_cnWho(x.who)+'</div></div>').join('')+'</div>';
+ h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">'+cnINFLU().map(x=>'<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F)">'+esc(x.n)+'</div>'+_cnDept(x.dept)+'</div><div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">'+_cnPlat(x.ch)+'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-users"></i> '+esc(x.followers)+'</span></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted,#64748B);border-top:1px solid var(--border,#E2E8F0);padding-top:8px"><span>ค่าตัว ฿'+x.rate.toLocaleString()+' · โควตา '+x.quota+'</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span style="font-size:11px;color:#0F766E;background:#E1F5EE;padding:2px 8px;border-radius:10px">'+esc(x.st)+'</span>'+_cnWhoLink(x.who)+'</div></div>').join('')+'</div>';
  w.innerHTML=h;_cnBind(w);_cnSetCt('cninflu',cnINFLU().length);}
 
 function start(){
@@ -3982,6 +4103,124 @@ $('otpBtn').onclick=async()=>{ $('err').textContent='';
 };
 $('pass').addEventListener('keydown',e=>{if(e.key==='Enter')$('btn').click();});
 $('email').addEventListener('keydown',e=>{if(e.key==='Enter'&&!$('pass').value)$('otpBtn').click();});
+
+/* ① LINE login */
+$('lineLoginBtn').onclick=()=>{location.href='login.html';};
+
+/* ② ลืมรหัสผ่าน */
+$('forgotLink').onclick=async(e)=>{ e.preventDefault();
+ const email=$('email').value.trim();
+ if(!email){$('err').style.color='';$('err').textContent='ใส่อีเมลก่อนค่ะ แล้วกดลืมรหัสผ่านอีกครั้ง';$('email').focus();return;}
+ $('forgotLink').style.pointerEvents='none';
+ $('err').style.color='';$('err').textContent='กำลังส่งลิงก์รีเซ็ตรหัสผ่าน…';
+ const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+ $('forgotLink').style.pointerEvents='';
+ if(error){$('err').style.color='';$('err').textContent='ส่งไม่สำเร็จ: '+error.message;}
+ else{$('err').style.color='#0F766E';$('err').textContent='ส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลแล้ว ✓';}
+};
+
+/* ⑥ สมัครสมาชิก — สลับหน้า */
+function regShow(){ $('login').classList.add('hidden'); $('register').classList.remove('hidden'); $('regErr').textContent=''; }
+function regHide(){ $('register').classList.add('hidden'); $('login').classList.remove('hidden'); }
+$('toRegister').onclick=(e)=>{ e.preventDefault(); regShow(); };
+$('toLogin').onclick=(e)=>{ e.preventDefault(); regHide(); };
+
+let _regCandidate=null; // ผลลัพธ์จาก register_match ที่ยืนยันแล้ว
+
+function _regReadForm(){
+ return {
+  email:$('regEmail').value.trim(),
+  password:$('regPass').value,
+  full_name:$('regName').value.trim(),
+  phone:$('regPhone').value.trim(),
+  employee_id:$('regEmpId').value.trim(),
+  nickname:$('regNick').value.trim()
+ };
+}
+
+/* Step 1: ค้นหาข้อมูล */
+$('regMatchBtn').onclick=async()=>{
+ $('regErr').style.color='#B91C1C'; $('regErr').textContent='';
+ const f=_regReadForm();
+ if(!f.email){$('regErr').textContent='กรุณากรอกอีเมลค่ะ';return;}
+ if(!f.password||f.password.length<8){$('regErr').textContent='รหัสผ่านต้องมีอย่างน้อย 8 ตัวค่ะ';return;}
+ if(!f.full_name){$('regErr').textContent='กรุณากรอกชื่อ-นามสกุลค่ะ';return;}
+ $('regMatchBtn').disabled=true; $('regErr').style.color='';$('regErr').textContent='กำลังค้นหาข้อมูลของคุณ…';
+ try{
+  const {data,error}=await sb.functions.invoke('line_login',{body:{action:'register_match',email:f.email,phone:f.phone,full_name:f.full_name,nickname:f.nickname,employee_id:f.employee_id}});
+  if(error) throw error;
+  if(!data||!data.ok){throw new Error((data&&data.error)||'ค้นหาไม่สำเร็จ');}
+  if(data.already_linked){
+   $('regErr').style.color='';$('regErr').textContent='';
+   $('regResult').classList.add('hidden');
+   $('err').style.color='#0F766E';$('err').textContent='บัญชีนี้มีอยู่แล้ว เข้าสู่ระบบได้เลย';
+   if($('email')&&!$('email').value) $('email').value=f.email;
+   regHide();
+   return;
+  }
+  _renderRegMatch(data,f);
+ }catch(err){
+  $('regResult').classList.add('hidden');
+  $('regErr').style.color='#B91C1C';$('regErr').textContent='ค้นหาไม่สำเร็จ: '+(err.message||err);
+ }finally{ $('regMatchBtn').disabled=false; if($('regErr').style.color===''){$('regErr').textContent='';} }
+};
+
+function _renderRegMatch(data,f){
+ $('regErr').textContent='';
+ const box=$('regResult'); box.classList.remove('hidden');
+ if(data.matched && data.candidate){
+  _regCandidate=data.candidate;
+  const conf=data.confidence||'low';
+  const chip = conf==='high' ? {bg:'rgba(61,197,183,.15)',c:'#0F766E',t:'ตรงกันชัดเจน'}
+            : conf==='medium' ? {bg:'rgba(245,158,11,.15)',c:'#B45309',t:'ตรงกันบางส่วน'}
+            : {bg:'rgba(148,163,184,.18)',c:'#64748b',t:'ตรงกันน้อย'};
+  const c=data.candidate;
+  const row=(lbl,val)=> val ? '<div class="row"><span>'+lbl+'</span><span>'+esc(String(val))+'</span></div>' : '';
+  box.innerHTML =
+   '<div class="reg-cand">'+
+     '<span class="reg-chip" style="background:'+chip.bg+';color:'+chip.c+'">'+chip.t+'</span>'+
+     row('ชื่อ',c.full_name)+ (c.nickname?row('ชื่อเล่น',c.nickname):'') +
+     row('ตำแหน่ง',c.position)+ row('สาขา',c.branch_name)+
+     row('อีเมล',c.email_masked)+ row('เบอร์',c.phone_masked)+
+     (c.status?row('สถานะ',c.status):'')+
+   '</div>'+
+   '<div class="reg-confirm-row"><input type="checkbox" id="regWantUpdate"><label for="regWantUpdate" style="margin:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">อัปเดตข้อมูลติดต่อให้ตรงกับที่กรอก</label></div>'+
+   '<div style="font-size:13px;color:var(--text);margin-top:12px;font-weight:600">ใช่ตัวคุณหรือไม่?</div>'+
+   '<button id="regCommitBtn"><i class="ti ti-check"></i> ใช่ — สมัครเลย</button>';
+  $('regCommitBtn').onclick=()=>_regCommit(f,_regCandidate.employee_id||'',$('regWantUpdate')&&$('regWantUpdate').checked);
+ }else{
+  _regCandidate=null;
+  box.innerHTML =
+   '<div class="reg-cand"><div style="font-size:13px;color:var(--text);line-height:1.5">ไม่พบข้อมูลที่ตรงกัน — สมัครได้ แต่ HR จะยืนยันตัวตนก่อนให้สิทธิ์</div></div>'+
+   '<button id="regCommitBtn"><i class="ti ti-user-plus"></i> สมัครเลย</button>';
+  $('regCommitBtn').onclick=()=>_regCommit(f,f.employee_id||'',false);
+ }
+}
+
+/* Step 2: ยืนยันสมัคร */
+async function _regCommit(f,employee_id,want_update){
+ $('regErr').style.color='';$('regErr').textContent='กำลังสมัคร…';
+ const btn=$('regCommitBtn'); if(btn)btn.disabled=true; $('regMatchBtn').disabled=true;
+ try{
+  const {data,error}=await sb.functions.invoke('line_login',{body:{action:'register_commit',email:f.email,password:f.password,employee_id:employee_id,full_name:f.full_name,phone:f.phone,nickname:f.nickname,want_update:!!want_update}});
+  if(error) throw error;
+  if(!data||!data.ok||!data.registered){throw new Error((data&&(data.note||data.error))||'สมัครไม่สำเร็จ');}
+  if(data.linked){
+   const {error:le}=await sb.auth.signInWithPassword({email:f.email,password:f.password});
+   if(le) throw new Error('สมัครสำเร็จแต่เข้าระบบอัตโนมัติไม่ได้: '+le.message);
+   $('err').style.color='#0F766E';$('err').textContent='เข้าระบบได้ทันที — สิทธิ์เมนูเพิ่มเติมรอ HR กำหนด';
+   start();
+  }else{
+   $('regErr').style.color='';$('regErr').textContent='';
+   $('err').style.color='#0F766E';$('err').textContent='สมัครแล้ว รอ HR ยืนยันตัวตน'+(data.note?' — '+data.note:'');
+   if($('email')&&!$('email').value) $('email').value=f.email;
+   regHide();
+  }
+ }catch(err){
+  $('regErr').style.color='#B91C1C';$('regErr').textContent='สมัครไม่สำเร็จ: '+(err.message||err);
+  if(btn)btn.disabled=false; $('regMatchBtn').disabled=false;
+ }
+}
 $('logout').onclick=async()=>{localStorage.removeItem('yy_line_id');LINE_ID=null;await sb.auth.signOut();location.reload();};
 /* LINE-login-first: เปิด LINE_FIRST=true เมื่อเสียบ LIFF ID + ตั้ง LINE_CHANNEL_ID_PUR แล้ว
    → ทั้งระบบ (HR/บัญชี/จัดซื้อ) บังคับเข้าผ่าน LINE ก่อน · email/OTP เหลือไว้สำหรับแอดมิน (?admin=1) */

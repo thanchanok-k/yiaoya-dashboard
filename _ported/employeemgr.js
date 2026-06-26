@@ -118,9 +118,31 @@ function em2MapAssignments(p) {
 // cache payload ดิบล่าสุดต่อ employee (getDetail reuse จาก list · backend ไม่มี endpoint แยก)
 var _em2Emps = [];
 var _em2ById = {};
+// lock flags ต่อ employee — เก็บแยกจาก core fields (เขียน Google Sheet ไม่ได้) → ตาราง emp_locks
+// keyed by employee_id → { position_locked, role_locked }  (ล็อก = ล็อกตำแหน่ง + บทบาทสิทธิ์พร้อมกัน)
+var _em2Locks = {};
+
+// ดึง lock flags ครั้งเดียวจาก emp_locks → _em2Locks ; error = ถือว่าไม่ล็อกทั้งหมด (ไม่ทำหน้าพัง)
+function em2FetchLocks() {
+  return sb.from('emp_locks').select('employee_id,position_locked,role_locked').then(function (res) {
+    var map = {};
+    var rows = (res && res.data) || [];
+    rows.forEach(function (r) {
+      if (!r || !r.employee_id) return;
+      map[r.employee_id] = { position_locked: !!r.position_locked, role_locked: !!r.role_locked };
+    });
+    _em2Locks = map;
+    return map;
+  }).catch(function (e) {
+    console.warn('[EM_BACKEND] locks fetch failed', e);
+    _em2Locks = {}; return {};
+  });
+}
 
 function em2FetchEmployees() {
-  return sb.functions.invoke(EM_FN + '?type=' + encodeURIComponent(EM_TYPE)).then(function (res) {
+  return em2FetchLocks().then(function () {
+    return sb.functions.invoke(EM_FN + '?type=' + encodeURIComponent(EM_TYPE));
+  }).then(function (res) {
     var data = (res && res.data) || {};
     var items = em2ToArr(data.items);
     var seen = {}; var rows = [];
@@ -812,6 +834,20 @@ function EM2_RUN_PAGE_JS() {
     }).join(' | ');
     return ' <span class="hang-badge" title="' + escapeAttr(tip) + '">แขวนป้าย</span>';
   }
+  // ล็อก = ล็อกตำแหน่ง + บทบาทสิทธิ์พร้อมกัน (อ่านจาก _em2Locks ระดับโมดูล)
+  function isEmpLocked(id) {
+    const l = _em2Locks[id];
+    return !!(l && (l.position_locked || l.role_locked));
+  }
+  function lockBadge(e) {
+    if (!isEmpLocked(e.employee_id)) return '';
+    return ' <span class="hang-badge" title="ล็อกตำแหน่ง+บทบาทสิทธิ์ไว้ — แก้ไม่ได้จนกว่าจะปลดล็อก"><i class="ti ti-lock"></i> ล็อก</span>';
+  }
+  function lockBtn(e) {
+    const locked = isEmpLocked(e.employee_id);
+    return '<button class="btn btn-icon" onclick="window.toggleEmpLock&&window.toggleEmpLock(\'' + escapeAttr(e.employee_id) + '\')" title="' +
+      (locked ? 'ปลดล็อกตำแหน่ง+บทบาทสิทธิ์' : 'ล็อกตำแหน่ง+บทบาทสิทธิ์') + '"><i class="ti ' + (locked ? 'ti-lock-open' : 'ti-lock') + '"></i></button>';
+  }
   function empChips(e) {
     const asg = empAssignmentsOf(e);
     if (!asg.length) return '<span style="color:var(--text-faint);font-size:12px">—</span>';
@@ -1036,7 +1072,7 @@ function EM2_RUN_PAGE_JS() {
             '<div class="emp-cell">',
               '<div class="emp-avatar" style="--av:' + avColor(e.employee_id) + '">' + escapeHtml(initials) + '</div>',
               '<div>',
-                '<div class="emp-name">' + escapeHtml(e.nickname || e.first_name || '—') + ' ' + multiBadge + hangB + '</div>',
+                '<div class="emp-name">' + escapeHtml(e.nickname || e.first_name || '—') + ' ' + multiBadge + hangB + lockBadge(e) + '</div>',
                 '<div class="emp-id">' + escapeHtml(e.employee_id) + ' · ' + escapeHtml(fullName.trim()) + '</div>',
               '</div>',
             '</div>',
@@ -1050,6 +1086,7 @@ function EM2_RUN_PAGE_JS() {
           '<td onclick="event.stopPropagation()">',
             '<div style="display:flex;gap:4px;justify-content:flex-end">',
               '<button class="btn btn-icon" onclick="window.openEmpAccess&&window.openEmpAccess(\'' + escapeAttr(e.employee_id) + '\')" title="ตั้งสิทธิ์เข้าระบบ"><i class="ti ti-shield-lock"></i></button>',
+              lockBtn(e),
               '<button class="btn btn-icon" onclick="openEdit(\'' + escapeAttr(e.employee_id) + '\')" title="ดูรายละเอียด 360">' + ICONS.edit + '</button>',
             '</div>',
           '</td>',
@@ -1066,7 +1103,7 @@ function EM2_RUN_PAGE_JS() {
           '<div class="ec-top">',
             '<div class="emp-avatar" style="--av:' + avColor(e.employee_id) + '">' + escapeHtml(initials) + '</div>',
             '<div class="ec-meta">',
-              '<div class="emp-name">' + escapeHtml(e.nickname || e.first_name || '—') + multiBadge + hangB + '</div>',
+              '<div class="emp-name">' + escapeHtml(e.nickname || e.first_name || '—') + multiBadge + hangB + lockBadge(e) + '</div>',
               '<div class="emp-id">' + escapeHtml(e.employee_id) + '</div>',
             '</div>',
             '<span class="pill status-' + e.status + '">' + e.status + '</span>',
@@ -1328,7 +1365,8 @@ function EM2_RUN_PAGE_JS() {
         if (d && d.error) { showToast(d.error, 'error'); return; }
         editingId = empId; editingDetail = d;
         document.getElementById('modal-title').textContent = 'รายละเอียด ' + (d.nickname || d.first_name || empId);
-        document.getElementById('modal-sub').textContent = empId + ' · ' + (d.assignments || []).length + ' branch assignments';
+        document.getElementById('modal-sub').textContent = empId + ' · ' + (d.assignments || []).length + ' branch assignments' +
+          (isEmpLocked(empId) ? ' · 🔒 ล็อกตำแหน่ง+บทบาทสิทธิ์ไว้' : '');
         document.getElementById('m-id-existing').value = empId;
         document.getElementById('m-emp-id').value = empId;
         document.getElementById('m-emp-id').disabled = true;
@@ -1503,11 +1541,33 @@ function EM2_RUN_PAGE_JS() {
     renderList();
   }
 
+  // ล็อก/ปลดล็อก ตำแหน่ง+บทบาทสิทธิ์พร้อมกัน → เขียน emp_locks (RLS = owner/hr_director เท่านั้น)
+  function toggleEmpLock(empId) {
+    const cur = _em2Locks[empId] || { position_locked: false, role_locked: false };
+    const wasLocked = !!(cur.position_locked || cur.role_locked);
+    const LOCK = !wasLocked;
+    const ok = window.confirm(LOCK
+      ? 'ล็อกตำแหน่ง+บทบาทของพนักงานคนนี้? จะแก้ไม่ได้จนกว่าจะปลดล็อก'
+      : 'ปลดล็อกตำแหน่ง+บทบาทของพนักงานคนนี้?');
+    if (!ok) return;
+    sb.from('emp_locks')
+      .upsert({ employee_id: empId, position_locked: LOCK, role_locked: LOCK, note: null }, { onConflict: 'employee_id' })
+      .then(function (res) {
+        if (res && res.error) throw res.error;
+        _em2Locks[empId] = { position_locked: LOCK, role_locked: LOCK };
+        renderList();
+        showToast(LOCK ? 'ล็อกตำแหน่ง+บทบาทแล้ว' : 'ปลดล็อกแล้ว', 'success');
+      })
+      .catch(function (e) {
+        showToast((e && e.message) ? e.message : 'ล็อกไม่สำเร็จ (ต้องเป็น owner/hr_director)', 'error');
+      });
+  }
+
   /* ===== expose fn ที่ inline onclick/markup ต้องเรียก ไปยัง window ===== */
   const _exp = {
     showHelp, HELP, loadList, openAdd, openEdit, setView, setOrgMode,
     onPositionChange, addAssignment, endAssign, closeModal, saveEmployee,
-    renderList, clearFilters,
+    renderList, clearFilters, toggleEmpLock,
   };
   Object.keys(_exp).forEach(k => { window[k] = _exp[k]; });
 
