@@ -4098,7 +4098,9 @@ function _cnPlatCol(p){return {FB:'#1877F2',IG:'#E4405F',TikTok:'#0F172A',LINE:'
 function cnPERF(){
  var live=CN_LIVE&&CN_LIVE.perf; if(live&&live.length) return live;
  var keyOf={FB:'fb_link',IG:'ig_link',TikTok:'tt_link',LINE:'line_link'};
- return cnDATA().filter(function(p){return p.col==='โพสเรียบร้อย'&&p.eng!=null;}).map(function(p){
+ var src=cnDATA().filter(function(p){return p.col==='โพสเรียบร้อย'&&p.eng!=null;});
+ if(!src.length)src=CN_DATA_MOCK.filter(function(p){return p.eng!=null;}); /* ยังไม่มี eng จริง → โชว์ตัวอย่าง (banner เตือนแล้ว) */
+ return src.map(function(p){
   var base=1400+(_cnHash(p.title)%4200), eng=+p.eng, plats=[], avail=[];
   if(p.fb_link)avail.push('FB'); if(p.ig_link)avail.push('IG'); if(p.tt_link)avail.push('TikTok'); if(p.line_link)avail.push('LINE');
   if(!avail.length)avail=['FB','IG'];
@@ -4117,6 +4119,20 @@ function _cnPlatCard(x){
  var stats=x.stats.map(function(s){var v=(String(s[0]).slice(-1)==='%')?(s[1]+'%'):_cnNum(s[1]);return '<div style="text-align:center;flex:1"><div style="font-size:13px;font-weight:800;color:var(--navy,#0D2F4F)">'+v+'</div><div style="font-size:10px;color:var(--text-muted,#64748B)">'+esc(s[0])+'</div></div>';}).join('');
  return '<div style="border:1px solid var(--border,#E2E8F0);border-radius:10px;padding:10px 12px;flex:1;min-width:158px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><i class="ti '+icon+'" style="color:'+col+';font-size:16px"></i><span style="font-size:12px;font-weight:700;color:'+col+'">'+esc(x.p)+'</span><span style="margin-left:auto;font-size:11px;color:var(--text-muted,#64748B)">'+(x.p==='TikTok'?'วิว ':x.p==='LINE'?'ส่ง ':'reach ')+_cnNum(x.reach)+'</span></div><div style="display:flex;gap:6px">'+stats+'</div>'+(x.link?'<a href="'+esc(x.link)+'" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:11px;color:'+col+';text-decoration:none">ดูโพสต์ →</a>':'')+'</div>';
 }
+function _cnColChart(items,unit){
+ if(!items||!items.length)return '';
+ unit=unit||'';
+ var n=items.length, W=Math.max(300,n*70), H=178, padX=20, padBot=30, padTop=24, gap=(W-padX*2)/n, bw=Math.min(48,gap*0.58), inner=H-padTop-padBot;
+ var mx=Math.max.apply(null,items.map(function(x){return +x.val||0;}))||1;
+ var g=items.map(function(x,i){
+  var v=+x.val||0, bh=Math.max(2,Math.round(inner*(v/mx))), cx=padX+gap*i+gap/2, y=H-padBot-bh;
+  var disp=(unit==='%')?v.toFixed(1)+'%':_cnNum(v)+unit;
+  return '<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+y+'" width="'+bw.toFixed(1)+'" height="'+bh+'" rx="5" fill="'+(x.color||'#3DC5B7')+'"></rect>'
+   +'<text x="'+cx.toFixed(1)+'" y="'+(y-6)+'" text-anchor="middle" font-size="11" font-weight="700" fill="#0D2F4F">'+disp+'</text>'
+   +'<text x="'+cx.toFixed(1)+'" y="'+(H-padBot+15)+'" text-anchor="middle" font-size="10" fill="#64748B">'+esc(String(x.label).slice(0,12))+'</text>';
+ }).join('');
+ return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto;max-height:190px"><line x1="'+padX+'" y1="'+(H-padBot)+'" x2="'+(W-padX)+'" y2="'+(H-padBot)+'" stroke="#E2E8F0" stroke-width="1"></line>'+g+'</svg>';
+}
 function mountCnPerf(){
  var w=$('cnPerfWrap'); if(!w)return;
  var all=cnPERF(), isMock=!(CN_LIVE&&CN_LIVE.perf&&CN_LIVE.perf.length);
@@ -4132,8 +4148,17 @@ function mountCnPerf(){
  h+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(all.length,'โพสต์ที่วัดผล')+_cnSc(_cnNum(totReach),'Reach รวม','#185FA5')+_cnSc(avgEng.toFixed(1)+'%','Engagement เฉลี่ย','#CA8A04')+_cnSc(topPlat,'แพลตฟอร์มเด่น','#0F766E')+'</div>';
  var seg=function(items,cur,attr){return '<div style="display:inline-flex;gap:4px;background:#F1F5F9;border-radius:9px;padding:3px;flex-wrap:wrap">'+items.map(function(it){var on=cur===it[0];return '<button data-'+attr+'="'+it[0]+'" style="border:none;border-radius:7px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;'+(on?'background:#fff;color:var(--navy,#0D2F4F);box-shadow:0 1px 2px rgba(0,0,0,.08)':'background:transparent;color:var(--text-muted,#64748B)')+'">'+esc(it[1])+'</button>';}).join('')+'</div>';};
  h+='<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">'+seg([['all','ทั้งหมด'],['FB','FB'],['IG','IG'],['TikTok','TikTok'],['LINE','LINE']],_cnPerfPlat,'pf')+'<span style="margin-left:auto;font-size:11px;color:var(--text-muted,#64748B)">เรียง</span>'+seg([['eng','Engagement'],['reach','Reach'],['recent','ล่าสุด']],_cnPerfSort,'ps')+'</div>';
+ // กราฟคอลัมน์ engagement
+ var byPlatEng=Object.keys(platAgg).map(function(k){return {label:k,val:platAgg[k].eng/platAgg[k].n,color:_cnPlatCol(k)};}).sort(function(a,b){return b.val-a.val;});
+ var creatorAgg={}; all.forEach(function(r){var c=creatorAgg[r.who]=creatorAgg[r.who]||{s:0,n:0};c.s+=r.eng;c.n++;});
+ var byCreator=Object.keys(creatorAgg).map(function(ww){return {label:ww,val:creatorAgg[ww].s/creatorAgg[ww].n,color:CN_WHO_C[ww]||'#64748B'};}).sort(function(a,b){return b.val-a.val;}).slice(0,7);
+ var topPosts=all.slice().sort(function(a,b){return b.eng-a.eng;}).slice(0,8).map(function(r){return {label:r.who,val:r.eng,color:CN_DEPT[r.dept]||'#3DC5B7'};});
+ h+='<div class="card" style="padding:16px 18px;margin-bottom:14px"><div style="font-weight:800;color:var(--navy,#0D2F4F);margin-bottom:2px"><i class="ti ti-chart-bar" style="color:#3DC5B7"></i> กราฟ Engagement</div><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:10px">% มีส่วนร่วมเฉลี่ย</div>'
+  +'<div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin:4px 0 2px">รายแพลตฟอร์ม</div>'+_cnColChart(byPlatEng,'%')
+  +'<div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 2px">รายครีเอเตอร์ (เฉลี่ย)</div>'+_cnColChart(byCreator,'%')
+  +'<div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin:14px 0 2px">Top โพสต์ (ตามผู้ดูแล)</div>'+_cnColChart(topPosts,'%')+'</div>';
  var mx=Math.max(1,...Object.keys(platAgg).map(function(k){return platAgg[k].reach;}));
- h+='<div class="card" style="padding:15px 17px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">เทียบรายแพลตฟอร์ม</div>'+Object.keys(platAgg).sort(function(a,b){return platAgg[b].reach-platAgg[a].reach;}).map(function(k){var t=platAgg[k],col=_cnPlatCol(k);return '<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:'+col+'"><i class="ti '+(CN_PLAT[k]||'ti-world')+'"></i> '+esc(k)+'</span><span style="color:var(--text-muted,#64748B)">reach '+_cnNum(t.reach)+' · eng '+(t.eng/t.n).toFixed(1)+'%</span></div><div style="height:9px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+Math.round(t.reach/mx*100)+'%;height:100%;background:'+col+'"></div></div></div>';}).join('')+'</div>';
+ h+='<div class="card" style="padding:15px 17px;margin-bottom:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:12px">เทียบรายแพลตฟอร์ม · Reach</div>'+Object.keys(platAgg).sort(function(a,b){return platAgg[b].reach-platAgg[a].reach;}).map(function(k){var t=platAgg[k],col=_cnPlatCol(k);return '<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:'+col+'"><i class="ti '+(CN_PLAT[k]||'ti-world')+'"></i> '+esc(k)+'</span><span style="color:var(--text-muted,#64748B)">reach '+_cnNum(t.reach)+' · eng '+(t.eng/t.n).toFixed(1)+'%</span></div><div style="height:9px;background:#EEF2F6;border-radius:4px;overflow:hidden"><div style="width:'+Math.round(t.reach/mx*100)+'%;height:100%;background:'+col+'"></div></div></div>';}).join('')+'</div>';
  rows.forEach(function(r){
   h+='<div class="card" style="padding:14px 16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px"><div style="min-width:0"><div style="font-size:14px;font-weight:700;color:var(--navy,#0D2F4F);line-height:1.4;margin-bottom:6px">'+esc(r.title)+'</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+_cnDept(r.dept)+_cnWhoLink(r.who)+(r.date?'<span style="font-size:11px;color:var(--text-muted,#64748B)"><i class="ti ti-calendar"></i> '+esc(r.date)+'</span>':'')+'</div></div>'+_cnEngBadge(r.eng)+'</div><div style="display:flex;gap:10px;flex-wrap:wrap">'+r.plats.map(_cnPlatCard).join('')+'</div></div>';
  });
