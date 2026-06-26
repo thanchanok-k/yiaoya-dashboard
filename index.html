@@ -1256,6 +1256,7 @@ function collapseToActive(){
 function applyRole(role){
  if(!VIEWS_BY_ROLE[role]) role='director';
  currentRole=role;
+ window.currentRole=role;   // expose ให้ ported pages อ่าน (เช่น adexplore gate exec)
  const chip=$('sbRole'); if(chip) chip.textContent='บทบาท: '+(ROLE_TH[role]||role);
  const allowed=EFFECTIVE_VIEWS||VIEWS_BY_ROLE[role];
  // if current active view not allowed → go to role landing

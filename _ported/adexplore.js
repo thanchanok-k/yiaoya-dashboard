@@ -5,7 +5,8 @@
 // pattern: window.mountAdexplore render เข้า #wrap-adexplore · ใช้ window.sb · ห้าม redeclare global
 
 (function () {
-  var ST = { days: 90, since: '', until: '', dept: '', platform: '', account: '', page: '', groupBy: 'dept', rows: [], ads: [], roas: null, sales: [], expanded: {}, loading: false, err: '' };
+  var ST = { days: 90, since: '', until: '', dept: '', platform: '', account: '', page: '', groupBy: 'dept', custType: 'new', rows: [], ads: [], roas: null, sales: [], expanded: {}, loading: false, err: '' };
+  function isExec() { var r = (typeof window !== 'undefined' && window.currentRole) || ''; return ['director', 'hq', 'admin', 'owner'].indexOf(r) >= 0; }
   // แมป "แผนกบริการ" (จาก JERA dept_sales ภาษาไทย) → "แผนกโฆษณา" (4 แผนก) เพื่อจับคู่รายได้↔ค่าแอด
   var SALE2AD = { 'กระดูกและข้อ': 'KneeCare (Ortho)', 'พิลาทิส': 'Resto Pilates', 'นวด': 'Massage', 'กายภาพ': 'Yiaoya', 'ผสม': 'Yiaoya', 'อื่นๆ': 'Yiaoya' };
   var RANGES = [['7', '7 วัน'], ['30', '30 วัน'], ['90', '90 วัน'], ['365', '1 ปี'], ['1200', 'ทั้งหมด']];
@@ -145,8 +146,8 @@
   }
   // รายได้รายแผนก (จาก dept_sales · JERA service/course) แมปเป็น 4 แผนกโฆษณา · เฉพาะเดือนในช่วง
   function revByDept() {
-    var mset = monthsInRange(), m = {};
-    ST.sales.forEach(function (s) { if (!mset[s.month]) return; var ad = SALE2AD[s.dept] || 'อื่นๆ / ไม่ระบุ'; m[ad] = (m[ad] || 0) + (Number(s.amount) || 0); });
+    var mset = monthsInRange(), m = {}, newOnly = (ST.custType !== 'all');
+    ST.sales.forEach(function (s) { if (!mset[s.month]) return; if (newOnly && !s.new_patient) return; var ad = SALE2AD[s.dept] || 'อื่นๆ / ไม่ระบุ'; m[ad] = (m[ad] || 0) + (Number(s.amount) || 0); });
     return m;
   }
 
@@ -178,7 +179,7 @@
     return '<div class="sec-title">Performance รายแผนก · ใครคุ้มสุด (ค่าแอด → รายได้ → ROAS)</div>'
       + '<div class="card" style="padding:14px;margin-bottom:14px">' + bars + '</div>'
       + '<div class="table-wrap"><table class="data-table"><thead><tr><th>แผนก</th><th class="num">ค่าแอด</th><th class="num">รายได้</th><th class="num">ROAS</th><th class="num">Conv</th><th class="num">฿/Conv</th><th class="num">Engagement</th></tr></thead><tbody>' + rankBody + '</tbody></table></div>'
-      + '<div style="font-size:11px;color:var(--text-muted,#64748B);margin:-6px 0 14px">รายได้จาก JERA (บริการ/คอร์ส) แมปเข้าแผนก · เทียบเดือนเดียวกับค่าแอด · กระดูกและข้อ→KneeCare · พิลาทิส→Resto · นวด→Massage · กายภาพ/ผสม→Yiaoya</div>';
+      + '<div style="font-size:11px;color:var(--text-muted,#64748B);margin:-6px 0 14px">ฐานรายได้: <b>' + (ST.custType === 'all' ? 'ลูกค้าใหม่ + เก่า (รวม)' : 'ลูกค้าใหม่เท่านั้น (แอดพามาจริง)') + '</b> · จาก JERA (บริการ/คอร์ส) แมปเข้าแผนก เทียบเดือนเดียวกับค่าแอด · กระดูกและข้อ→KneeCare · พิลาทิส→Resto · นวด→Massage · กายภาพ/ผสม→Yiaoya</div>';
   }
 
   function render() {
@@ -206,8 +207,14 @@
       + sel('axAcc', ST.account, uniq('account'), 'ทุกแบรนด์/บัญชี')
       + sel('axPage', ST.page, uniq('page'), 'ทุกเพจ') + '</div>';
     // มุมมอง
-    h += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px"><span style="font-size:12px;color:var(--text-muted,#64748B)">มุมมอง:</span>'
+    h += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:var(--text-muted,#64748B)">มุมมอง:</span>'
       + GROUPS.map(function (g) { return btn(ST.groupBy === g[0], g[1], 'data-grp="' + g[0] + '"'); }).join('') + '</div>';
+    // ฐานรายได้/ROAS: ลูกค้าใหม่ (แอดพามา · honest) vs รวมเก่า (เฉพาะผู้บริหาร)
+    var exec = isExec(); if (!exec) ST.custType = 'new';
+    h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap"><span style="font-size:12px;color:var(--text-muted,#64748B)">ฐานรายได้/ROAS:</span>'
+      + btn(ST.custType === 'new', 'ลูกค้าใหม่ (แอดพามา)', 'data-cust="new"')
+      + (exec ? btn(ST.custType === 'all', 'ใหม่+เก่า (รวม)', 'data-cust="all"') : '<span style="font-size:11px;color:var(--text-muted,#64748B)">· รวมคนไข้เก่า = เฉพาะผู้บริหาร</span>')
+      + '</div>';
 
     var card = function (l, v, sub) { return '<div style="background:var(--surface,#fff);border:1px solid var(--border,#E2E8F0);border-radius:12px;padding:11px 14px;flex:1;min-width:120px"><div style="font-size:10.5px;color:var(--text-muted,#64748B);font-weight:600;text-transform:uppercase">' + l + '</div><div style="font-size:20px;font-weight:800;color:var(--navy,#0D2F4F)">' + v + '</div><div style="font-size:10.5px;color:var(--text-muted,#64748B)">' + (sub || '') + '</div></div>'; };
     h += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'
@@ -246,6 +253,7 @@
 
     w.querySelectorAll('[data-rng]').forEach(function (b) { b.onclick = function () { ST.days = b.getAttribute('data-rng'); ST.since = ''; ST.until = ''; load(); }; });
     w.querySelectorAll('[data-grp]').forEach(function (b) { b.onclick = function () { ST.groupBy = b.getAttribute('data-grp'); render(); }; });
+    w.querySelectorAll('[data-cust]').forEach(function (b) { b.onclick = function () { if (!isExec()) return; ST.custType = b.getAttribute('data-cust'); render(); }; });
     w.querySelectorAll('[data-camp]').forEach(function (tr) { tr.onclick = function () { var c = tr.getAttribute('data-camp'); ST.expanded[c] = !ST.expanded[c]; render(); }; });
     var ax = document.getElementById('axApply'); if (ax) ax.onclick = function () { var f = document.getElementById('axFrom'), t = document.getElementById('axTo'); if (f && t && f.value && t.value) { ST.since = f.value; ST.until = t.value; load(); } };
     var bindSel = function (id, k) { var el = document.getElementById(id); if (el) el.onchange = function () { ST[k] = el.value; render(); }; };
