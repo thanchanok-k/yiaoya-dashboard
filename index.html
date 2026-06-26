@@ -1975,21 +1975,31 @@ async function loadPayTerms(){
    h+='</div></div>';
    return h;
   };
-  const cats={}; rows.forEach((r,i)=>{r._i=i;const c=ptCat(r.position);(cats[c]=cats[c]||[]).push(r);});
+  rows.forEach((r,i)=>{r._i=i;});
   const ORD=['แพทย์','กายภาพบำบัด','พิลาทิส','นวดบำบัด','การตลาด/คอนเทนต์','ต้อนรับ/ประสานงาน','ผู้จัดการ','บัญชี/จัดซื้อ','ภายนอก/อื่นๆ'];
+  // กลุ่มจ้างงาน: derive จาก employment_type (normalize แล้ว) · คนปิดสัญญา ⛔ แยกกลุ่ม "ออกแล้ว"
+  const PTB={monthly:'ft',per_session:'pt',part_time:'pt',daily:'pt',hourly:'pt',outsource:'ext',consultant:'ext',intern:'ext'};
+  const bucketOf=r=>/^\s*⛔/.test(r.special_notes||'')?'left':(PTB[r.employment_type]||'ext');
+  const BK=[{k:'ft',label:'Full-time',sub:'พนักงานประจำ · รายเดือน',col:'#4338CA',bg:'#EEF2FF'},{k:'pt',label:'Part-time',sub:'พาร์ทไทม์ · ราย session / วัน',col:'#B45309',bg:'#FFFBEB'},{k:'ext',label:'จ้างนอก · External',sub:'Outsource · ที่ปรึกษา · ฝึกงาน',col:'#475569',bg:'#F1F5F9'},{k:'left',label:'ออกแล้ว · เก็บประวัติ',sub:'ปิดสัญญา · ไม่นับ payroll',col:'#B91C1C',bg:'#FEF2F2'}];
+  const buckets={ft:[],pt:[],ext:[],left:[]}; rows.forEach(r=>buckets[bucketOf(r)].push(r));
+  const groupCats=br=>{const cats={};br.forEach(r=>{const c=ptCat(r.position);(cats[c]=cats[c]||[]).push(r);});let s='';ORD.filter(c=>cats[c]).forEach(c=>{s+='<div style="margin-top:12px"><div style="font-weight:700;color:var(--navy);font-size:12.5px;margin-bottom:8px;padding-left:4px">'+c+' <span style="color:var(--text-muted);font-weight:400">('+cats[c].length+')</span></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px">'+cats[c].map(r=>card(r,r._i)).join('')+'</div></div>';});return s;};
   let bodyHtml='';
-  ORD.filter(c=>cats[c]).forEach(c=>{ bodyHtml+='<div style="margin-top:14px"><div style="font-weight:700;color:var(--navy);font-size:13px;margin-bottom:8px">'+c+' <span style="color:var(--text-muted);font-weight:400">('+cats[c].length+')</span></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px">'+cats[c].map(r=>card(r,r._i)).join('')+'</div></div>'; });
+  BK.forEach(b=>{const br=buckets[b.k];if(!br.length)return;bodyHtml+='<div class="ptbucket" data-bk="'+b.k+'" style="margin-top:16px"><div style="display:flex;align-items:center;gap:10px;border-left:4px solid '+b.col+';background:'+b.bg+';padding:9px 13px;border-radius:9px"><div style="font-weight:800;color:'+b.col+';font-size:14px">'+b.label+'</div><div style="font-size:11px;color:var(--text-muted)">'+b.sub+'</div><div style="margin-left:auto;font-weight:800;color:'+b.col+';font-size:13px">'+br.length+' คน</div></div>'+groupCats(br)+'</div>';});
   const warnN=rows.filter(r=>/⚠️/.test(r.special_notes||'')).length;
   const negN=rows.filter(r=>r.negotiated).length;
-  let h='<div class="note"><i class="ti ti-info-circle ni"></i><div><b>มาตรฐานค่าจ้างบริษัท</b> รายคนจากสัญญาจ้าง ('+rows.length+' สัญญา · ต่อรอง '+negN+') — '+(ptCanEdit()?'HR แก้ได้ ทุกการแก้บันทึก log':'ดูอย่างเดียว')+(warnN?' · <b style="color:#B45309">'+warnN+' รายการมี ⚠️ OCR ควรยืนยัน</b>':'')+'</div></div>';
+  const actN=buckets.ft.length+buckets.pt.length+buckets.ext.length;
+  let h='<div class="note"><i class="ti ti-info-circle ni"></i><div><b>มาตรฐานค่าจ้างบริษัท</b> รายคนจากสัญญาจ้าง · ทำงานอยู่ '+actN+' คน (FT '+buckets.ft.length+' · PT '+buckets.pt.length+' · จ้างนอก '+buckets.ext.length+') · ออกแล้ว '+buckets.left.length+' · ต่อรอง '+negN+' — '+(ptCanEdit()?'HR แก้ได้ ทุกการแก้บันทึก log':'ดูอย่างเดียว')+(warnN?' · <b style="color:#B45309">'+warnN+' รายการมี ⚠️ OCR ควรยืนยัน</b>':'')+'</div></div>';
+  const SEG=[{k:'all',label:'ทั้งหมด',n:rows.length},{k:'ft',label:'Full-time',n:buckets.ft.length},{k:'pt',label:'Part-time',n:buckets.pt.length},{k:'ext',label:'จ้างนอก',n:buckets.ext.length},{k:'left',label:'ออกแล้ว',n:buckets.left.length}];
+  h+='<div id="ptSeg" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+SEG.map((s,ix)=>'<button data-seg="'+s.k+'" class="ptseg" style="font-size:12px;font-weight:600;border:1px solid '+(ix===0?'var(--navy)':'var(--border)')+';border-radius:20px;padding:6px 14px;cursor:pointer;font-family:inherit;background:'+(ix===0?'var(--navy)':'#fff')+';color:'+(ix===0?'#fff':'var(--text-muted)')+'">'+s.label+' ('+s.n+')</button>').join('')+'</div>';
   h+='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><input id="ptQ" placeholder="ค้นหา ชื่อ / ตำแหน่ง…" style="flex:1;min-width:200px;max-width:360px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"><button id="ptLogDl" style="font-size:12px;font-weight:600;color:#047857;background:#ECFDF5;border:none;border-radius:8px;padding:9px 14px;cursor:pointer;font-family:inherit"><i class="ti ti-download"></i> ดาวน์โหลดประวัติแก้ไข (CSV)</button></div>';
   h+='<div id="ptList">'+bodyHtml+'</div>';
   $('ptWrap').innerHTML=h;
   $('ptQ').oninput=function(){const q=this.value.trim().toLowerCase();$('ptList').querySelectorAll('.card').forEach(c=>{c.style.display=c.textContent.toLowerCase().includes(q)?'':'none';});};
+  document.querySelectorAll('#ptSeg .ptseg').forEach(b=>b.onclick=function(){document.querySelectorAll('#ptSeg .ptseg').forEach(x=>{x.style.background='#fff';x.style.color='var(--text-muted)';x.style.borderColor='var(--border)';});this.style.background='var(--navy)';this.style.color='#fff';this.style.borderColor='var(--navy)';const k=this.dataset.seg;$('ptList').querySelectorAll('.ptbucket').forEach(sec=>{sec.style.display=(k==='all'||sec.dataset.bk===k)?'':'none';});});
   $('ptLogDl').onclick=ptDownloadLog;
   $('ptList').querySelectorAll('[data-ptedit]').forEach(b=>b.onclick=()=>ptEdit(+b.dataset.ptedit));
   $('ptList').querySelectorAll('[data-pthist]').forEach(b=>b.onclick=()=>ptHistory(+b.dataset.pthist));
-  if($('ct-payterms'))$('ct-payterms').textContent=rows.length;
+  if($('ct-payterms'))$('ct-payterms').textContent=actN;
  }catch(e){ console.error('payterms',e); if($('ptWrap'))$('ptWrap').innerHTML='<div class="empty-card"><i class="ti ti-alert-triangle"></i><span>โหลดไม่ได้</span></div>'; }
 }
 function ptEdit(idx){
