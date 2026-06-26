@@ -78,7 +78,7 @@
   }
 
   function roleOptions(curRole) {
-    return ROLES.filter(r => MY_ROLE === 'owner' || !roleHasReserved(r.role_key)).map(r => {
+    return ROLES.filter(r => MY_ROLE === 'owner' || !roleHasReserved(r.role_key) || r.role_key === curRole).map(r => {
       return `<option value="${esc(r.role_key)}"${r.role_key === curRole ? ' selected' : ''}>${esc(r.label)}</option>`;
     }).join('');
   }
@@ -204,7 +204,9 @@
       b.onclick = async (ev) => {
         ev.stopPropagation();
         const dk = b.dataset.dom, want = b.dataset.act === 'on';
-        const rows = MENUS.filter(m => m.domain === dk && menuEditable(m, mode));
+        const q = (ADD_FILTER || '').trim().toLowerCase();   // เคารพช่องค้นหา — toggle เฉพาะเมนูที่กำลังเห็น
+        const rows = MENUS.filter(m => m.domain === dk && menuEditable(m, mode)
+          && (!q || (m.label || '').toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q) || m.view_key.toLowerCase().includes(q)));
         for (const m of rows) {
           const cur = menuOn(m, mode).on;
           if (want && !cur) { mode === 'base' ? await toggleBase(m.view_key, true, null) : await toggleAdd(m.view_key, true, null); }

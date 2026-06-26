@@ -808,16 +808,19 @@ function LV2_RUN_PAGE_JS() {
     lvCalRenderLegend(['sick', 'personal', 'vacation', 'public', 'company', 'religious', 'other']);
 
     // build/refresh employee dropdown (unique จาก leave items · sort by name)
+    // rebuild เฉพาะเมื่อชุดพนักงานเปลี่ยน (เช่น cache refresh มีคนใหม่) · คงค่าที่เลือกไว้
     var sel = document.getElementById('lv-cal-person-sel');
-    if (sel.children.length === 0) {
-      var seen = {}, emps = [];
-      (leaves || []).forEach(function (r) {
-        var id = r.employee_id || '';
-        if (!id || seen[id]) return;
-        seen[id] = true;
-        emps.push({ id: id, name: r.employee_name || id });
-      });
-      emps.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+    var seen = {}, emps = [];
+    (leaves || []).forEach(function (r) {
+      var id = r.employee_id || '';
+      if (!id || seen[id]) return;
+      seen[id] = true;
+      emps.push({ id: id, name: r.employee_name || id });
+    });
+    emps.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+    var sig = emps.map(function (e) { return e.id; }).join('|');
+    if (sel.dataset.sig !== sig) {
+      var prev = sel.value;
       if (emps.length === 0) {
         sel.innerHTML = '<option value="">— ไม่มีข้อมูลพนักงาน —</option>';
       } else {
@@ -825,6 +828,8 @@ function LV2_RUN_PAGE_JS() {
           return '<option value="' + escapeAttr(e.id) + '">' + escapeHtml(e.name) + '</option>';
         }).join('');
       }
+      sel.dataset.sig = sig;
+      if (prev && emps.some(function (e) { return e.id === prev; })) sel.value = prev;
     }
 
     var empId = sel.value;
