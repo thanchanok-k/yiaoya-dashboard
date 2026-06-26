@@ -5,7 +5,7 @@
 // pattern: window.mountAdexplore render เข้า #wrap-adexplore · ใช้ window.sb · ห้าม redeclare global
 
 (function () {
-  var ST = { days: 90, since: '', until: '', dept: '', platform: '', account: '', page: '', groupBy: 'dept', rows: [], ads: [], expanded: {}, loading: false, err: '' };
+  var ST = { days: 90, since: '', until: '', dept: '', platform: '', account: '', page: '', groupBy: 'dept', rows: [], ads: [], roas: null, expanded: {}, loading: false, err: '' };
   var RANGES = [['7', '7 วัน'], ['30', '30 วัน'], ['90', '90 วัน'], ['365', '1 ปี'], ['1200', 'ทั้งหมด']];
   var GROUPS = [['dept', 'แผนก'], ['platform', 'แพลตฟอร์ม'], ['account', 'แบรนด์/บัญชี'], ['campaign', 'แคมเปญ'], ['page', 'เพจ'], ['month', 'รายเดือน']];
   var PLAT_NAME = { meta: 'Meta (FB/IG)', google: 'Google Ads', tiktok: 'TikTok Ads' };
@@ -53,11 +53,13 @@
     var body = (ST.since && ST.until) ? { mode: 'explore', since: ST.since, until: ST.until } : { mode: 'explore', days: Number(ST.days) };
     Promise.all([
       sb.functions.invoke('meta_sync', { body: body }),
-      sb.functions.invoke('ad_creative').catch(function () { return { data: {} }; })
+      sb.functions.invoke('ad_creative').catch(function () { return { data: {} }; }),
+      sb.functions.invoke('ad_roas', { body: { days: Number(ST.days) || 90 } }).catch(function () { return { data: {} }; })  // ROAS รวม (org) จาก JERA
     ]).then(function (arr) {
       var d = (arr[0] && arr[0].data) || {};
       ST.rows = (d.ok && Array.isArray(d.rows)) ? d.rows : [];
       ST.ads = (((arr[1] && arr[1].data) || {}).rows) || [];
+      ST.roas = (arr[2] && arr[2].data) || null;
       ST.err = d.ok ? '' : (d.error || (arr[0] && arr[0].error && arr[0].error.message) || 'โหลดไม่ได้');
       ST.loading = false; render();
     }).catch(function (e) { ST.loading = false; ST.err = String(e && e.message || e); render(); });
@@ -128,6 +130,34 @@
     return '<input type="date" id="' + id + '" value="' + esc(val) + '" style="padding:6px 8px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;color:var(--navy,#0D2F4F)">';
   }
 
+  // ── Performance รายแผนก (ค่าแอด/conv/engagement/CPA) — กราฟ + ranking ──
+  function perfByDept() {
+    var rows = ST.rows.filter(function (r) { if (ST.platform && r.platform !== ST.platform) return false; if (ST.account && r.account !== ST.account) return false; if (ST.page && (r.page || '') !== ST.page) return false; return true; });
+    var m = {};
+    rows.forEach(function (r) { var d = deptOf(r); var o = m[d] || (m[d] = { dept: d, spend: 0, conv: 0, impr: 0, clicks: 0, eng: 0 }); o.spend += Number(r.spend) || 0; o.conv += Number(r.conversions) || 0; o.impr += Number(r.impressions) || 0; o.clicks += Number(r.clicks) || 0; });
+    ST.ads.forEach(function (a) { var d = deptOf({ page: tag(a.campaign || '', 'PAGE'), account: a.adset_name }); if (m[d]) m[d].eng += (Number(a.post_engagement) || ((Number(a.reactions) || 0) + (Number(a.comments) || 0))); });
+    var arr = Object.keys(m).map(function (k) { return m[k]; });
+    arr.forEach(function (o) { o.cpa = o.conv ? o.spend / o.conv : null; o.ctr = o.impr ? o.clicks / o.impr * 100 : 0; });
+    arr.sort(function (a, b) { return b.spend - a.spend; });
+    return arr;
+  }
+  function renderPerf() {
+    var p = perfByDept(); if (!p.length) return '';
+    var maxSp = Math.max.apply(null, p.map(function (o) { return o.spend; }).concat([1]));
+    // best = CPA ต่ำสุด (คุ้มสุด) ในกลุ่มที่มี conv
+    var withCpa = p.filter(function (o) { return o.cpa != null; });
+    var best = withCpa.length ? withCpa.reduce(function (a, b) { return a.cpa <= b.cpa ? a : b; }).dept : '';
+    var bars = p.map(function (o) {
+      var wd = Math.round(o.spend / maxSp * 100);
+      var isBest = o.dept === best;
+      return '<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:700;color:var(--navy,#0D2F4F)">' + esc(o.dept) + (isBest ? ' <span style="font-size:10px;color:#047857;background:#D1FAE5;border-radius:6px;padding:1px 6px">คุ้มสุด ฿/conv ต่ำ</span>' : '') + '</span><span style="color:var(--text-muted,#64748B)">' + baht(o.spend) + ' · ' + intf(o.conv) + ' conv · ' + (o.cpa != null ? baht(o.cpa) + '/conv' : '—') + '</span></div><div style="height:10px;background:#EEF2F6;border-radius:5px;overflow:hidden"><div style="width:' + Math.max(wd, 2) + '%;height:100%;background:' + (isBest ? 'linear-gradient(90deg,#3DC5B7,#047857)' : '#185FA5') + '"></div></div></div>';
+    }).join('');
+    var rankBody = p.map(function (o) { return '<tr><td class="name-cell">' + esc(o.dept) + '</td><td class="num">' + baht(o.spend) + '</td><td class="num">' + intf(o.conv) + '</td><td class="num">' + (o.cpa != null ? baht(o.cpa) : '—') + '</td><td class="num">' + intf(o.eng) + '</td><td class="num">' + pct(o.ctr) + '</td></tr>'; }).join('');
+    return '<div class="sec-title">Performance รายแผนก · ใครคุ้มสุด (ค่าแอด vs conv vs engagement)</div>'
+      + '<div class="card" style="padding:14px;margin-bottom:14px">' + bars + '</div>'
+      + '<div class="table-wrap"><table class="data-table"><thead><tr><th>แผนก</th><th class="num">ค่าแอด</th><th class="num">Conv</th><th class="num">฿/Conv</th><th class="num">Engagement</th><th class="num">CTR</th></tr></thead><tbody>' + rankBody + '</tbody></table></div>';
+  }
+
   function render() {
     var w = $w(); if (!w) return;
     if (ST.loading) { w.innerHTML = '<div class="empty-card"><i class="ti ti-loader"></i><span>กำลังโหลดข้อมูลโฆษณา…</span></div>'; return; }
@@ -163,7 +193,11 @@
       + card('คลิก', intf(tot.clicks), 'CPC ' + baht(tcpc))
       + card('CPM', baht(tcpm), 'ต่อ 1,000 impr')
       + card('Conversions', intf(tot.conv), 'จากแอด')
+      + (ST.roas && ST.roas.roas != null ? card('ROAS รวม', ST.roas.roas + 'x', 'ยอดขาย ' + baht(ST.roas.total_sales) + ' · ทั้งองค์กร') : '')
       + '</div>';
+
+    // กราฟ performance รายแผนก (ใครคุ้มสุด)
+    h += renderPerf();
 
     var gname = (GROUPS.filter(function (g) { return g[0] === ST.groupBy; })[0] || ['', 'รายการ'])[1];
     var isCamp = ST.groupBy === 'campaign';
