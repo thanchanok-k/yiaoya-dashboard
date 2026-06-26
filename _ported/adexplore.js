@@ -4,7 +4,7 @@
 // pattern: mountAdexplore render เข้า #wrap-adexplore · ใช้ window.sb · ห้าม redeclare global
 
 (function () {
-  var ST = { days: 90, platform: '', account: '', page: '', groupBy: 'campaign', rows: [], loading: false, err: '' };
+  var ST = { days: 90, platform: '', account: '', page: '', groupBy: 'campaign', rows: [], ads: [], expanded: {}, loading: false, err: '' };
   var RANGES = [['7', '7 วัน'], ['30', '30 วัน'], ['90', '90 วัน'], ['365', '1 ปี'], ['1200', 'ทั้งหมด']];
   var GROUPS = [['platform', 'แพลตฟอร์ม'], ['account', 'แบรนด์/บัญชี'], ['campaign', 'แคมเปญ'], ['page', 'เพจ'], ['month', 'รายเดือน']];
   var PLAT_NAME = { meta: 'Meta (FB/IG)', google: 'Google Ads', tiktok: 'TikTok Ads' };
@@ -19,10 +19,14 @@
   function load() {
     var sb = getSb(); if (!sb || !sb.functions) { ST.err = 'ไม่พบการเชื่อมต่อ'; return render(); }
     ST.loading = true; render();
-    sb.functions.invoke('meta_sync', { body: { mode: 'explore', days: Number(ST.days) } }).then(function (res) {
-      var d = (res && res.data) || {};
+    Promise.all([
+      sb.functions.invoke('meta_sync', { body: { mode: 'explore', days: Number(ST.days) } }),
+      sb.functions.invoke('ad_creative').catch(function () { return { data: {} }; })   // ad-level (reach/วิดีโอ) สำหรับ drill
+    ]).then(function (arr) {
+      var d = (arr[0] && arr[0].data) || {};
       ST.rows = (d.ok && Array.isArray(d.rows)) ? d.rows : [];
-      ST.err = d.ok ? '' : (d.error || (res && res.error && res.error.message) || 'โหลดไม่ได้');
+      ST.ads = (((arr[1] && arr[1].data) || {}).rows) || [];
+      ST.err = d.ok ? '' : (d.error || (arr[0] && arr[0].error && arr[0].error.message) || 'โหลดไม่ได้');
       ST.loading = false; render();
     }).catch(function (e) { ST.loading = false; ST.err = String(e && e.message || e); render(); });
   }
@@ -60,6 +64,14 @@
     });
     arr.sort(function (a, b) { return b.spend - a.spend; });
     return arr;
+  }
+
+  // รายโฆษณา (ad-level) ของแคมเปญ — จาก ad_creative (มี reach + ดูวิดีโอจบ%)
+  function adsFor(camp) {
+    return ST.ads.filter(function (r) { return (r.campaign || '') === camp; }).map(function (r) {
+      var impr = Number(r.impressions) || 0, clk = Number(r.clicks) || 0, vv = Number(r.video_views) || 0;
+      return { ad: r.ad_name || r.creative_id || '(ไม่มีชื่อ)', spend: Number(r.spend) || 0, impr: impr, reach: Number(r.reach) || 0, ctr: impr ? clk / impr * 100 : 0, watch: vv ? (Number(r.v_p100) || 0) / vv * 100 : 0, msg: Number(r.messages) || 0 };
+    }).sort(function (a, b) { return b.spend - a.spend; });
   }
 
   function uniq(field) {
@@ -113,9 +125,11 @@
 
     // ตาราง
     var gname = (GROUPS.filter(function (g) { return g[0] === ST.groupBy; })[0] || ['', 'รายการ'])[1];
+    var isCamp = ST.groupBy === 'campaign';
     var body = agg.map(function (o) {
-      return '<tr>'
-        + '<td class="name-cell" title="' + esc(o.key) + '">' + esc(o.key.length > 60 ? o.key.slice(0, 60) + '…' : o.key) + '</td>'
+      var caret = isCamp ? '<span style="color:#3DC5B7;font-weight:700">' + (ST.expanded[o.key] ? '▾ ' : '▸ ') + '</span>' : '';
+      var tr = '<tr ' + (isCamp ? 'data-camp="' + esc(o.key) + '" style="cursor:pointer"' : '') + '>'
+        + '<td class="name-cell" title="' + esc(o.key) + '">' + caret + esc(o.key.length > 60 ? o.key.slice(0, 60) + '…' : o.key) + '</td>'
         + '<td class="num">' + baht(o.spend) + '</td>'
         + '<td class="num">' + intf(o.impr) + '</td>'
         + '<td class="num">' + intf(o.clicks) + '</td>'
@@ -124,8 +138,15 @@
         + '<td class="num">' + baht(o.cpm) + '</td>'
         + '<td class="num">' + intf(o.conv) + '</td>'
         + '</tr>';
+      if (isCamp && ST.expanded[o.key]) {
+        var ads = adsFor(o.key);
+        tr += '<tr style="background:#F1F8F7"><td colspan="8" style="padding:0 0 0 24px"><table style="width:100%;border-collapse:collapse"><thead><tr style="color:var(--text-muted,#64748B);font-size:10.5px"><th style="text-align:left;padding:4px 8px">↳ รายโฆษณา</th><th style="text-align:right;padding:4px 8px">ค่าแอด</th><th style="text-align:right;padding:4px 8px">Impr</th><th style="text-align:right;padding:4px 8px">Reach</th><th style="text-align:right;padding:4px 8px">CTR</th><th style="text-align:right;padding:4px 8px">ดูจบ</th><th style="text-align:right;padding:4px 8px">แชท</th></tr></thead><tbody>'
+          + (ads.length ? ads.map(function (a) { return '<tr style="font-size:11.5px"><td style="padding:4px 8px;color:var(--navy,#0D2F4F)">' + esc(a.ad.length > 50 ? a.ad.slice(0, 50) + '…' : a.ad) + '</td><td style="text-align:right;padding:4px 8px">' + baht(a.spend) + '</td><td style="text-align:right;padding:4px 8px">' + intf(a.impr) + '</td><td style="text-align:right;padding:4px 8px">' + intf(a.reach) + '</td><td style="text-align:right;padding:4px 8px">' + pct(a.ctr) + '</td><td style="text-align:right;padding:4px 8px">' + pct(a.watch) + '</td><td style="text-align:right;padding:4px 8px;font-weight:700">' + intf(a.msg) + '</td></tr>'; }).join('') : '<tr><td colspan="7" style="padding:6px 8px;font-size:11px;color:var(--text-muted,#64748B)">ไม่มีข้อมูลรายโฆษณา (ad_creative) ของแคมเปญนี้ในช่วงที่เก็บ</td></tr>')
+          + '</tbody></table></td></tr>';
+      }
+      return tr;
     }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted,#64748B);padding:18px">ไม่มีข้อมูลในช่วง/ตัวกรองนี้</td></tr>';
-    h += '<div class="sec-title">' + esc(gname) + ' · ' + agg.length + ' รายการ (เรียงตามค่าแอด)</div>';
+    h += '<div class="sec-title">' + esc(gname) + ' · ' + agg.length + ' รายการ (เรียงตามค่าแอด)' + (isCamp ? ' <span style="font-size:11px;font-weight:400;color:var(--text-muted,#64748B)">— กดแถวเพื่อดูรายโฆษณา + reach</span>' : '') + '</div>';
     h += '<div class="table-wrap"><table class="data-table"><thead><tr>'
       + '<th>' + esc(gname) + '</th><th class="num">ค่าแอด</th><th class="num">Impr</th><th class="num">คลิก</th><th class="num">CTR</th><th class="num">CPC</th><th class="num">CPM</th><th class="num">Conv</th>'
       + '</tr></thead><tbody>' + body + '</tbody></table></div>';
@@ -135,6 +156,7 @@
     // bind
     w.querySelectorAll('[data-rng]').forEach(function (b) { b.onclick = function () { ST.days = b.getAttribute('data-rng'); load(); }; });
     w.querySelectorAll('[data-grp]').forEach(function (b) { b.onclick = function () { ST.groupBy = b.getAttribute('data-grp'); render(); }; });
+    w.querySelectorAll('[data-camp]').forEach(function (tr) { tr.onclick = function () { var c = tr.getAttribute('data-camp'); ST.expanded[c] = !ST.expanded[c]; render(); }; });
     var ap = document.getElementById('axPlat'); if (ap) ap.onchange = function () { ST.platform = ap.value; render(); };
     var aa = document.getElementById('axAcc'); if (aa) aa.onchange = function () { ST.account = aa.value; render(); };
     var ag = document.getElementById('axPage'); if (ag) ag.onchange = function () { ST.page = ag.value; render(); };
