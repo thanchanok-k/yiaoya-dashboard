@@ -72,6 +72,14 @@ function lm2MapChannel(p) {
     category: lm2Str(p.category || p.channel_category || p.group || p.type_label || p.media_type),
     monthly_budget: lm2Num(p.monthly_budget || p.budget_monthly || p.budget || p.planned_budget),
     status: lm2Str(p.status || p.state || p.active_status) || (p.active === false ? 'inactive' : (p.active === true ? 'active' : '')),
+    // ---- Conversion ROAS (funnel จริงจาก FO + ค่าแอด) ----
+    actual_spend: lm2Num(p.actual_spend || p.spend),
+    fo_leads: lm2Num(p.fo_leads),
+    fo_appointments: lm2Num(p.fo_appointments),
+    fo_showed: lm2Num(p.fo_showed),
+    cost_per_lead: lm2NumOrNull(p.cost_per_lead),
+    cost_per_appt: lm2NumOrNull(p.cost_per_appt),
+    cost_per_show: lm2NumOrNull(p.cost_per_show),
     _raw: p,
   };
 }
@@ -667,6 +675,30 @@ function LM_RUN_PAGE_JS() {
     return rows;
   }
 
+  // ---- Conversion ROAS: ค่าแอดต่อ lead/นัด/คนมาจริง (กรองเฉพาะช่องทางแอด) ----
+  function renderConvRoas() {
+    var rows = filteredChannels().filter(function (c) { return (c.actual_spend > 0) || (c.fo_leads > 0); });
+    if (!rows.length) return '';
+    rows.sort(function (a, b) { return (b.actual_spend || 0) - (a.actual_spend || 0); });
+    var body = rows.map(function (c) {
+      return '<tr>'
+        + '<td class="name-cell">' + escapeHtml(c.channel_name) + '</td>'
+        + '<td class="num">' + fmtBaht(c.actual_spend) + '</td>'
+        + '<td class="num">' + fmtInt(c.fo_leads) + '</td>'
+        + '<td class="num">' + fmtInt(c.fo_appointments) + '</td>'
+        + '<td class="num">' + fmtInt(c.fo_showed) + '</td>'
+        + '<td class="num">' + (c.cost_per_lead != null ? fmtBaht(c.cost_per_lead) : '—') + '</td>'
+        + '<td class="num">' + (c.cost_per_appt != null ? fmtBaht(c.cost_per_appt) : '—') + '</td>'
+        + '<td class="num">' + (c.cost_per_show != null ? fmtBaht(c.cost_per_show) : '—') + '</td>'
+        + '</tr>';
+    }).join('');
+    return '<div class="sec-title">Conversion ROAS · ค่าโฆษณาต่อผลลัพธ์จริง (จาก FO)</div>'
+      + '<div style="font-size:12px;color:var(--text-muted,#64748B);margin-bottom:8px">เทียบค่าแอดกับ lead/นัด/คนมาจริงที่ทีมหน้าร้านบันทึก · ยิ่งต่ำยิ่งคุ้ม · (ค่าแอด=ยอดรวมที่ดึงมา)</div>'
+      + '<div class="table-wrap"><table class="data-table"><thead><tr>'
+      + '<th>ช่องทาง</th><th class="num">ค่าแอด</th><th class="num">Leads</th><th class="num">นัด</th><th class="num">มาจริง</th><th class="num">฿/Lead</th><th class="num">฿/นัด</th><th class="num">฿/คนมา</th>'
+      + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+
   // ---- render ----
   function renderAll() {
     renderStats();
@@ -684,6 +716,7 @@ function LM_RUN_PAGE_JS() {
       return;
     }
     content.innerHTML =
+      renderConvRoas() +
       renderChannelSection() +
       renderCampaignSection() +
       renderMonthlySection();
