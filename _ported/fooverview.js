@@ -105,6 +105,28 @@ function fov_fetchRevenue() {
   }).catch(function () { /* ไม่มียอดขาย → กราฟรวมแสดงเฉพาะจำนวนผู้ป่วย */ });
 }
 
+// ยอดขายแยกแผนกรายวัน (fo.fo_daily_sales) → map date → {total,pt,ortho,pilates} · ใช้ในกราฟรวม (แกนขวา)
+var fov_salesByDate = {};
+function fov_fetchSales(d1, d2) {
+  var sb = fov_sb(); if (!sb || !sb.schema) return;
+  sb.schema('fo').from('fo_daily_sales')
+    .select('record_date,submitted_at,amount_total,amount_pt,amount_ortho,amount_pilates,is_test')
+    .gte('record_date', d1).lte('record_date', d2).limit(2000)
+    .then(function (res) {
+      if (res.error) { fov_salesByDate = {}; return; } // ตารางยังไม่มี/ไม่มีสิทธิ์ → เงียบ ใช้ branch_daily แทน
+      var m = {};
+      (res.data || []).forEach(function (p) {
+        if (p.is_test) return;
+        var d = String(p.record_date || p.submitted_at || '').slice(0, 10); if (!d) return;
+        var o = m[d] || (m[d] = { total: 0, pt: 0, ortho: 0, pilates: 0 });
+        o.total += fov_num(p.amount_total); o.pt += fov_num(p.amount_pt);
+        o.ortho += fov_num(p.amount_ortho); o.pilates += fov_num(p.amount_pilates);
+      });
+      fov_salesByDate = m;
+      if (fov_lastRows.length) fov_renderCharts(fov_lastRows);
+    }).catch(function () { fov_salesByDate = {}; });
+}
+
 // ---- state ช่วงวันที่ ----
 function fov_pad(n) { return String(n).padStart(2, '0'); }
 function fov_isoDay(d) { return d.getFullYear() + '-' + fov_pad(d.getMonth() + 1) + '-' + fov_pad(d.getDate()); }
@@ -152,6 +174,7 @@ function fov_applyRange() {
 
 function fov_loadRange(d1, d2) {
   var sb = fov_sb(); if (!sb || !sb.schema) return;
+  fov_fetchSales(d1, d2);   // ยอดขายแยกแผนกตามช่วงวันที่
   var box = document.getElementById('fovRecent');
   if (box) box.innerHTML = '<div class="fov-empty">กำลังโหลด…</div>';
   var chartsBox = document.getElementById('fovCharts');
@@ -230,15 +253,26 @@ function fov_renderCharts(rows) {
 
   // กราฟรวม · เลือกดูได้ (toggle) — ผู้ป่วยใหม่/เก่า + แยกแผนก + ยอดขายรวม (แกนขวา)
   var isoKeys = asc.map(function (r) { return String(r.submitted_at).slice(0, 10); });
+  var sBy = function (d) { return fov_salesByDate[d]; };
+  var hasDeptSales = isoKeys.some(function (d) { return sBy(d); });
   var hasRev = isoKeys.some(function (d) { return fov_revByDate[d]; });
+  // จำนวนผู้ป่วย (แกนซ้าย = คน)
   var comboSeries = [
     { key: 'new', name: 'ผู้ป่วยใหม่', vals: asc.map(function (r) { return fov_num(r.count_new); }), color: Y.C.tealSoft },
     { key: 'old', name: 'ผู้ป่วยเก่า', vals: asc.map(function (r) { return fov_num(r.count_returning); }), color: Y.C.navySoft },
-    { key: 'pt', name: 'กายภาพบำบัด', vals: asc.map(function (r) { return fov_num(r.count_pt); }), color: Y.color(2) },
-    { key: 'pil', name: 'Pilates', vals: asc.map(function (r) { return fov_num(r.count_pilates); }), color: Y.color(3) },
-    { key: 'ortho', name: 'ออร์โธ', vals: asc.map(function (r) { return fov_num(r.count_ortho); }), color: Y.color(4) }
+    { key: 'pt', name: 'คนไข้กายภาพ', vals: asc.map(function (r) { return fov_num(r.count_pt); }), color: Y.color(2) },
+    { key: 'pil', name: 'คนไข้ Pilates', vals: asc.map(function (r) { return fov_num(r.count_pilates); }), color: Y.color(3) },
+    { key: 'ortho', name: 'คนไข้ออร์โธ', vals: asc.map(function (r) { return fov_num(r.count_ortho); }), color: Y.color(4) }
   ];
-  if (hasRev) comboSeries.push({ key: 'rev', name: 'ยอดขายรวม', vals: isoKeys.map(function (d) { return fov_revByDate[d] || 0; }), color: Y.C.amberSoft, axis: 'right' });
+  // ยอดขาย (แกนขวา = บาท) — ถ้ามี fo_daily_sales ใช้แยกแผนกได้ · ไม่งั้น fallback ยอดรวมจาก branch_daily
+  if (hasDeptSales) {
+    comboSeries.push({ key: 'sale_total', name: 'ยอดขายรวม', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.total : 0; }), color: Y.C.amberSoft, axis: 'right' });
+    comboSeries.push({ key: 'sale_pt', name: 'ยอดขายกายภาพ', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.pt : 0; }), color: Y.color(6), axis: 'right' });
+    comboSeries.push({ key: 'sale_ortho', name: 'ยอดขายออร์โธ', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.ortho : 0; }), color: Y.color(7), axis: 'right' });
+    comboSeries.push({ key: 'sale_pil', name: 'ยอดขาย Pilates', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.pilates : 0; }), color: Y.color(8), axis: 'right' });
+  } else if (hasRev) {
+    comboSeries.push({ key: 'rev', name: 'ยอดขายรวม', vals: isoKeys.map(function (d) { return fov_revByDate[d] || 0; }), color: Y.C.amberSoft, axis: 'right' });
+  }
   var comboCard = Y.card({
     title: 'กราฟรวม · เลือกดูได้', icon: 'ti-chart-dots-2', sub: 'กด chip เลือกเส้นที่จะแสดงพร้อมกัน · ' + perLab, action: dlBtn,
     body: Y.toggleChart({ id: 'fovCombo', labels: labels, height: 290, active: ['new', 'old'], series: comboSeries })
