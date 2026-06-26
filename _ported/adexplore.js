@@ -5,7 +5,9 @@
 // pattern: window.mountAdexplore render เข้า #wrap-adexplore · ใช้ window.sb · ห้าม redeclare global
 
 (function () {
-  var ST = { days: 90, since: '', until: '', dept: '', platform: '', account: '', page: '', groupBy: 'dept', rows: [], ads: [], roas: null, expanded: {}, loading: false, err: '' };
+  var ST = { days: 90, since: '', until: '', dept: '', platform: '', account: '', page: '', groupBy: 'dept', rows: [], ads: [], roas: null, sales: [], expanded: {}, loading: false, err: '' };
+  // แมป "แผนกบริการ" (จาก JERA dept_sales ภาษาไทย) → "แผนกโฆษณา" (4 แผนก) เพื่อจับคู่รายได้↔ค่าแอด
+  var SALE2AD = { 'กระดูกและข้อ': 'KneeCare (Ortho)', 'พิลาทิส': 'Resto Pilates', 'นวด': 'Massage', 'กายภาพ': 'Yiaoya', 'ผสม': 'Yiaoya', 'อื่นๆ': 'Yiaoya' };
   var RANGES = [['7', '7 วัน'], ['30', '30 วัน'], ['90', '90 วัน'], ['365', '1 ปี'], ['1200', 'ทั้งหมด']];
   var GROUPS = [['dept', 'แผนก'], ['platform', 'แพลตฟอร์ม'], ['account', 'แบรนด์/บัญชี'], ['campaign', 'แคมเปญ'], ['page', 'เพจ'], ['month', 'รายเดือน']];
   var PLAT_NAME = { meta: 'Meta (FB/IG)', google: 'Google Ads', tiktok: 'TikTok Ads' };
@@ -54,12 +56,14 @@
     Promise.all([
       sb.functions.invoke('meta_sync', { body: body }),
       sb.functions.invoke('ad_creative').catch(function () { return { data: {} }; }),
-      sb.functions.invoke('ad_roas', { body: { days: Number(ST.days) || 90 } }).catch(function () { return { data: {} }; })  // ROAS รวม (org) จาก JERA
+      sb.functions.invoke('ad_roas', { body: { days: Number(ST.days) || 90 } }).catch(function () { return { data: {} }; }),  // ROAS รวม (org) จาก JERA
+      sb.functions.invoke('dept_sales', { body: { action: 'get' } }).catch(function () { return { data: {} }; })  // รายได้รายแผนก (JERA service/course)
     ]).then(function (arr) {
       var d = (arr[0] && arr[0].data) || {};
       ST.rows = (d.ok && Array.isArray(d.rows)) ? d.rows : [];
       ST.ads = (((arr[1] && arr[1].data) || {}).rows) || [];
       ST.roas = (arr[2] && arr[2].data) || null;
+      ST.sales = (((arr[3] && arr[3].data) || {}).rows) || [];
       ST.err = d.ok ? '' : (d.error || (arr[0] && arr[0].error && arr[0].error.message) || 'โหลดไม่ได้');
       ST.loading = false; render();
     }).catch(function (e) { ST.loading = false; ST.err = String(e && e.message || e); render(); });
@@ -130,32 +134,51 @@
     return '<input type="date" id="' + id + '" value="' + esc(val) + '" style="padding:6px 8px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;color:var(--navy,#0D2F4F)">';
   }
 
-  // ── Performance รายแผนก (ค่าแอด/conv/engagement/CPA) — กราฟ + ranking ──
+  // เดือน (YYYY-MM) ที่อยู่ในช่วงเวลาปัจจุบัน — เพื่อ align รายได้รายเดือนกับค่าแอด
+  function monthsInRange() {
+    var from, to;
+    if (ST.since && ST.until) { from = ST.since.slice(0, 7); to = ST.until.slice(0, 7); }
+    else { to = new Date().toISOString().slice(0, 7); from = new Date(Date.now() - (Number(ST.days) || 90) * 86400000).toISOString().slice(0, 7); }
+    var set = {}, y = +from.slice(0, 4), m = +from.slice(5, 7), ey = +to.slice(0, 4), em = +to.slice(5, 7), guard = 0;
+    while ((y < ey || (y === ey && m <= em)) && guard++ < 60) { set[y + '-' + ('0' + m).slice(-2)] = 1; m++; if (m > 12) { m = 1; y++; } }
+    return set;
+  }
+  // รายได้รายแผนก (จาก dept_sales · JERA service/course) แมปเป็น 4 แผนกโฆษณา · เฉพาะเดือนในช่วง
+  function revByDept() {
+    var mset = monthsInRange(), m = {};
+    ST.sales.forEach(function (s) { if (!mset[s.month]) return; var ad = SALE2AD[s.dept] || 'อื่นๆ / ไม่ระบุ'; m[ad] = (m[ad] || 0) + (Number(s.amount) || 0); });
+    return m;
+  }
+
+  // ── Performance รายแผนก (ค่าแอด/conv/engagement/CPA + รายได้/ROAS) — กราฟ + ranking ──
   function perfByDept() {
     var rows = ST.rows.filter(function (r) { if (ST.platform && r.platform !== ST.platform) return false; if (ST.account && r.account !== ST.account) return false; if (ST.page && (r.page || '') !== ST.page) return false; return true; });
     var m = {};
     rows.forEach(function (r) { var d = deptOf(r); var o = m[d] || (m[d] = { dept: d, spend: 0, conv: 0, impr: 0, clicks: 0, eng: 0 }); o.spend += Number(r.spend) || 0; o.conv += Number(r.conversions) || 0; o.impr += Number(r.impressions) || 0; o.clicks += Number(r.clicks) || 0; });
     ST.ads.forEach(function (a) { var d = deptOf({ page: tag(a.campaign || '', 'PAGE'), account: a.adset_name }); if (m[d]) m[d].eng += (Number(a.post_engagement) || ((Number(a.reactions) || 0) + (Number(a.comments) || 0))); });
     var arr = Object.keys(m).map(function (k) { return m[k]; });
-    arr.forEach(function (o) { o.cpa = o.conv ? o.spend / o.conv : null; o.ctr = o.impr ? o.clicks / o.impr * 100 : 0; });
+    var rev = revByDept();
+    arr.forEach(function (o) { o.cpa = o.conv ? o.spend / o.conv : null; o.ctr = o.impr ? o.clicks / o.impr * 100 : 0; o.rev = rev[o.dept] || 0; o.roas = (o.spend > 0 && o.rev > 0) ? o.rev / o.spend : null; });
     arr.sort(function (a, b) { return b.spend - a.spend; });
     return arr;
   }
   function renderPerf() {
     var p = perfByDept(); if (!p.length) return '';
     var maxSp = Math.max.apply(null, p.map(function (o) { return o.spend; }).concat([1]));
-    // best = CPA ต่ำสุด (คุ้มสุด) ในกลุ่มที่มี conv
-    var withCpa = p.filter(function (o) { return o.cpa != null; });
-    var best = withCpa.length ? withCpa.reduce(function (a, b) { return a.cpa <= b.cpa ? a : b; }).dept : '';
+    // best = ROAS สูงสุด (คุ้มสุดจริง) ในกลุ่มที่มีรายได้
+    var withRoas = p.filter(function (o) { return o.roas != null; });
+    var best = withRoas.length ? withRoas.reduce(function (a, b) { return a.roas >= b.roas ? a : b; }).dept : '';
+    var roasC = function (r) { return r == null ? 'var(--text-muted,#64748B)' : r >= 3 ? '#047857' : r >= 1 ? '#B45309' : '#B91C1C'; };
     var bars = p.map(function (o) {
-      var wd = Math.round(o.spend / maxSp * 100);
-      var isBest = o.dept === best;
-      return '<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:700;color:var(--navy,#0D2F4F)">' + esc(o.dept) + (isBest ? ' <span style="font-size:10px;color:#047857;background:#D1FAE5;border-radius:6px;padding:1px 6px">คุ้มสุด ฿/conv ต่ำ</span>' : '') + '</span><span style="color:var(--text-muted,#64748B)">' + baht(o.spend) + ' · ' + intf(o.conv) + ' conv · ' + (o.cpa != null ? baht(o.cpa) + '/conv' : '—') + '</span></div><div style="height:10px;background:#EEF2F6;border-radius:5px;overflow:hidden"><div style="width:' + Math.max(wd, 2) + '%;height:100%;background:' + (isBest ? 'linear-gradient(90deg,#3DC5B7,#047857)' : '#185FA5') + '"></div></div></div>';
+      var wd = Math.round(o.spend / maxSp * 100), isBest = o.dept === best;
+      var roasTxt = o.roas != null ? 'ROAS ' + o.roas.toFixed(2) + 'x' : (o.spend > 0 ? 'ยังไม่มีรายได้จับคู่' : '');
+      return '<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:700;color:var(--navy,#0D2F4F)">' + esc(o.dept) + (isBest ? ' <span style="font-size:10px;color:#047857;background:#D1FAE5;border-radius:6px;padding:1px 6px">คุ้มสุด ROAS สูง</span>' : '') + '</span><span style="color:var(--text-muted,#64748B)">แอด ' + baht(o.spend) + ' → รายได้ ' + baht(o.rev) + ' · <b style="color:' + roasC(o.roas) + '">' + roasTxt + '</b></span></div><div style="height:10px;background:#EEF2F6;border-radius:5px;overflow:hidden"><div style="width:' + Math.max(wd, 2) + '%;height:100%;background:' + (isBest ? 'linear-gradient(90deg,#3DC5B7,#047857)' : '#185FA5') + '"></div></div></div>';
     }).join('');
-    var rankBody = p.map(function (o) { return '<tr><td class="name-cell">' + esc(o.dept) + '</td><td class="num">' + baht(o.spend) + '</td><td class="num">' + intf(o.conv) + '</td><td class="num">' + (o.cpa != null ? baht(o.cpa) : '—') + '</td><td class="num">' + intf(o.eng) + '</td><td class="num">' + pct(o.ctr) + '</td></tr>'; }).join('');
-    return '<div class="sec-title">Performance รายแผนก · ใครคุ้มสุด (ค่าแอด vs conv vs engagement)</div>'
+    var rankBody = p.map(function (o) { return '<tr><td class="name-cell">' + esc(o.dept) + '</td><td class="num">' + baht(o.spend) + '</td><td class="num rev-cell">' + baht(o.rev) + '</td><td class="num"><b style="color:' + roasC(o.roas) + '">' + (o.roas != null ? o.roas.toFixed(2) + 'x' : '—') + '</b></td><td class="num">' + intf(o.conv) + '</td><td class="num">' + (o.cpa != null ? baht(o.cpa) : '—') + '</td><td class="num">' + intf(o.eng) + '</td></tr>'; }).join('');
+    return '<div class="sec-title">Performance รายแผนก · ใครคุ้มสุด (ค่าแอด → รายได้ → ROAS)</div>'
       + '<div class="card" style="padding:14px;margin-bottom:14px">' + bars + '</div>'
-      + '<div class="table-wrap"><table class="data-table"><thead><tr><th>แผนก</th><th class="num">ค่าแอด</th><th class="num">Conv</th><th class="num">฿/Conv</th><th class="num">Engagement</th><th class="num">CTR</th></tr></thead><tbody>' + rankBody + '</tbody></table></div>';
+      + '<div class="table-wrap"><table class="data-table"><thead><tr><th>แผนก</th><th class="num">ค่าแอด</th><th class="num">รายได้</th><th class="num">ROAS</th><th class="num">Conv</th><th class="num">฿/Conv</th><th class="num">Engagement</th></tr></thead><tbody>' + rankBody + '</tbody></table></div>'
+      + '<div style="font-size:11px;color:var(--text-muted,#64748B);margin:-6px 0 14px">รายได้จาก JERA (บริการ/คอร์ส) แมปเข้าแผนก · เทียบเดือนเดียวกับค่าแอด · กระดูกและข้อ→KneeCare · พิลาทิส→Resto · นวด→Massage · กายภาพ/ผสม→Yiaoya</div>';
   }
 
   function render() {
