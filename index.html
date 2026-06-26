@@ -1215,6 +1215,8 @@ async function resolveAccess(){
   const empId = (st && st.employee_id) || lineEmp;
   let accessRole = st && st.access_role;
   if(empId){ const { data:er } = await sb.from('emp_access_role').select('access_role').eq('employee_id',empId).maybeSingle(); if(er&&er.access_role) accessRole=er.access_role; }
+  /* director (ผู้บริหาร) = เห็นทุกเมนู + ใช้ view-as ได้ (เหมือน owner) — กัน owner/director ที่เข้าผ่าน LINE โดนจำกัด */
+  if(accessRole==='director'){ EFFECTIVE_VIEWS=null; toggleViewAs(); applyRole(currentRole); return; }
   const eff=new Set(['overview']);
   if(accessRole){ const { data:ra } = await sb.from('role_access').select('view_key').eq('role_key',accessRole); (ra||[]).forEach(r=>eff.add(r.view_key)); }
   const { data:aa } = await sb.from('app_access').select('view_key,employee_id,uid'); (aa||[]).forEach(r=>{ if((empId&&r.employee_id===empId)||r.uid===user.id) eff.add(r.view_key); });
