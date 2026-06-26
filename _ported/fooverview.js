@@ -60,6 +60,7 @@ function mountFooverview() {
     '<div class="fov-card"><div class="fov-lab"><i class="ti ti-alert-triangle"></i>รายงานปัญหา</div><div class="fov-val" id="fovK_iss">…</div></div>' +
     '<div class="fov-card"><div class="fov-lab"><i class="ti ti-clock-hour-8"></i>คำขอ OT</div><div class="fov-val" id="fovK_ot">…</div></div>' +
     '</div>' +
+    '<div id="fovCharts" style="margin:0 0 16px"></div>' +
     '<div class="fov-tw">' +
     '<div class="fov-th"><i class="ti ti-calendar-stats"></i>กิจกรรมหน้าบ้าน 14 วันล่าสุด</div>' +
     '<div id="fovRecent"><div class="fov-empty">กำลังโหลด…</div></div>' +
@@ -101,11 +102,46 @@ function mountFooverview() {
       });
       html += '</tbody></table>';
       box.innerHTML = html;
+      fov_renderCharts(rows);
     })
     .catch(function (e) {
       var box = document.getElementById('fovRecent');
       if (box) box.innerHTML = '<div class="fov-empty">โหลดไม่ได้: ' + fov_esc(e && e.message) + '</div>';
     });
+}
+
+// แดชบอร์ดกราฟ (JERA-style) จาก 14 วันล่าสุด — ใช้ YChart กลาง · ถ้า kit ยังไม่โหลดก็ข้าม (ไม่ error)
+function fov_renderCharts(rows) {
+  var box = document.getElementById('fovCharts');
+  if (!box || typeof window === 'undefined' || !window.YChart) return;
+  var Y = window.YChart;
+  var asc = rows.slice().reverse(); // เก่า→ใหม่ (ซ้าย→ขวา)
+  var labels = asc.map(function (r) { return fov_dateTH(r.submitted_at); });
+
+  // stacked bar : ผู้ป่วยใหม่ vs เก่า รายวัน
+  var barCard = Y.card({
+    title: 'ผู้ป่วยรายวัน', icon: 'ti-users', sub: 'ใหม่ / เก่า · 14 วัน',
+    body: Y.bars({
+      labels: labels, stacked: true, height: 220,
+      series: [
+        { name: 'ผู้ป่วยใหม่', vals: asc.map(function (r) { return fov_num(r.count_new); }), color: Y.C.teal },
+        { name: 'ผู้ป่วยเก่า', vals: asc.map(function (r) { return fov_num(r.count_returning); }), color: Y.C.navy }
+      ]
+    })
+  });
+
+  // donut : สัดส่วนบริการ (รวม 14 วัน)
+  var sum = function (k) { return rows.reduce(function (a, r) { return a + fov_num(r[k]); }, 0); };
+  var donutCard = Y.card({
+    title: 'สัดส่วนบริการ', icon: 'ti-chart-donut', sub: 'รวม 14 วัน',
+    body: Y.donut([
+      { label: 'กายภาพบำบัด', value: sum('count_pt') },
+      { label: 'Pilates', value: sum('count_pilates') },
+      { label: 'ออร์โธ', value: sum('count_ortho') }
+    ], { centerLabel: 'รวม', valueFmt: Y.full })
+  });
+
+  box.innerHTML = Y.grid([barCard, donutCard], { min: 320 });
 }
 
 if (typeof window !== 'undefined') window.mountFooverview = mountFooverview;
