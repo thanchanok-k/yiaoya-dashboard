@@ -55,7 +55,14 @@ function rc2Invoke(action, payload) {
       }
       // unwrap ซ้อน 2 ชั้น: data.result.result (fallback ถ้าโครงต่างเล็กน้อย)
       var outer = data.result || {};
+      // engine error ซ่อนใน 200 (เช่น {status:'error'} / {error:'Not found'}) → throw ให้ caller ขึ้น toast แดง
+      if (outer && typeof outer === 'object' && (outer.status === 'error' || outer.error)) {
+        throw new Error(rc2ErrMsg(outer.message || outer.error) || 'recruit engine error');
+      }
       var inner = (outer && typeof outer === 'object' && ('result' in outer)) ? outer.result : outer;
+      if (inner && typeof inner === 'object' && inner.error) {
+        throw new Error(rc2ErrMsg(inner.error) || 'recruit engine error');
+      }
       return (inner == null) ? {} : inner;
     });
 }
