@@ -7,13 +7,15 @@
 // ใช้ global sb (index.html module scope) — ห้าม redeclare · helper (esc/$/ICONS/showToast/showHelp) inline ใน scope
 // fn/var ที่ inline onclick ต้องใช้ = ผูกกับ window ภายใน RC_RUN_PAGE_JS
 //
-// backend (edge fn hr_list?type=recruit.updated → {items}) :
-//   list   → derive candidates/stats/positions/branches client-side จาก payload ล่าสุดต่อ candidate
-//            (ตอนนี้ list อาจว่าง = 0 candidate → render ได้ ไม่ error · empty state สวย)
-//   whoami → {ok:true, is_owner:true} (dashboard user = admin เต็มสิทธิ์)
-//   detail → reuse payload ดิบที่ cache ไว้ตอน list
-//   intake/moveStage/updateCandidate/reject/hire/sendInterviewInvite/sendOffer/
-//     sendManualFlex/setMbti → เขียนกลับ/ส่ง LINE ไม่ได้ → stub + toast แจ้งยังไม่พร้อม
+// backend (edge fn recruit_proxy → GAS recruit engine สด) :
+//   recruit.list   → {items:[...]} → derive candidates/stats/positions/branches client-side
+//   recruit.detail → candidate detail สด (fallback cache list ถ้า engine ไม่คืน)
+//   recruit.move   → ย้าย stage สด (screening/interview/offer/hired/rejected)
+//                    interview/offer/rejected → engine ส่ง LINE หา candidate อัตโนมัติ · hired → สร้าง employee
+//   recruit.intake → เพิ่ม candidate manual (walk-in/referral)
+//   whoami/oaName  → dashboard user = admin เต็มสิทธิ์ (proxy ใส่ hr_user_id จาก JWT ให้เอง)
+//   update/invite/offer-flex/manual-flex/mbti → ยังไม่ proxy → stub + toast แจ้งยังไม่พร้อม
+//     (การส่ง LINE แจ้ง candidate เกิดอัตโนมัติฝั่ง engine ตอน move แล้ว)
 
 /* ============================================================
    RC_BACKEND — map google.script.run → Supabase edge fn recruit_proxy (GAS recruit engine สด)
@@ -154,7 +156,7 @@ var _rc2Cands = [];
 var _rc2Raw = {};
 
 function rc2FetchCands() {
-  return rc2Invoke('recruit.list', { opts: {} }).then(function (data) {
+  return rc2Invoke('recruit.list', {}).then(function (data) {
     data = data || {};
     var items = rc2ToArr(data.items);
     var seen = {}; var rows = [];
@@ -241,19 +243,33 @@ var RC_BACKEND = {
     });
   },
 
-  // detail — flat candidate object (reuse cache)
+  // detail — flat candidate object (GAS recruit.detail สด · fallback cache ถ้า engine ไม่คืน)
   recruitAdminDetail: function (candidateId) {
-    var build = function () {
+    var fromCache = function () {
       var p = _rc2Raw[candidateId];
-      if (!p) {
-        var c0 = _rc2Cands.find(function (x) { return x.candidate_id === candidateId; });
-        if (c0) return c0;
-        return { error: 'ไม่พบ candidate' };
-      }
-      return rc2MapCand(p);
+      if (p) return rc2MapCand(p);
+      var c0 = _rc2Cands.find(function (x) { return x.candidate_id === candidateId; });
+      return c0 || null;
     };
-    if (_rc2Cands.length || Object.keys(_rc2Raw).length) return Promise.resolve(build());
-    return rc2FetchCands().then(build);
+    return rc2Invoke('recruit.detail', { candidate_id: candidateId })
+      .then(function (inner) {
+        // inner = engine detail object (flat) หลัง unwrap 2 ชั้นแล้ว
+        var obj = (inner && typeof inner === 'object' && inner.candidate)
+          ? inner.candidate : inner;
+        if (obj && typeof obj === 'object' && (obj.candidate_id || obj.entity_id || obj.id || obj.name)) {
+          _rc2Raw[candidateId] = obj;
+          return rc2MapCand(obj);
+        }
+        // engine คืนว่าง → ใช้ cache จาก list
+        var c = fromCache();
+        return c || { error: 'ไม่พบ candidate' };
+      })
+      .catch(function (e) {
+        // detail proxy ล้ม → fallback cache (อย่าให้ modal พัง)
+        console.warn('[RC_BACKEND] detail fetch failed', e);
+        var c = fromCache();
+        return c || { error: rc2ErrMsg(e) || 'ไม่พบ candidate' };
+      });
   },
 
   // ---- mutations ผ่าน recruit_proxy → GAS engine สด (move/reject/hire/intake = จริง) ----
