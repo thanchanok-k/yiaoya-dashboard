@@ -1206,22 +1206,32 @@ async function resolveAccess(){
  try{
   if(!window.sb) return;
   const { data:{ user } } = await sb.auth.getUser();
-  if(!user){ EFFECTIVE_VIEWS=null; return; }
+  if(!user){ EFFECTIVE_VIEWS=null; toggleViewAs(); return; }
   const { data:st } = await sb.from('app_staff').select('role,employee_id,access_role').eq('uid',user.id).maybeSingle();
-  if(st && st.role==='owner'){ EFFECTIVE_VIEWS=null; applyRole(currentRole); return; }
-  const empId = st && st.employee_id;
+  if(st && st.role==='owner'){ EFFECTIVE_VIEWS=null; toggleViewAs(); applyRole(currentRole); return; }
+  /* ตัวตนจาก LINE (anonymous session ไม่มี row ใน app_staff) → ใช้ employee_id จาก LINE หาเมนูจริง
+     (เมนูเท่านั้น · ข้อมูลจริงยังตัดสินที่ RLS ตาม app_staff.role) */
+  const lineEmp = (window.LINE_ID && LINE_ID.employee_id) || null;
+  const empId = (st && st.employee_id) || lineEmp;
   let accessRole = st && st.access_role;
   if(empId){ const { data:er } = await sb.from('emp_access_role').select('access_role').eq('employee_id',empId).maybeSingle(); if(er&&er.access_role) accessRole=er.access_role; }
   const eff=new Set(['overview']);
   if(accessRole){ const { data:ra } = await sb.from('role_access').select('view_key').eq('role_key',accessRole); (ra||[]).forEach(r=>eff.add(r.view_key)); }
   const { data:aa } = await sb.from('app_access').select('view_key,employee_id,uid'); (aa||[]).forEach(r=>{ if((empId&&r.employee_id===empId)||r.uid===user.id) eff.add(r.view_key); });
   if(st && st.role==='hr_director'){ eff.add('accessmgr'); eff.add('employeemgr'); } /* HR director ต้องเข้าหน้าจัดการสิทธิ์ได้ */
-  /* fail-closed: คนที่ "มีตัวตนใน app_staff แต่ไม่ใช่ owner" → เห็นเฉพาะสิทธิ์จริง (อย่างน้อย overview)
-     ไม่ตกไป VIEWS_BY_ROLE['director']=ALL · เฉพาะกรณีไม่มี row ใน app_staff เลย (st null) ถึงคง fallback เดิม กันล็อกเอาท์ระหว่างเปลี่ยนผ่าน */
-  if(st){ EFFECTIVE_VIEWS=[...eff]; }
+  /* fail-closed: มีตัวตน (app_staff หรือ LINE-linked) แต่ไม่ใช่ owner → เห็นเฉพาะสิทธิ์จริง (อย่างน้อย overview)
+     เฉพาะ session ที่ไม่รู้จักเลย (ไม่มี app_staff + ไม่ได้ผูก LINE) ถึงคง fallback เดิม กันล็อกเอาท์ */
+  if(st || lineEmp){ EFFECTIVE_VIEWS=[...eff]; }
   else { EFFECTIVE_VIEWS=null; }
+  toggleViewAs();
   applyRole(currentRole);
- }catch(e){ console.warn('resolveAccess',e); EFFECTIVE_VIEWS=null; }
+ }catch(e){ console.warn('resolveAccess',e); EFFECTIVE_VIEWS=null; toggleViewAs(); }
+}
+/* สวิตช์ "ดูแบบ" = เครื่องมือพรีวิวของผู้บริหารเท่านั้น — ซ่อนจากคนที่ถูกจำกัดสิทธิ์ (EFFECTIVE_VIEWS ถูกตั้ง) */
+function toggleViewAs(){
+ const restricted = EFFECTIVE_VIEWS!==null;
+ const sel=$('viewAs'); if(sel) sel.style.display=restricted?'none':'';
+ const lbl=document.querySelector('label[for="viewAs"]'); if(lbl) lbl.style.display=restricted?'none':'';
 }
 /* เปิดแผงตั้งสิทธิ์จากหน้าทะเบียนพนักงาน (ปุ่ม shield ต่อแถว) — โหลด accessmgr.js ก่อนถ้ายังไม่โหลด */
 function openEmpAccess(empId){
