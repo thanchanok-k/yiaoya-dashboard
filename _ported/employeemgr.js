@@ -237,15 +237,25 @@ var EM_BACKEND = {
     if (_em2Emps.length) return Promise.resolve(find());
     return em2FetchEmployees().then(find);
   },
-  // add — stub (เขียน Sheet ไม่ได้บน dashboard)
-  empAdminAdd: function () {
-    em2NotReady('เพิ่มพนักงาน');
-    return Promise.resolve({ error: 'การเพิ่มพนักงานยังไม่พร้อมบน dashboard (เขียนกลับ Google Sheet)' });
+  // add — dual-write: edge fn hr_emp_write → GAS เขียน Sheet + push hub
+  empAdminAdd: function (input) {
+    if (!window.sb) return Promise.resolve({ error: 'ระบบยังไม่พร้อม (sb)' });
+    return sb.functions.invoke('hr_emp_write', { body: { action: 'add', input: input } })
+      .then(function (r) {
+        if (r && r.error) return { error: (r.error.message || 'ส่งไม่สำเร็จ') };
+        return (r && r.data) || { error: 'ส่งไม่สำเร็จ' };
+      })
+      .catch(function (e) { return { error: String(e && e.message || e) }; });
   },
-  // update — stub
-  empAdminUpdate: function () {
-    em2NotReady('แก้ไข/บันทึกพนักงาน');
-    return Promise.resolve({ error: 'การบันทึกแก้ไขยังไม่พร้อมบน dashboard (เขียนกลับ Google Sheet)' });
+  // update — dual-write
+  empAdminUpdate: function (id, updates) {
+    if (!window.sb) return Promise.resolve({ error: 'ระบบยังไม่พร้อม (sb)' });
+    return sb.functions.invoke('hr_emp_write', { body: { action: 'update', employee_id: id, updates: updates } })
+      .then(function (r) {
+        if (r && r.error) return { error: (r.error.message || 'บันทึกไม่สำเร็จ') };
+        return (r && r.data) || { error: 'บันทึกไม่สำเร็จ' };
+      })
+      .catch(function (e) { return { error: String(e && e.message || e) }; });
   },
   // add multi-branch assignment — stub
   empAdminAddAssignment: function () {
