@@ -987,6 +987,10 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <span id="fbFilesHint" style="font-size:12px;color:#94A3B8"></span>
     </div>
     <div id="fbThumbs" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px"></div>
+    <label style="display:flex;align-items:flex-start;gap:9px;margin:10px 0 2px;cursor:pointer">
+      <input id="fbPrivate" type="checkbox" style="margin-top:2px;width:16px;height:16px;accent-color:var(--navy,#0D2F4F);cursor:pointer">
+      <span style="font-size:12.5px;color:#475569;line-height:1.5"><b style="color:var(--navy,#0D2F4F)">ทำเป็นส่วนตัว</b> — เห็นเฉพาะฉันกับผู้บริหาร (ติ๊กถ้ามีข้อมูลส่วนตัว เช่น เงินเดือน/รูปที่เกี่ยวกับตัวเอง)</span>
+    </label>
     <div id="fbErr" style="font-size:12px;color:#B91C1C;min-height:16px;margin:6px 2px"></div>
     <button id="fbSend" style="width:100%;background:var(--navy,#0D2F4F);color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer">ส่งความเห็น</button>
   </div>
@@ -1039,6 +1043,7 @@ const VIEWS_BY_ROLE={
 const ROLE_MAP={'admin@yiaoya-hub.com':'director','thanchanok.k@altmedical.info':'director'};
 let currentRole='director';
 let EFFECTIVE_VIEWS=null; /* เฟส D: สิทธิ์จริงจาก DB (role_access ∪ app_access) · null = ใช้ VIEWS_BY_ROLE เดิม (owner/ยังไม่ตั้งสิทธิ์) */
+let FB_MY_ROLE=''; /* access_role (สายงาน) ของผู้ login — snapshot ลง trial_feedback.reporter_role เพื่อสิทธิ์เห็นแบบสายงานเดียวกัน */
 
 /* ╔══════════════════════════════════════════════════════════════════════════╗
    ║  กฏการเพิ่มเมนูใหม่ (READ ME ก่อนเพิ่มหน้า/เมนู) — ดูเต็มที่ DASHBOARD_เพิ่มเมนูใหม่.md ║
@@ -1256,13 +1261,14 @@ async function resolveAccess(){
   const { data:{ user } } = await sb.auth.getUser();
   if(!user){ EFFECTIVE_VIEWS=null; toggleViewAs(); return; }
   const { data:st } = await sb.from('app_staff').select('role,employee_id,access_role').eq('uid',user.id).maybeSingle();
-  if(st && st.role==='owner'){ EFFECTIVE_VIEWS=null; toggleViewAs(); applyRole(currentRole); setRoleChip('owner'); return; }
+  if(st && st.role==='owner'){ FB_MY_ROLE='director'; EFFECTIVE_VIEWS=null; toggleViewAs(); applyRole(currentRole); setRoleChip('owner'); return; }
   /* ตัวตนจาก LINE (anonymous session ไม่มี row ใน app_staff) → ใช้ employee_id จาก LINE หาเมนูจริง
      (เมนูเท่านั้น · ข้อมูลจริงยังตัดสินที่ RLS ตาม app_staff.role) */
   const lineEmp = (window.LINE_ID && LINE_ID.employee_id) || null;
   const empId = (st && st.employee_id) || lineEmp;
   let accessRole = st && st.access_role;
   if(empId){ const { data:er } = await sb.from('emp_access_role').select('access_role').eq('employee_id',empId).maybeSingle(); if(er&&er.access_role) accessRole=er.access_role; }
+  FB_MY_ROLE=accessRole||'';
   /* director (ผู้บริหาร) = เห็นทุกเมนู + ใช้ view-as ได้ (เหมือน owner) — กัน owner/director ที่เข้าผ่าน LINE โดนจำกัด */
   if(accessRole==='director'){ EFFECTIVE_VIEWS=null; toggleViewAs(); applyRole(currentRole); setRoleChip('director'); return; }
   const eff=new Set(['overview']);
@@ -4625,7 +4631,7 @@ function fbOpenModal(){
  FB_CAT='suggest';
  $('fbCat').innerHTML=FB_CATS.map(c=>'<button data-c="'+c[0]+'" class="fbcat" style="border:1.5px solid #E2E8F0;background:'+(c[0]===FB_CAT?'var(--navy,#0D2F4F)':'#fff')+';color:'+(c[0]===FB_CAT?'#fff':'#475569')+';border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit"><i class="ti '+c[2]+'"></i> '+c[1]+'</button>').join('');
  $('fbCat').querySelectorAll('.fbcat').forEach(b=>b.onclick=()=>{FB_CAT=b.dataset.c;$('fbCat').querySelectorAll('.fbcat').forEach(x=>{const on=x.dataset.c===FB_CAT;x.style.background=on?'var(--navy,#0D2F4F)':'#fff';x.style.color=on?'#fff':'#475569';});});
- $('fbMsg').value=''; $('fbTags').value=''; $('fbErr').textContent='';
+ $('fbMsg').value=''; $('fbTags').value=''; $('fbErr').textContent=''; $('fbPrivate').checked=false;
  FB_FILES=[]; $('fbFiles').value=''; $('fbFilesHint').textContent=''; fbRenderThumbs();
  $('fbModal').style.display='flex';
 }
@@ -4642,7 +4648,7 @@ async function fbSend(){
    source:FB_SRC||'dashboard', view_key:v, view_label:VIEW_TITLE[v]||v,
    page_url:(location.hash||location.pathname||'').slice(0,300),
    category:FB_CAT, message:msg, reporter_name:fbReporter(),
-   tags, attachments
+   tags, attachments, reporter_role:FB_MY_ROLE||null, is_private:$('fbPrivate').checked
  });
  btn.disabled=false; btn.textContent='ส่งความเห็น';
  if(error){ $('fbErr').textContent='ส่งไม่สำเร็จ: '+error.message; return; }
@@ -4747,7 +4753,8 @@ async function loadFeedback(){
    const srcTag='<span style="background:#EEF2FF;color:#4338CA;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px"><i class="ti '+(FB_SRC_ICON[r.source]||'ti-app-window')+'"></i> '+esc(FB_SRC_LABEL[r.source]||r.source||'-')+'</span>';
    const pageTag='<span style="background:rgba(61,197,183,.14);color:#0F766E;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px"><i class="ti ti-tag"></i> '+esc(r.view_label||r.view_key||'-')+'</span>';
    const extraTags=(r.tags||[]).map(t=>'<span style="background:#F1F5F9;color:#475569;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px">#'+esc(t)+'</span>').join('');
-   const tagRow='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">'+srcTag+pageTag+extraTags+'</div>';
+   const privTag=r.is_private?'<span style="background:#FEF2F2;color:#B91C1C;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px"><i class="ti ti-lock"></i> ส่วนตัว</span>':'';
+   const tagRow='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">'+privTag+srcTag+pageTag+extraTags+'</div>';
    // แนบไฟล์: รูป -> โชว์ภาพคลิกดู · เอกสาร -> ชิปไอคอน+ชื่อ คลิกดาวน์โหลด (signed URL)
    const atts=(r.attachments||[]).map(a=>{
      const url=a&&a.path?sig[a.path]:''; if(!url) return '';
