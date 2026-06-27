@@ -127,6 +127,32 @@ function fov_fetchSales(d1, d2) {
     }).catch(function () { fov_salesByDate = {}; });
 }
 
+// segment รายวัน จาก JERA (fo.fo_sales_segment_daily): แยก ผู้ป่วยใหม่/เก่า + ช่องทาง
+//   map date → { saleNew, saleOld, chanNew:{ch:cnt}, chanOld:{ch:cnt} } · ถ้าตารางยังไม่มีก็เงียบ
+var fov_segByDate = {};
+var fov_segChannels = []; // ช่องทางที่พบ (เรียงตามจำนวนรวม)
+function fov_fetchSegment(d1, d2) {
+  var sb = fov_sb(); if (!sb || !sb.schema) return;
+  sb.schema('fo').from('fo_sales_segment_daily')
+    .select('record_date,is_new_patient,channel,amount,cnt')
+    .gte('record_date', d1).lte('record_date', d2).limit(5000)
+    .then(function (res) {
+      if (res.error) { fov_segByDate = {}; fov_segChannels = []; return; } // ยังไม่ deploy → เงียบ
+      var m = {}, chanTot = {};
+      (res.data || []).forEach(function (p) {
+        var d = String(p.record_date || '').slice(0, 10); if (!d) return;
+        var o = m[d] || (m[d] = { saleNew: 0, saleOld: 0, chanNew: {}, chanOld: {} });
+        var amt = fov_num(p.amount), cnt = fov_num(p.cnt), ch = p.channel || 'ไม่ระบุ';
+        if (p.is_new_patient) { o.saleNew += amt; o.chanNew[ch] = (o.chanNew[ch] || 0) + cnt; }
+        else { o.saleOld += amt; o.chanOld[ch] = (o.chanOld[ch] || 0) + cnt; }
+        chanTot[ch] = (chanTot[ch] || 0) + cnt;
+      });
+      fov_segByDate = m;
+      fov_segChannels = Object.keys(chanTot).sort(function (a, b) { return chanTot[b] - chanTot[a]; }).slice(0, 3);
+      if (fov_lastRows.length) fov_renderCharts(fov_lastRows);
+    }).catch(function () { fov_segByDate = {}; fov_segChannels = []; });
+}
+
 // ---- state ช่วงวันที่ ----
 function fov_pad(n) { return String(n).padStart(2, '0'); }
 function fov_isoDay(d) { return d.getFullYear() + '-' + fov_pad(d.getMonth() + 1) + '-' + fov_pad(d.getDate()); }
@@ -174,7 +200,8 @@ function fov_applyRange() {
 
 function fov_loadRange(d1, d2) {
   var sb = fov_sb(); if (!sb || !sb.schema) return;
-  fov_fetchSales(d1, d2);   // ยอดขายแยกแผนกตามช่วงวันที่
+  fov_fetchSales(d1, d2);    // ยอดขายแยกแผนกตามช่วงวันที่
+  fov_fetchSegment(d1, d2);  // ยอดขาย/ช่องทาง แยกผู้ป่วยใหม่/เก่า (JERA)
   var box = document.getElementById('fovRecent');
   if (box) box.innerHTML = '<div class="fov-empty">กำลังโหลด…</div>';
   var chartsBox = document.getElementById('fovCharts');
@@ -272,6 +299,16 @@ function fov_renderCharts(rows) {
     comboSeries.push({ key: 'sale_pil', name: 'ยอดขาย Pilates', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.pilates : 0; }), color: Y.color(8), axis: 'right' });
   } else if (hasRev) {
     comboSeries.push({ key: 'rev', name: 'ยอดขายรวม', vals: isoKeys.map(function (d) { return fov_revByDate[d] || 0; }), color: Y.C.amberSoft, axis: 'right' });
+  }
+  // ยอดขายแยกผู้ป่วยใหม่/เก่า + ช่องทาง×ใหม่/เก่า (จาก JERA segment) — โผล่เมื่อ deploy แล้ว
+  var gBy = function (d) { return fov_segByDate[d]; };
+  if (isoKeys.some(function (d) { return gBy(d); })) {
+    comboSeries.push({ key: 'sale_new', name: 'ยอดขายผู้ป่วยใหม่', vals: isoKeys.map(function (d) { var s = gBy(d); return s ? s.saleNew : 0; }), color: Y.C.tealSoft, axis: 'right' });
+    comboSeries.push({ key: 'sale_old', name: 'ยอดขายผู้ป่วยเก่า', vals: isoKeys.map(function (d) { var s = gBy(d); return s ? s.saleOld : 0; }), color: Y.C.navySoft, axis: 'right' });
+    fov_segChannels.forEach(function (ch, ci) {
+      comboSeries.push({ key: 'chN_' + ci, name: 'ใหม่ · ' + ch, vals: isoKeys.map(function (d) { var s = gBy(d); return s ? (s.chanNew[ch] || 0) : 0; }), color: Y.color(ci) });
+      comboSeries.push({ key: 'chO_' + ci, name: 'เก่า · ' + ch, vals: isoKeys.map(function (d) { var s = gBy(d); return s ? (s.chanOld[ch] || 0) : 0; }), color: Y.color(ci + 5) });
+    });
   }
   var comboCard = Y.card({
     title: 'กราฟรวม · เลือกดูได้', icon: 'ti-chart-dots-2', sub: 'กด chip เลือกเส้นที่จะแสดงพร้อมกัน · ' + perLab, action: dlBtn,
