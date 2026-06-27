@@ -251,6 +251,9 @@ function fov_dlDaily() {
   window.YChart.download('fo_ภาพรวม_' + tag + '.csv', csv);
 }
 
+// palette 16 สีแยกจากกันชัด (นำด้วย teal/navy แบรนด์) — กันสีซ้ำในกราฟรวม
+var FOV_COMBO_COLORS = ['#3DC5B7', '#3E6FB0', '#E8995A', '#8E72E0', '#E06FA8', '#43A86A', '#5BB6D6', '#D45F5F', '#A88A3A', '#6FA0D0', '#B05FB0', '#7AA86A', '#D0843E', '#5FA39B', '#9B7BD0', '#C9683E', '#2F8F87', '#A84F6F', '#8FA63E', '#B5651D'];
+
 // แดชบอร์ดกราฟ (JERA-style) — ใช้ YChart กลาง · ถ้า kit ยังไม่โหลดก็ข้าม (ไม่ error)
 function fov_renderCharts(rows) {
   var box = document.getElementById('fovCharts');
@@ -284,38 +287,40 @@ function fov_renderCharts(rows) {
   var sBy = function (d) { return fov_salesByDate[d]; };
   var hasDeptSales = isoKeys.some(function (d) { return sBy(d); });
   var hasRev = isoKeys.some(function (d) { return fov_revByDate[d]; });
-  // จำนวนผู้ป่วย (แกนซ้าย = คน)
+  // จำนวนผู้ป่วย (แกนซ้าย = คน) · group = แถวของ chip
   var comboSeries = [
-    { key: 'new', name: 'ผู้ป่วยใหม่', vals: asc.map(function (r) { return fov_num(r.count_new); }), color: Y.C.tealSoft },
-    { key: 'old', name: 'ผู้ป่วยเก่า', vals: asc.map(function (r) { return fov_num(r.count_returning); }), color: Y.C.navySoft },
-    { key: 'pt', name: 'คนไข้กายภาพ', vals: asc.map(function (r) { return fov_num(r.count_pt); }), color: Y.color(2) },
-    { key: 'pil', name: 'คนไข้ Pilates', vals: asc.map(function (r) { return fov_num(r.count_pilates); }), color: Y.color(3) },
-    { key: 'ortho', name: 'คนไข้ออร์โธ', vals: asc.map(function (r) { return fov_num(r.count_ortho); }), color: Y.color(4) }
+    { key: 'new', name: 'ผู้ป่วยใหม่', group: 'จำนวนคนไข้', vals: asc.map(function (r) { return fov_num(r.count_new); }) },
+    { key: 'old', name: 'ผู้ป่วยเก่า', group: 'จำนวนคนไข้', vals: asc.map(function (r) { return fov_num(r.count_returning); }) },
+    { key: 'pt', name: 'คนไข้กายภาพ', group: 'จำนวนคนไข้', vals: asc.map(function (r) { return fov_num(r.count_pt); }) },
+    { key: 'pil', name: 'คนไข้ Pilates', group: 'จำนวนคนไข้', vals: asc.map(function (r) { return fov_num(r.count_pilates); }) },
+    { key: 'ortho', name: 'คนไข้ออร์โธ', group: 'จำนวนคนไข้', vals: asc.map(function (r) { return fov_num(r.count_ortho); }) }
   ];
-  // ยอดขาย (แกนขวา = บาท) — ถ้ามี fo_daily_sales ใช้แยกแผนกได้ · ไม่งั้น fallback ยอดรวมจาก branch_daily
+  // ยอดขายแยกแผนก (แกนขวา = บาท) — จาก fo_daily_sales · ไม่งั้น fallback ยอดรวม branch_daily
   if (hasDeptSales) {
-    comboSeries.push({ key: 'sale_total', name: 'ยอดขายรวม', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.total : 0; }), color: Y.C.amberSoft, axis: 'right' });
-    comboSeries.push({ key: 'sale_pt', name: 'ยอดขายกายภาพ', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.pt : 0; }), color: Y.color(6), axis: 'right' });
-    comboSeries.push({ key: 'sale_ortho', name: 'ยอดขายออร์โธ', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.ortho : 0; }), color: Y.color(7), axis: 'right' });
-    comboSeries.push({ key: 'sale_pil', name: 'ยอดขาย Pilates', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.pilates : 0; }), color: Y.color(8), axis: 'right' });
+    comboSeries.push({ key: 'sale_total', name: 'ยอดขายรวม', group: 'ยอดขายแยกแผนก', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.total : 0; }), axis: 'right' });
+    comboSeries.push({ key: 'sale_pt', name: 'ยอดขายกายภาพ', group: 'ยอดขายแยกแผนก', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.pt : 0; }), axis: 'right' });
+    comboSeries.push({ key: 'sale_ortho', name: 'ยอดขายออร์โธ', group: 'ยอดขายแยกแผนก', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.ortho : 0; }), axis: 'right' });
+    comboSeries.push({ key: 'sale_pil', name: 'ยอดขาย Pilates', group: 'ยอดขายแยกแผนก', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.pilates : 0; }), axis: 'right' });
   } else if (hasRev) {
-    comboSeries.push({ key: 'rev', name: 'ยอดขายรวม', vals: isoKeys.map(function (d) { return fov_revByDate[d] || 0; }), color: Y.C.amberSoft, axis: 'right' });
+    comboSeries.push({ key: 'rev', name: 'ยอดขายรวม', group: 'ยอดขาย', vals: isoKeys.map(function (d) { return fov_revByDate[d] || 0; }), axis: 'right' });
   }
-  // ยอดขายแยกผู้ป่วยใหม่/เก่า + ช่องทาง×ใหม่/เก่า (จาก JERA segment) — โผล่เมื่อ deploy แล้ว
+  // ยอดขายแยกผู้ป่วยใหม่/เก่า + ช่องทาง×ใหม่/เก่า (จาก JERA segment)
   var gBy = function (d) { return fov_segByDate[d]; };
   if (isoKeys.some(function (d) { return gBy(d); })) {
-    comboSeries.push({ key: 'sale_new', name: 'ยอดขายผู้ป่วยใหม่', vals: isoKeys.map(function (d) { var s = gBy(d); return s ? s.saleNew : 0; }), color: Y.C.tealSoft, axis: 'right' });
-    comboSeries.push({ key: 'sale_old', name: 'ยอดขายผู้ป่วยเก่า', vals: isoKeys.map(function (d) { var s = gBy(d); return s ? s.saleOld : 0; }), color: Y.C.navySoft, axis: 'right' });
+    comboSeries.push({ key: 'sale_new', name: 'ยอดขายผู้ป่วยใหม่', group: 'ยอดขายใหม่/เก่า', vals: isoKeys.map(function (d) { var s = gBy(d); return s ? s.saleNew : 0; }), axis: 'right' });
+    comboSeries.push({ key: 'sale_old', name: 'ยอดขายผู้ป่วยเก่า', group: 'ยอดขายใหม่/เก่า', vals: isoKeys.map(function (d) { var s = gBy(d); return s ? s.saleOld : 0; }), axis: 'right' });
     fov_segChannels.forEach(function (ch, ci) {
-      comboSeries.push({ key: 'chN_' + ci, name: 'ใหม่ · ' + ch, vals: isoKeys.map(function (d) { var s = gBy(d); return s ? (s.chanNew[ch] || 0) : 0; }), color: Y.color(ci) });
-      comboSeries.push({ key: 'chO_' + ci, name: 'เก่า · ' + ch, vals: isoKeys.map(function (d) { var s = gBy(d); return s ? (s.chanOld[ch] || 0) : 0; }), color: Y.color(ci + 5) });
+      comboSeries.push({ key: 'chN_' + ci, name: 'ใหม่ · ' + ch, group: 'ช่องทาง', vals: isoKeys.map(function (d) { var s = gBy(d); return s ? (s.chanNew[ch] || 0) : 0; }) });
+      comboSeries.push({ key: 'chO_' + ci, name: 'เก่า · ' + ch, group: 'ช่องทาง', vals: isoKeys.map(function (d) { var s = gBy(d); return s ? (s.chanOld[ch] || 0) : 0; }) });
     });
   }
-  // ยอดขายใหม่/เก่า ที่พนักงาน "กรอกหน้าร้าน" (fo_daily_sales) — ไว้ cross-check กับ JERA
+  // ยอดขายใหม่/เก่า ที่พนักงาน "กรอกหน้าร้าน" (fo_daily_sales) — cross-check กับ JERA
   if (isoKeys.some(function (d) { var s = sBy(d); return s && (s.foNew || s.foOld); })) {
-    comboSeries.push({ key: 'foNew', name: 'ยอดใหม่ (FO กรอก)', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.foNew : 0; }), color: Y.color(2), axis: 'right' });
-    comboSeries.push({ key: 'foOld', name: 'ยอดเก่า (FO กรอก)', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.foOld : 0; }), color: Y.color(7), axis: 'right' });
+    comboSeries.push({ key: 'foNew', name: 'ยอดใหม่ (FO กรอก)', group: 'FO กรอก (cross-check)', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.foNew : 0; }), axis: 'right' });
+    comboSeries.push({ key: 'foOld', name: 'ยอดเก่า (FO กรอก)', group: 'FO กรอก (cross-check)', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.foOld : 0; }), axis: 'right' });
   }
+  // แจกสีไม่ซ้ำตามลำดับ (palette 16 สีแยกจากกันชัด)
+  comboSeries.forEach(function (s, i) { s.color = FOV_COMBO_COLORS[i % FOV_COMBO_COLORS.length]; });
   var comboCard = Y.card({
     title: 'กราฟรวม · เลือกดูได้', icon: 'ti-chart-dots-2', sub: 'กด chip เลือกเส้นที่จะแสดงพร้อมกัน · ' + perLab, action: dlBtn,
     body: Y.toggleChart({ id: 'fovCombo', labels: labels, height: 290, active: ['new', 'old'], series: comboSeries })

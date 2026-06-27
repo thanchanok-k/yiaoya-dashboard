@@ -282,6 +282,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
     <nav class="sb-nav" id="sbnav">
       <div class="sb-search"><i class="ti ti-search"></i><input id="sbSearch" placeholder="ค้นหาเมนู…" autocomplete="off"></div>
       <div class="sb-label">เมนู</div>
+      <div class="sb-item" data-view="board"><i class="ti ti-layout-kanban"></i>กระดานงาน<span class="ct" id="ct-board"></span></div>
       <div class="sb-item" data-view="myday"><i class="ti ti-checkup-list"></i>ศูนย์ทำงานวันนี้<span class="ct" id="ct-myday"></span></div>
       <div class="sb-item active" data-view="overview"><i class="ti ti-layout-dashboard"></i>ภาพรวม</div>
       <div class="sb-label">ข้อมูล (Entities)</div>
@@ -897,6 +898,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
     <section class="view" data-view="payrollmgr"><div class="sec"><span class="sec-bar"></span>เงินเดือน<span class="sec-c">Native</span></div><div id="wrap-payrollmgr"></div></section>
     <section class="view" data-view="calendar"><div class="sec"><span class="sec-bar"></span>ปฏิทิน<span class="sec-c">Native</span></div><div id="wrap-calendar"></div></section>
     <section class="view" data-view="doctorshift"><div class="sec"><span class="sec-bar"></span>ตารางเวรหมอ<span class="sec-c">Native</span></div><div id="wrap-doctorshift"></div></section>
+        <section class="view" data-view="board"><div class="sec"><span class="sec-bar"></span>กระดานงาน · Kanban<span class="sec-c">งานข้ามตำแหน่ง · ส่งให้รีวิว · ตามตำแหน่งของคุณ</span></div><div id="wrap-board"></div></section>
         <section class="view" data-view="myday"><div class="sec"><span class="sec-bar"></span>ศูนย์ทำงานวันนี้<span class="sec-c">My Day</span></div><div id="wrap-myday"></div></section>
         <section class="view" data-view="recruit"><div class="sec"><span class="sec-bar"></span>สรรหา<span class="sec-c">Native</span></div><div id="wrap-recruit"></div></section>
         <section class="view" data-view="hiring"><div class="sec"><span class="sec-bar"></span>สัญญาณการจ้างงาน<span class="sec-c">HR · Native</span></div><div id="wrap-hiring"></div></section>
@@ -1009,14 +1011,14 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
 </div>
 
 <!-- YChart : ชุดกราฟ/แดชบอร์ดกลาง (JERA-style) — โหลดก่อน main module เพื่อให้ window.YChart พร้อมใช้ทุกหน้า -->
-<script src="_ported/charts.js?v=20260627e"></script>
+<script src="_ported/charts.js?v=20260627f"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SB_URL="https://iyldrlzhftylewstfmsg.supabase.co", ANON="sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
 const sb=createClient(SB_URL, ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VIEW_TITLE={overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',hiring:'สัญญาณการจ้างงาน',accessmgr:'จัดการสิทธิ์พนักงาน',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',fooverview:'FO · ภาพรวม',foops:'FO · ปฏิบัติการ',fosales:'ยอดขายหน้าร้าน',roomutil:'การใช้ห้อง · คอร์สค้าง · คอขวด',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',payterms:'สัญญา/ค่าจ้างรายคน',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',peopleai:'วิเคราะห์คน · AI',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',ptaudit:'ทีมกายภาพ · ใช้เครื่อง',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',promo:'ออกแบบโปรโมชั่น',cnplan:'ปฏิทินคอนเทนต์',cnboard:'กระดานผลิต (Kanban)',cndraft:'สร้าง · ดราฟต์ · อัปโหลด',cnreview:'คิวรีวิว · อนุมัติ',cnqueue:'คิวโพสต์',cncampaign:'แคมเปญ · โปรโมชั่น',cnkpi:'KPI ทีมคอนเทนต์',cnmonthly:'สรุปผลงานรายเดือน',cnhighlight:'คอนเทนต์ Highlight',cnbrief:'Morning Brief',cncheckin:'Check-in / EOD',cninflu:'Influencer DB',cnperf:'Performance · รายโพสต์',cnsync:'สถานะเชื่อมต่อ · Sync',dept:'รายได้ตามแผนก',aisettings:'AI Settings · ตั้งค่าออโต้',aiapprovals:'AI Approvals · คิวอนุมัติ',equipment:'ยืม-คืนอุปกรณ์',compliance:'Compliance ประจำปี',scorecard:'สกอร์การ์ดหมอ',welfare:'สวัสดิการพนักงาน',dfschedule:'ตาราง DF หมอ',legal:'แฟ้มคดี/กฎหมาย',contracts:'สัญญาจ้าง',adexplore:'โฆษณา · เจาะลึก (Explorer)',leadmkt:'Lead & การตลาด',leadpipe:'Lead Pipeline (FO)',myday:'ศูนย์ทำงานวันนี้',dailyclose:'ยอดปิดจบวัน'};
+const VIEW_TITLE={board:'กระดานงาน (Kanban)',overview:'ภาพรวม',employees:'พนักงาน',branches:'สาขา',prices:'ราคา',payments:'การชำระเงิน',appointments:'นัดหมาย',leaves:'การลา',ot:'OT',kpi:'KPI',digest:'สรุปวันนี้',balance:'วันลาคงเหลือ',kpisum:'KPI สรุป',contract:'สัญญาใกล้หมด',anniv:'ครบรอบงาน',leaveana:'วิเคราะห์ลา',otsum:'สรุป OT',announce:'ประกาศ',employeemgr:'พนักงาน (จัดการ)',kpimgr:'KPI (จัดการ)',onboard:'Onboarding',offboard:'Offboarding',payrollmgr:'เงินเดือน',calendar:'ปฏิทิน',doctorshift:'ตารางเวรหมอ',recruit:'สรรหา',hiring:'สัญญาณการจ้างงาน',accessmgr:'จัดการสิทธิ์พนักงาน',training:'อบรม',disciplinary:'วินัย',license:'ใบอนุญาต',insurance:'ประกัน/สวัสดิการ',document:'ติดตามเอกสาร',accreq:'อนุมัติสิทธิ์เข้าระบบ',timeattend:'ลงเวลาเข้า-ออก',raise:'ปรับเงินเดือน',reward:'รางวัล/ชมเชย',openpos:'ตำแหน่งเปิดรับ',offerletter:'จดหมายเสนองาน',interviewbank:'คลังคำถามสัมภาษณ์',internship:'ฝึกงาน',internaljob:'ประกาศงานภายใน',recruittpl:'เทมเพลตสรรหา',pip:'แผนพัฒนาผลงาน (PIP)',probcriteria:'เกณฑ์ทดลองงาน',position:'จัดการตำแหน่ง',milestone:'หมุดหมายอายุงาน',emp360:'โปรไฟล์ 360°',holiday:'วันหยุด',birthday:'วันเกิดพนักงาน',pulse:'Pulse survey',surveyexit:'แบบสอบถามลาออก',sop:'SOP/คู่มือ',tasks:'มอบหมายงาน',tag:'ป้ายกำกับ (Tag)',fooverview:'FO · ภาพรวม',foops:'FO · ปฏิบัติการ',fosales:'ยอดขายหน้าร้าน',roomutil:'การใช้ห้อง · คอร์สค้าง · คอขวด',leavereq:'คำขอลา',otreq:'คำขอ OT',pinfo:'ขอแก้ข้อมูล',incident:'รายงานเหตุการณ์',oneonone:'บันทึก 1-on-1',probreview:'ประเมินทดลองงาน',expense:'เบิกค่าใช้จ่าย',survey:'แบบสอบถาม',accexp:'คีย์รายจ่าย',accpr:'คำขอจ่าย·อนุมัติ',accpetty:'เงินสดย่อย',accsales:'ยอดขาย·variance',accdigest:'สรุปวันนี้·บัญชี',accpayroll:'เงินเดือน',accdf:'ค่า DF หมอ',acctax:'ภาษี (ภงด./ปกส)',accbank:'ไฟล์โอนธนาคาร',accpayset:'ตั้งเงินเดือน/บัญชี',payterms:'สัญญา/ค่าจ้างรายคน',accroster:'หมอ/PT (roster)',purdash:'สรุปจัดซื้อ',purpr:'ใบขอซื้อ·อนุมัติ',purpo:'ใบสั่งซื้อ',purgr:'รับของ',purvendor:'ผู้ขาย',puritem:'สินค้า',purrfq:'เทียบราคา (RFQ)',purstock:'สต็อก',purscan:'สแกนรับของ',purlookup:'ค้นหา / รายละเอียด',puractivity:'บันทึกกิจกรรม',events:'เหตุการณ์ทั้งหมด',ecosystem:'สถานะระบบ',aihq:'AI วิเคราะห์ · HQ',peopleai:'วิเคราะห์คน · AI',hub360:'ภาพรวม 360°',expansion:'ขยายสาขา · ROI อุปกรณ์',ptaudit:'ทีมกายภาพ · ใช้เครื่อง',mkt:'การตลาด · Timeline',adops:'โฆษณา · Ad Ops',adcreative:'ครีเอทีฟ · คลิป',promo:'ออกแบบโปรโมชั่น',cnplan:'ปฏิทินคอนเทนต์',cnboard:'กระดานผลิต (Kanban)',cndraft:'สร้าง · ดราฟต์ · อัปโหลด',cnreview:'คิวรีวิว · อนุมัติ',cnqueue:'คิวโพสต์',cncampaign:'แคมเปญ · โปรโมชั่น',cnkpi:'KPI ทีมคอนเทนต์',cnmonthly:'สรุปผลงานรายเดือน',cnhighlight:'คอนเทนต์ Highlight',cnbrief:'Morning Brief',cncheckin:'Check-in / EOD',cninflu:'Influencer DB',cnperf:'Performance · รายโพสต์',cnsync:'สถานะเชื่อมต่อ · Sync',dept:'รายได้ตามแผนก',aisettings:'AI Settings · ตั้งค่าออโต้',aiapprovals:'AI Approvals · คิวอนุมัติ',equipment:'ยืม-คืนอุปกรณ์',compliance:'Compliance ประจำปี',scorecard:'สกอร์การ์ดหมอ',welfare:'สวัสดิการพนักงาน',dfschedule:'ตาราง DF หมอ',legal:'แฟ้มคดี/กฎหมาย',contracts:'สัญญาจ้าง',adexplore:'โฆษณา · เจาะลึก (Explorer)',leadmkt:'Lead & การตลาด',leadpipe:'Lead Pipeline (FO)',myday:'ศูนย์ทำงานวันนี้',dailyclose:'ยอดปิดจบวัน'};
 VIEW_TITLE.accessmgr='จัดการสิทธิ์พนักงาน';
 VIEW_TITLE.feedback='ความเห็น/ทดลองใช้';
 
@@ -1041,16 +1043,16 @@ const ROLE_LANDING={director:'myday',accountant:'accdigest',hr:'myday',staff:'ov
 const ALL_VIEWS=Object.keys(VIEW_TITLE);
 const VIEWS_BY_ROLE={
  director: ALL_VIEWS.slice(),
- accountant:['overview','events','accdigest','accexp','accpr','accpetty','accsales','accpayroll','accdf','acctax','accbank','accpayset','accroster','fooverview','foops','fosales','dailyclose','roomutil'],
- hr:['myday','overview','employees','branches','leaves','ot','kpi',
+ accountant:['board','overview','events','accdigest','accexp','accpr','accpetty','accsales','accpayroll','accdf','acctax','accbank','accpayset','accroster','fooverview','foops','fosales','dailyclose','roomutil'],
+ hr:['board','myday','overview','employees','branches','leaves','ot','kpi',
      'digest','balance','kpisum','leaveana','otsum','contract','anniv',
      'leavereq','otreq','pinfo','expense','accreq',
      'announce','incident','oneonone','probreview','survey',
      'employeemgr','onboard','offboard','recruit','hiring','training','disciplinary','license','insurance','document','doctorshift','calendar',
      'payrollmgr','payterms','kpimgr','raise','timeattend','reward','openpos','offerletter','interviewbank','internship','internaljob','recruittpl','pip','probcriteria','position','milestone','emp360','holiday','birthday','pulse','surveyexit','sop','tasks','tag','equipment','compliance','scorecard','welfare','dfschedule','events',
      'aisettings','aiapprovals','accessmgr'], /* AI Operator: เห็นเมนูได้ แต่สิทธิ์จริงตัดสินที่ RLS (app_role) */
- staff:['overview'],
- purchasing:['overview','purdash','purpr','purpo','purgr','purvendor','puritem','purrfq','purstock','purscan','purlookup','puractivity','events'],
+ staff:['board','overview'],
+ purchasing:['board','overview','purdash','purpr','purpo','purgr','purvendor','puritem','purrfq','purstock','purscan','purlookup','puractivity','events'],
 };
 /* email → role (real per-user roles need each employee to have a Supabase Auth account — future).
    Today: ROLE_MAP + the view-as switcher demonstrate the behavior. */
@@ -1081,6 +1083,7 @@ let FB_MY_ROLE=''; /* access_role (สายงาน) ของผู้ login 
    buildNav() จัดเรียงตาม NAV_GROUPS ตอน runtime (reuse element เดิม คงไอคอน/onclick/count) */
 /* โครง 3 ชั้น: โดเมน → (sub-category) → เมนู · โดเมนที่ไม่มี subs = เมนูตรง 1 ชั้น */
 const NAV_TREE=[
+ {label:'กระดานงาน', views:['board']},
  {label:'ภาพรวม', views:['myday','overview']},
  {label:'ข้อมูล · Entities', views:['employees','branches','prices','payments','appointments','leaves','ot','kpi']},
  {label:'HR · บุคคล', subs:[
@@ -3927,10 +3930,27 @@ let CN_LIVE=null;
 function cnGet(key,mock){ var a=CN_LIVE&&CN_LIVE[key]; return (a&&a.length)?a:mock; }
 function cnNorm(p){ p.col=p.status||p.col; if(p.publish_date)p.date=String(p.publish_date).slice(0,10); if(p.eng!=null)p.eng=+p.eng; return p; }
 let CN_TRELLO=null; /* การ์ดจาก Trello (เสริมจาก V3) · โหลดผ่าน cnLoadTrello() */
+function _cnNormTitle(s){ return String(s||'').toLowerCase().replace(/\s+/g,'').replace(/[^0-9a-z฀-๿]/g,''); }
 function cnDATA(){
-  if(CN_TRELLO&&CN_TRELLO.length){ /* มีของจริงจาก Trello → ทิ้ง mock ไม่ให้ปน · V3(จริง)+Trello */
+  if(CN_TRELLO&&CN_TRELLO.length){ /* มีของจริงจาก Trello → ทิ้ง mock · รวม V3+Trello เป็นการ์ดเดียวเมื่อชื่อตรงกัน */
     var v3=(CN_LIVE&&CN_LIVE.pieces&&CN_LIVE.pieces.length)?CN_LIVE.pieces.filter(function(p){return p.source!=='trello';}):[];
-    return v3.concat(CN_TRELLO);
+    var byTitle={}; v3.forEach(function(p){ var k=_cnNormTitle(p.title); if(k&&!byTitle[k])byTitle[k]=p; });
+    var used={};
+    /* Trello เป็นฐาน (มีรูป/คอมเมนต์/สถานะสด) + ดึงข้อมูลวิเคราะห์จาก V3 มาเติมช่องที่ Trello ไม่มี */
+    var merged=CN_TRELLO.map(function(t){
+      var k=_cnNormTitle(t.title), m=byTitle[k];
+      if(!m) return t;
+      used[k]=1;
+      return Object.assign({}, m, t, {
+        eng:(t.eng!=null?t.eng:m.eng), caption:(t.caption||m.caption||''),
+        promo_id:(t.promo_id||m.promo_id||''), fmt:(t.fmt||m.fmt||''),
+        topic:(t.topic||m.topic||''), dept:(t.dept||m.dept||''),
+        who:(t.who||m.who||''), date:(t.date||m.date||''), _merged:true
+      });
+    });
+    /* การ์ด V3 ที่ไม่มีคู่ใน Trello → คงไว้เป็นใบของตัวเอง (ไม่ทิ้งข้อมูล) */
+    var leftover=v3.filter(function(p){ return !used[_cnNormTitle(p.title)]; });
+    return merged.concat(leftover);
   }
   return cnGet('pieces', CN_DATA_MOCK);
 }
@@ -4046,6 +4066,8 @@ function cnPiece(id){
  /* ===== Trello: เนื้อหา + คอมเมนต์ทั้งหมด ===== */
  if(it.source==='trello'){
    h+='<div style="margin-top:13px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:800;color:#0079BF;background:#E4F0F6;border:1px solid #B6D9EA;padding:2px 8px;border-radius:8px"><i class="ti ti-brand-trello"></i> Trello</span>'+(it.url?'<a href="'+esc(it.url)+'" target="_blank" rel="noopener" style="font-size:12px;color:#0079BF;text-decoration:none">เปิดการ์ดใน Trello <i class="ti ti-external-link"></i></a>':'')+'</div>';
+   if(it.image)h+='<div style="margin-top:11px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px"><i class="ti ti-photo"></i> ผลงาน</div><img src="'+esc(it.image)+'" loading="lazy" style="width:100%;border-radius:10px;border:1px solid var(--border,#E2E8F0);background:#F8FAFC;display:block" onerror="this.parentNode.style.display=\'none\'"></div>';
+   h+='<div style="margin-top:14px;border-top:1px solid var(--border,#E2E8F0);padding-top:13px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:7px"><i class="ti ti-send"></i> สั่งงาน / คอมเมนต์ (ส่งเข้า Trello)</div><textarea id="cnCmtBox" placeholder="พิมพ์คอมเมนต์ถึงทีม… (อนุมัติ/ตีกลับจะแนบข้อความนี้ไปด้วย)" style="width:100%;box-sizing:border-box;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;resize:vertical;min-height:56px"></textarea><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button onclick="cnTrelloAct(\''+esc(it.id)+'\',\'comment\',document.getElementById(\'cnCmtBox\').value,this)" style="'+_cnBtnCss('')+'"><i class="ti ti-message-2"></i> ส่งคอมเมนต์</button><button onclick="cnTrelloAct(\''+esc(it.id)+'\',\'approve\',document.getElementById(\'cnCmtBox\').value,this)" style="'+_cnBtnCss('ok')+'"><i class="ti ti-check"></i> อนุมัติ</button><button onclick="cnTrelloAct(\''+esc(it.id)+'\',\'reject\',document.getElementById(\'cnCmtBox\').value,this)" style="'+_cnBtnCss('danger')+'"><i class="ti ti-arrow-back-up"></i> ตีกลับแก้ไข</button></div></div>';
  }
  if(it.desc)h+='<div style="margin-top:13px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">เนื้อหา</div><div style="font-size:13px;color:var(--text,#0F172A);white-space:pre-wrap;background:#F8FAFC;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:10px 12px;line-height:1.5">'+esc(it.desc)+'</div></div>';
  if(it.comments&&it.comments.length){
@@ -4148,9 +4170,9 @@ function mountCnBoard(){const w=$('cnBoardWrap');if(!w)return;
  h+='<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px">';
  CN_COLS.forEach(function(col){var its=data.filter(function(x){return _cnBoardCol(x.col)===col.k;});
   h+='<div class="cnCol" style="flex:0 0 210px;min-width:210px;background:#F1F5F9;border-radius:12px;padding:8px">';
-  h+='<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);padding:4px 6px 8px"><i class="ti '+col.i+'"></i>'+esc(col.k)+'<span style="margin-left:auto;font-size:10px;background:#fff;color:var(--text-muted,#64748B);border-radius:8px;padding:1px 7px">'+its.length+'</span></div>';
+  h+='<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--navy,#0D2F4F);padding:4px 6px 8px"><i class="ti '+col.i+'"></i>'+esc(col.k)+'<span style="margin-left:auto;font-size:10px;background:#fff;color:var(--text-muted,#64748B);border-radius:8px;padding:1px 7px">'+its.length+'</span></div>';
   h+='<div class="cnColBody" data-col="'+esc(col.k)+'" style="min-height:40px;display:flex;flex-direction:column;gap:7px">';
-  its.forEach(function(it){h+='<div class="cnKan" draggable="true" data-id="'+esc(String(it.id))+'" data-cnpiece="'+esc(String(it.id))+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)"><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.35;margin-bottom:6px">'+esc(it.title)+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+_cnDept(it.dept)+_cnWhoLink(it.who)+(it.source==='trello'?'<span title="จาก Trello" style="font-size:9px;font-weight:700;color:#0079BF;background:#E4F0F6;padding:1px 6px;border-radius:7px"><i class="ti ti-brand-trello"></i></span>':'')+(it.comment_count?'<span title="คอมเมนต์" style="font-size:10px;color:var(--text-muted,#64748B);display:inline-flex;align-items:center;gap:2px"><i class="ti ti-message-2"></i>'+it.comment_count+'</span>':'')+'</div></div>';});
+  its.forEach(function(it){h+='<div class="cnKan" draggable="true" data-id="'+esc(String(it.id))+'" data-cnpiece="'+esc(String(it.id))+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)">'+(it.thumb?'<img loading="lazy" src="'+esc(it.thumb)+'" style="width:100%;height:84px;object-fit:cover;border-radius:6px;margin-bottom:6px;background:#F1F5F9;display:block" onerror="this.style.display=\'none\'">':'')+'<div style="font-size:11px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.3;margin-bottom:5px">'+esc(it.title)+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+_cnDept(it.dept)+_cnWhoLink(it.who)+(it.source==='trello'?'<span title="จาก Trello" style="font-size:9px;font-weight:700;color:#0079BF;background:#E4F0F6;padding:1px 6px;border-radius:7px"><i class="ti ti-brand-trello"></i></span>':'')+(it.comment_count?'<span title="คอมเมนต์" style="font-size:10px;color:var(--text-muted,#64748B);display:inline-flex;align-items:center;gap:2px"><i class="ti ti-message-2"></i>'+it.comment_count+'</span>':'')+'</div></div>';});
   h+='</div></div>';});
  h+='</div>';
  w.innerHTML=h;_cnBind(w);_cnSetCt('cnboard',all.length);
@@ -4251,8 +4273,26 @@ function cnAct(piece_id,action,to_status,from_status,comment,btn){
  var refresh=function(){[mountCnReview,mountCnBoard,mountCnQueue,mountCnDraft,mountCnKpi,mountCnMonthly].forEach(function(f){try{f();}catch(e){}});};
  try{ if(typeof sb==='undefined'){reEnable();_cnToast('ยังไม่ได้เชื่อม Supabase');return;}
   sb.functions.invoke('content_action',{body:{piece_id:String(piece_id),action:action,to_status:to_status,from_status:from_status,comment:comment||'',actor:CN_ACTOR||''}}).then(function(r){
-   if(r&&r.data&&r.data.ok){ applyLocal(); _cnToast('บันทึกแล้ว → '+(to_status||action)); refresh(); }
+   if(r&&r.data&&r.data.ok){ applyLocal();
+     /* การ์ด Trello: ดันสถานะที่เปลี่ยนกลับไปย้าย list ใน Trello ด้วย (best-effort) */
+     if(String(piece_id).indexOf('TR-')===0&&to_status){try{sb.functions.invoke('content_trello_action',{body:{card_id:String(piece_id),action:'move',to_status:to_status,by:CN_ACTOR||''}});}catch(e){}}
+     _cnToast('บันทึกแล้ว → '+(to_status||action)); refresh(); }
    else { reEnable(); _cnToast('บันทึกไม่สำเร็จ: '+((r&&r.error&&r.error.message)||(r&&r.data&&r.data.error)||'ตรวจ deploy content_action')); }
+  }).catch(function(e){ reEnable(); _cnToast('ผิดพลาด: '+((e&&e.message)||e)); });
+ }catch(e){ reEnable(); _cnToast('ผิดพลาด'); }
+}
+/* ===== สั่งงานกลับ Trello โดยตรง (คอมเมนต์/อนุมัติ/ตีกลับ) ผ่าน content_trello_action ===== */
+function cnTrelloAct(card_id,action,text,btn){
+ if(btn){btn.disabled=true;btn.style.opacity='.55';}
+ var reEnable=function(){if(btn){btn.disabled=false;btn.style.opacity='';}};
+ if((action==='comment')&&!String(text||'').trim()){_cnToast('พิมพ์คอมเมนต์ก่อนนะคะ');reEnable();return;}
+ try{ if(typeof sb==='undefined'){reEnable();_cnToast('ยังไม่ได้เชื่อม Supabase');return;}
+  sb.functions.invoke('content_trello_action',{body:{card_id:String(card_id),action:action,text:String(text||''),by:CN_ACTOR||''}}).then(function(r){
+   if(r&&r.data&&r.data.ok){
+    _cnToast(action==='comment'?'ส่งคอมเมนต์ไป Trello แล้ว':action==='approve'?'อนุมัติ + ย้ายใน Trello แล้ว':action==='reject'?'ตีกลับแก้ไขใน Trello แล้ว':'อัปเดต Trello แล้ว');
+    try{cnLoadTrello();}catch(e){} /* โหลดบอร์ด Trello ใหม่ให้คอมเมนต์/สถานะตรง */
+    if(action==='comment'){reEnable();var tb=$('cnCmtBox');if(tb)tb.value='';}else{_cnModalClose();}
+   } else { reEnable(); _cnToast('ไม่สำเร็จ: '+((r&&r.error&&r.error.message)||(r&&r.data&&r.data.error)||'ตรวจ deploy content_trello_action / token เขียน')); }
   }).catch(function(e){ reEnable(); _cnToast('ผิดพลาด: '+((e&&e.message)||e)); });
  }catch(e){ reEnable(); _cnToast('ผิดพลาด'); }
 }
@@ -4465,6 +4505,67 @@ function mountCnSync(){
  h+='</div>';
  w.innerHTML=h;_cnBind(w);_cnSetCt('cnsync',d.unmatched.length||'');
 }
+/* ===== กระดานงาน (Kanban กลาง role-aware + ส่งข้ามตำแหน่งรีวิว) — ดู [[yiaoya-erp-nextjs]] โมเดลลอกจาก ERP CrossRoleRequest ===== */
+var KB_DATA={cards:[],requests_in:[],position:''}; var _kbDragId=null,_kbDragging=false;
+const KB_COLS=['วางแผน','กำลังทำ','รอรีวิว','แก้ไข','เสร็จ'];
+const KB_PRI={urgent:['ด่วนมาก','#B91C1C'],high:['สูง','#C2410C'],normal:['ปกติ','#64748B'],low:['ต่ำ','#94A3B8']};
+const KB_CAT={approval:'ขออนุมัติ',opinion:'ขอความเห็น',action:'ขอดำเนินการ',info:'แจ้งทราบ',escalation:'ส่งต่อหัวหน้า'};
+function kbMyPos(){ if(currentRole==='director'||currentRole==='owner')return 'director'; return FB_MY_ROLE||currentRole||'staff'; }
+function kbActor(){ return (LINE_ID&&(LINE_ID.employee_name||LINE_ID.display_name))||'ผู้ใช้'; }
+function kbPosLabel(p){ return (ACCESS_TH&&ACCESS_TH[p])||p||'-'; }
+function kbLoad(){ try{ if(typeof sb==='undefined')return; }catch(e){ return; } var pos=kbMyPos();
+ sb.functions.invoke('kanban_list',{body:{position:pos,name:kbActor()}}).then(function(r){ if(r&&r.data&&!r.error){ KB_DATA=r.data; KB_DATA.position=KB_DATA.position||pos; } mountBoard(); }).catch(function(){ mountBoard(); }); }
+function kbAct(id,extra){ var body=Object.assign({card_id:id,actor:kbActor(),position:kbMyPos()},extra);
+ sb.functions.invoke('kanban_action',{body:body}).then(function(r){ if(r&&r.data&&r.data.error){alert('ผิดพลาด: '+r.data.error);return;} kbClose(); kbLoad(); }).catch(function(){ alert('เชื่อมต่อไม่ได้'); }); }
+function kbDecide(cardId,reqId,action){ var note=action==='reject'?(prompt('เหตุผลที่ตีกลับ (ไม่บังคับ):')||''):''; kbAct(cardId,{action:action,request_id:reqId,note:note}); }
+function kbModal(title,html){ var ov=$('kbOv'); if(!ov){ov=document.createElement('div');ov.id='kbOv';ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(13,47,79,.45);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:40px 16px';ov.onclick=function(e){if(e.target===ov)kbClose();};document.body.appendChild(ov);}
+ ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:620px;width:100%;padding:20px 22px;box-shadow:0 20px 60px rgba(13,47,79,.3)"><div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+title+'<button id="kbX" style="margin-left:auto;background:#F1F5F9;border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px">×</button></div>'+html+'</div>';
+ ov.style.display='flex'; var x=$('kbX'); if(x)x.onclick=kbClose; return ov; }
+function kbClose(){var ov=$('kbOv');if(ov)ov.style.display='none';}
+function kbEvLabel(e){ var m={create:'สร้างการ์ด',move:'ย้าย → '+(e.to_status||''),send_review:'ส่งรีวิว → '+kbPosLabel(e.to_position),approve:'อนุมัติ',reject:'ตีกลับ',comment:'คอมเมนต์',update:'แก้ไข'}; return m[e.action]||e.action; }
+function kbAdd(){ var opts=KB_COLS.map(function(c){return '<option>'+esc(c)+'</option>';}).join(''); var pos=kbMyPos();
+ kbModal('<span style="font-size:16px;font-weight:800;color:var(--navy,#0D2F4F)">เพิ่มการ์ดงาน</span>',
+  '<div style="display:flex;flex-direction:column;gap:9px"><input id="kbT" placeholder="ชื่องาน" style="padding:9px 11px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:inherit"><textarea id="kbB" rows="3" placeholder="รายละเอียด (ไม่บังคับ)" style="padding:9px 11px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical"></textarea><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="kbAs" placeholder="ผู้รับผิดชอบ" style="flex:1;min-width:110px;padding:9px 11px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:inherit"><select id="kbSt" style="padding:9px 11px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:inherit">'+opts+'</select><select id="kbPr" style="padding:9px 11px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:inherit"><option value="normal">ปกติ</option><option value="high">สูง</option><option value="urgent">ด่วนมาก</option><option value="low">ต่ำ</option></select></div><button id="kbSaveBtn" style="background:#0F766E;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">บันทึก</button></div>');
+ $('kbSaveBtn').onclick=function(){ var t=$('kbT').value.trim(); if(!t){$('kbT').focus();return;} sb.functions.invoke('kanban_save',{body:{actor:kbActor(),card:{title:t,body:$('kbB').value.trim(),owner_position:pos,assignee:$('kbAs').value.trim(),status:$('kbSt').value,priority:$('kbPr').value}}}).then(function(r){ if(r&&r.data&&r.data.error){alert(r.data.error);return;} kbClose(); kbLoad(); }).catch(function(){alert('เชื่อมต่อไม่ได้');}); };
+}
+function kbCard(id){ var it=(KB_DATA.cards||[]).find(function(x){return String(x.id)===String(id);}); if(!it)return;
+ var posOpts=Object.keys(ACCESS_TH||{}).map(function(k){return '<option value="'+k+'">'+esc(ACCESS_TH[k])+'</option>';}).join('');
+ var catOpts=Object.keys(KB_CAT).map(function(k){return '<option value="'+k+'">'+esc(KB_CAT[k])+'</option>';}).join('');
+ var pr=KB_PRI[it.priority]||KB_PRI.normal;
+ var h='<div style="font-size:13px;color:#475569;white-space:pre-wrap;margin-bottom:10px">'+(it.body?esc(it.body):'<span style="color:#94A3B8">ไม่มีรายละเอียด</span>')+'</div>';
+ h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><span style="font-size:11px;background:#F1F5F9;padding:3px 9px;border-radius:8px">สถานะ: <b>'+esc(it.status||'-')+'</b></span><span style="font-size:11px;color:'+pr[1]+';background:'+pr[1]+'1a;padding:3px 9px;border-radius:8px">'+pr[0]+'</span><span style="font-size:11px;background:#EFF6FF;color:#185FA5;padding:3px 9px;border-radius:8px">เจ้าของ: '+esc(kbPosLabel(it.owner_position))+'</span>'+(it.assignee?'<span style="font-size:11px;background:#F1F5F9;padding:3px 9px;border-radius:8px">'+esc(it.assignee)+'</span>':'')+(it.ext_url?'<a href="'+esc(it.ext_url)+'" target="_blank" rel="noopener" style="font-size:11px;color:#0079BF">เปิด Trello</a>':'')+'</div>';
+ h+='<div style="border-top:1px dashed #E2E8F0;padding-top:12px;margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:7px"><i class="ti ti-send"></i> ส่งให้ตำแหน่งอื่นรีวิว</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:7px"><select id="kbTo" style="flex:1;min-width:130px;padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;font-family:inherit">'+posOpts+'</select><select id="kbCat" style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;font-family:inherit">'+catOpts+'</select></div><input id="kbNote" placeholder="ข้อความถึงผู้รีวิว (ไม่บังคับ)" style="width:100%;padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;margin-bottom:7px"><button id="kbSendBtn" style="background:#0F766E;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">ส่งรีวิว</button></div>';
+ h+='<div id="kbHist" style="font-size:12px;color:#94A3B8">กำลังโหลดประวัติ…</div>';
+ kbModal('<span style="font-size:16px;font-weight:800;color:var(--navy,#0D2F4F);flex:1;min-width:0">'+esc(it.title)+'</span>',h);
+ $('kbSendBtn').onclick=function(){ kbAct(it.id,{action:'send_review',to_position:$('kbTo').value,category:$('kbCat').value,note:$('kbNote').value.trim()}); };
+ sb.functions.invoke('kanban_list',{body:{card_id:it.id}}).then(function(r){ var hd=$('kbHist'); if(!hd)return; var ev=(r&&r.data&&r.data.events)||[]; hd.innerHTML='<div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">ประวัติ</div>'+(ev.length?ev.map(function(e){return '<div style="padding:4px 0;border-bottom:1px solid #F1F5F9;color:#475569">'+esc(kbEvLabel(e))+' <span style="color:#94A3B8">· '+esc(String(e.created_at||'').slice(0,16).replace('T',' '))+(e.actor?' · '+esc(e.actor):'')+'</span>'+(e.note?'<div style="color:#64748B;font-size:11px">“'+esc(e.note)+'”</div>':'')+'</div>';}).join(''):'<span style="color:#94A3B8">—</span>'); }).catch(function(){ var hd=$('kbHist'); if(hd)hd.textContent=''; });
+}
+function mountBoard(){ var w=$('wrap-board'); if(!w)return;
+ var pos=KB_DATA.position||kbMyPos(); var cards=KB_DATA.cards||[]; var inbox=KB_DATA.requests_in||[];
+ var h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:9px 13px;background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px"><i class="ti ti-layout-kanban" style="color:#0F766E"></i><span style="font-size:12px;color:#0F766E">บอร์ดของ <b>'+esc(kbPosLabel(pos))+'</b> · ลากการ์ดเปลี่ยนสถานะ · คลิกการ์ดเพื่อส่งให้ตำแหน่งอื่นรีวิว</span><button id="kbAddBtn" style="margin-left:auto;background:#0F766E;color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มการ์ด</button></div>';
+ if(inbox.length){ h+='<div class="card" style="padding:12px 14px;margin-bottom:14px;border:1px solid #FCD9A8;background:#FFF7ED"><div style="font-weight:700;color:#9A3412;margin-bottom:8px"><i class="ti ti-inbox"></i> รอฉันรีวิว ('+inbox.length+')</div>';
+   inbox.forEach(function(rq){ h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #FCD9A8;flex-wrap:wrap"><span style="font-size:10px;font-weight:700;color:#7C3AED;background:#EDE9FE;padding:2px 7px;border-radius:7px">'+esc(KB_CAT[rq.category]||rq.category)+'</span><span style="font-size:13px;font-weight:600;color:var(--navy,#0D2F4F)">'+esc(rq.card_title||'(การ์ด)')+'</span><span style="font-size:11px;color:#92400E">จาก '+esc(kbPosLabel(rq.from_position))+'</span>'+(rq.note?'<div style="font-size:11px;color:#64748B;width:100%">“'+esc(rq.note)+'”</div>':'')+'<span style="margin-left:auto;display:flex;gap:6px"><button data-kbappr="'+rq.id+'" data-kbcard="'+esc(rq.card_id)+'" style="background:#047857;color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">อนุมัติ</button><button data-kbrej="'+rq.id+'" data-kbcard="'+esc(rq.card_id)+'" style="background:#fff;color:#B91C1C;border:1px solid #FCA5A5;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">ตีกลับ</button></span></div>'; });
+   h+='</div>'; }
+ h+='<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px">';
+ KB_COLS.forEach(function(col){ var its=cards.filter(function(x){return (x.status||'วางแผน')===col;});
+   h+='<div style="flex:0 0 220px;min-width:220px;background:#F1F5F9;border-radius:12px;padding:8px"><div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);padding:4px 6px 8px">'+esc(col)+'<span style="margin-left:auto;font-size:10px;background:#fff;color:#64748B;border-radius:8px;padding:1px 7px">'+its.length+'</span></div><div class="kbColBody" data-col="'+esc(col)+'" style="min-height:40px;display:flex;flex-direction:column;gap:7px">';
+   its.forEach(function(it){ var pr=KB_PRI[it.priority]||KB_PRI.normal; h+='<div class="kbCard" draggable="true" data-id="'+esc(it.id)+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)"><div style="font-size:12px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.35;margin-bottom:6px">'+esc(it.title)+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="font-size:9px;font-weight:700;color:'+pr[1]+';background:'+pr[1]+'1a;padding:1px 6px;border-radius:7px">'+pr[0]+'</span>'+(it.assignee?'<span style="font-size:10px;color:#64748B">'+esc(it.assignee)+'</span>':'')+((it.owner_position&&it.owner_position!==pos)?'<span style="font-size:9px;color:#185FA5;background:#EFF6FF;padding:1px 6px;border-radius:7px">'+esc(kbPosLabel(it.owner_position))+'</span>':'')+(it.source==='trello'?'<span style="font-size:9px;color:#0079BF;background:#E4F0F6;padding:1px 6px;border-radius:7px">Trello</span>':'')+'</div></div>'; });
+   h+='</div></div>'; });
+ h+='</div>';
+ if(!cards.length&&!inbox.length) h+='<div style="text-align:center;padding:34px;color:#94A3B8;font-size:13px">ยังไม่มีการ์ด — กด “เพิ่มการ์ด” เพื่อเริ่ม</div>';
+ w.innerHTML=h; var ct=$('ct-board'); if(ct)ct.textContent=(cards.length+inbox.length)||'';
+ var ab=$('kbAddBtn'); if(ab)ab.onclick=kbAdd;
+ w.querySelectorAll('[data-kbappr]').forEach(function(b){b.onclick=function(){kbDecide(b.dataset.kbcard,b.dataset.kbappr,'approve');};});
+ w.querySelectorAll('[data-kbrej]').forEach(function(b){b.onclick=function(){kbDecide(b.dataset.kbcard,b.dataset.kbrej,'reject');};});
+ w.querySelectorAll('.kbCard').forEach(function(card){
+   card.addEventListener('dragstart',function(){_kbDragId=card.dataset.id;_kbDragging=true;card.style.opacity='.45';});
+   card.addEventListener('dragend',function(){card.style.opacity='';setTimeout(function(){_kbDragging=false;},60);});
+   card.addEventListener('click',function(){if(_kbDragging)return;kbCard(card.dataset.id);}); });
+ w.querySelectorAll('.kbColBody').forEach(function(body){
+   body.addEventListener('dragover',function(e){e.preventDefault();body.parentElement.style.outline='2px dashed #3DC5B7';});
+   body.addEventListener('dragleave',function(){body.parentElement.style.outline='';});
+   body.addEventListener('drop',function(e){e.preventDefault();body.parentElement.style.outline='';var it=(KB_DATA.cards||[]).find(function(x){return String(x.id)===String(_kbDragId);});if(it&&(it.status||'วางแผน')!==body.dataset.col){kbAct(it.id,{action:'move',from_status:it.status,to_status:body.dataset.col});}}); });
+}
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
  buildNav(); navAudit(); navAuditRegistry(); fbInit();
@@ -4500,7 +4601,7 @@ function start(){
  renderTaxTabs(); $('txPeriod').value=_curMonth(); $('txRun').onclick=runTax; $('txCsv').onclick=txDownloadCsv; runTax();
  renderBankTabs(); $('bkPeriod').value=_curMonth(); $('bkGen').onclick=bkGenerate; $('bkCsv').onclick=bkDownloadCsv; loadBankHistory();
  if($('rcDate')&&!$('rcDate').value)$('rcDate').value=new Date().toISOString().slice(0,10); $('rcGen').onclick=rcGenerate;
- mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountPromo();mountDept();mountMkt();mountHub360();mountExpansion();mountPtAudit();mountAiHQ();mountPeopleAi();mountCnPlan();mountCnBoard();mountCnDraft();mountCnReview();mountCnQueue();mountCnCampaign();mountCnKpi();mountCnMonthly();mountCnHighlight();mountCnBrief();mountCnCheckin();mountCnInflu();mountCnPerf();mountCnSync();cnLoadLive();cnLoadTrello();cnLoadHR();
+ mountPurDash();mountPurPr();mountPurPo();mountPurGr();mountPurVendor();mountPurItem();mountPurRfq();mountPurStock();mountPurBridge();mountPurScan();mountPurLookup();mountPurActivity();renderLineBadge();mountAdops();mountAdCreative();mountPromo();mountDept();mountMkt();mountHub360();mountExpansion();mountPtAudit();mountAiHQ();mountPeopleAi();mountCnPlan();mountCnBoard();mountCnDraft();mountCnReview();mountCnQueue();mountCnCampaign();mountCnKpi();mountCnMonthly();mountCnHighlight();mountCnBrief();mountCnCheckin();mountCnInflu();mountCnPerf();mountCnSync();mountBoard();kbLoad();cnLoadLive();cnLoadTrello();cnLoadHR();
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.wf-appr');if(b)doApprove(b.dataset.k,b.dataset.id,b.dataset.d);});
  $('sbToggle').onclick=()=>$('sidebar').classList.toggle('open');
  $('sbOv').onclick=()=>$('sidebar').classList.remove('open');

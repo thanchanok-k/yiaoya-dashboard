@@ -135,7 +135,11 @@
     '.yc-tg-chip .ax{font-size:10px;color:#94A3B8;font-weight:700}' +
     '.yc-tg-chip:hover{border-color:#3DC5B7}' +
     '.yc-tg-chip.off{background:#F8FAFC;color:#94A3B8;border-color:#EEF2F6}' +
-    '.yc-tg-chip.off .dot{background:#CBD5E1 !important}';
+    '.yc-tg-chip.off .dot{background:#CBD5E1 !important}' +
+    '.yc-tg-groups{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}' +
+    '.yc-tg-row{display:flex;align-items:flex-start;gap:10px}' +
+    '.yc-tg-glab{flex:none;width:84px;font-size:10.5px;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding-top:7px;text-align:right}' +
+    '.yc-tg-set{display:flex;flex-wrap:wrap;gap:7px;flex:1}';
 
   function ensureCSS() {
     if (typeof document === 'undefined' || document.getElementById('ychart-css')) return;
@@ -393,11 +397,20 @@
     _tg[id] = cfg;
     return '<div class="yc-tg" id="' + id + '">' + tgChips(cfg) + '<div class="yc-tg-svg" id="' + id + '_svg">' + tgSvg(cfg) + '</div></div>';
   }
+  function tgChip(cfg, s, i) {
+    var c = s.color || col(i), on = cfg._active[s.key];
+    return '<button class="yc-tg-chip' + (on ? '' : ' off') + '" data-yc-tg="' + esc(cfg.id) + '" data-key="' + esc(s.key) + '">' +
+      '<span class="dot" style="background:' + c + '"></span>' + esc(s.name) + (s.axis === 'right' ? ' <span class="ax">฿</span>' : '') + '</button>';
+  }
   function tgChips(cfg) {
-    return '<div class="yc-tg-chips">' + cfg.series.map(function (s, i) {
-      var c = s.color || col(i), on = cfg._active[s.key];
-      return '<button class="yc-tg-chip' + (on ? '' : ' off') + '" data-yc-tg="' + esc(cfg.id) + '" data-key="' + esc(s.key) + '">' +
-        '<span class="dot" style="background:' + c + '"></span>' + esc(s.name) + (s.axis === 'right' ? ' <span class="ax">฿</span>' : '') + '</button>';
+    var hasG = cfg.series.some(function (s) { return s.group; });
+    if (!hasG) return '<div class="yc-tg-chips">' + cfg.series.map(function (s, i) { return tgChip(cfg, s, i); }).join('') + '</div>';
+    // จัด chip เป็นแถวตามกลุ่ม (รักษาลำดับกลุ่มที่พบ)
+    var order = [], byG = {};
+    cfg.series.forEach(function (s, i) { var g = s.group || 'อื่น ๆ'; if (!byG[g]) { byG[g] = []; order.push(g); } byG[g].push({ s: s, i: i }); });
+    return '<div class="yc-tg-groups">' + order.map(function (g) {
+      return '<div class="yc-tg-row"><span class="yc-tg-glab">' + esc(g) + '</span><div class="yc-tg-set">' +
+        byG[g].map(function (it) { return tgChip(cfg, it.s, it.i); }).join('') + '</div></div>';
     }).join('') + '</div>';
   }
   function tgSvg(cfg) {
