@@ -42,7 +42,24 @@
 - dict: `FO-Data-Dictionary.md` · view: `reporting/100_fo_reporting_views.sql`
 - deploy: `fo/build_apply.sh` → รัน SQL ใน Supabase Editor
 
+## สถานะ (อัปเดต)
+**โค้ดเสร็จทั้ง 2 track + dashboard live (guarded) — เหลือรันบน prod:**
+
+### Track A (JERA) — ไฟล์พร้อม
+- `~/jera-sandbox/sql/fo_sales_segment_daily.sql` (ตาราง+RLS)
+- `~/jera-sandbox/pull_sales_segment.py` (aggregation, syntax OK)
+- deploy: (1) รัน SQL ใน Supabase Editor (2) `python3 pull_sales_segment.py 2026-06-01 2026-06-30` verify field (3) เสียบ cron ใน `refresh_jera_snapshot.py`
+
+### Track B (FO form) — ไฟล์พร้อม
+- `00 Integration Hub/20_Supabase/fo/migrations/005_sales_patient_type.sql` (ALTER เพิ่ม amount_new/amount_returning) + mirror ใน FO-Supabase
+- `webapp/app/sales/new/page.tsx` (เพิ่ม 2 ช่อง ยอดใหม่/เก่า + insert) — Hub + FO mirror ตรงกัน
+- deploy: (1) รัน migration 005 ใน Supabase (2) build+deploy webapp (Next.js)
+
+### Dashboard — live แล้ว (e8aaf3d, 7c087f1)
+- กราฟรวม toggle รับครบ: JERA (ยอดขายใหม่/เก่า + ช่องทาง) + FO กรอก (ยอดใหม่/เก่า cross-check) + แยกแผนก · guarded ทุกตัว (data ยังไม่มา = ไม่โผล่/ไม่ error)
+
 ## Gate ก่อน deploy (production)
-- [ ] อนุมัติ schema ตาราง `fo_sales_segment_daily` + RLS
-- [ ] อนุมัติเพิ่ม cron ใน JERA refresh
-- PDPA: channel/patient_type = ระดับ INTERNAL → RLS branch-scoped พอ (ไม่ใช่ข้อมูลระบุตัวตน)
+- [ ] อนุมัติ + รัน SQL: `fo_sales_segment_daily.sql` + `005_sales_patient_type.sql`
+- [ ] verify field `/report/payment/` + รัน pull_sales_segment ครั้งแรก
+- [ ] เพิ่ม cron (JERA refresh) + deploy webapp
+- PDPA: channel/patient_type = INTERNAL → RLS branch-scoped พอ (ไม่ใช่ข้อมูลระบุตัวตน)
