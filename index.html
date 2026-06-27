@@ -4272,11 +4272,17 @@ function cnAct(piece_id,action,to_status,from_status,comment,btn){
  var applyLocal=function(){var it=cnDATA().find(function(x){return String(x.id)===String(piece_id);});if(it&&to_status){it.col=to_status;it.status=to_status;}};
  var refresh=function(){[mountCnReview,mountCnBoard,mountCnQueue,mountCnDraft,mountCnKpi,mountCnMonthly].forEach(function(f){try{f();}catch(e){}});};
  try{ if(typeof sb==='undefined'){reEnable();_cnToast('ยังไม่ได้เชื่อม Supabase');return;}
+  /* การ์ด Trello: Trello คือแหล่งจริง → ย้าย list ใน Trello ตรงๆ (ไม่ผ่าน content_action ที่ใช้คนละ id) */
+  if(String(piece_id).indexOf('TR-')===0){
+   if(!to_status){reEnable();return;}
+   sb.functions.invoke('content_trello_action',{body:{card_id:String(piece_id),action:'move',to_status:to_status,by:CN_ACTOR||''}}).then(function(r){
+    if(r&&r.data&&r.data.ok){ applyLocal(); _cnToast('ย้ายใน Trello แล้ว → '+to_status); try{cnLoadTrello();}catch(e){} refresh(); }
+    else { reEnable(); _cnToast('ย้ายไม่สำเร็จ: '+((r&&r.data&&r.data.error)||(r&&r.error&&r.error.message)||'ตรวจ token เขียน')); }
+   }).catch(function(e){ reEnable(); _cnToast('ผิดพลาด: '+((e&&e.message)||e)); });
+   return;
+  }
   sb.functions.invoke('content_action',{body:{piece_id:String(piece_id),action:action,to_status:to_status,from_status:from_status,comment:comment||'',actor:CN_ACTOR||''}}).then(function(r){
-   if(r&&r.data&&r.data.ok){ applyLocal();
-     /* การ์ด Trello: ดันสถานะที่เปลี่ยนกลับไปย้าย list ใน Trello ด้วย (best-effort) */
-     if(String(piece_id).indexOf('TR-')===0&&to_status){try{sb.functions.invoke('content_trello_action',{body:{card_id:String(piece_id),action:'move',to_status:to_status,by:CN_ACTOR||''}});}catch(e){}}
-     _cnToast('บันทึกแล้ว → '+(to_status||action)); refresh(); }
+   if(r&&r.data&&r.data.ok){ applyLocal(); _cnToast('บันทึกแล้ว → '+(to_status||action)); refresh(); }
    else { reEnable(); _cnToast('บันทึกไม่สำเร็จ: '+((r&&r.error&&r.error.message)||(r&&r.data&&r.data.error)||'ตรวจ deploy content_action')); }
   }).catch(function(e){ reEnable(); _cnToast('ผิดพลาด: '+((e&&e.message)||e)); });
  }catch(e){ reEnable(); _cnToast('ผิดพลาด'); }
