@@ -110,7 +110,7 @@ var fov_salesByDate = {};
 function fov_fetchSales(d1, d2) {
   var sb = fov_sb(); if (!sb || !sb.schema) return;
   sb.schema('fo').from('fo_daily_sales')
-    .select('record_date,submitted_at,amount_total,amount_pt,amount_ortho,amount_pilates,is_test')
+    .select('record_date,submitted_at,amount_total,amount_pt,amount_ortho,amount_pilates,amount_new,amount_returning,is_test')
     .gte('record_date', d1).lte('record_date', d2).limit(2000)
     .then(function (res) {
       if (res.error) { fov_salesByDate = {}; return; } // ตารางยังไม่มี/ไม่มีสิทธิ์ → เงียบ ใช้ branch_daily แทน
@@ -118,9 +118,10 @@ function fov_fetchSales(d1, d2) {
       (res.data || []).forEach(function (p) {
         if (p.is_test) return;
         var d = String(p.record_date || p.submitted_at || '').slice(0, 10); if (!d) return;
-        var o = m[d] || (m[d] = { total: 0, pt: 0, ortho: 0, pilates: 0 });
+        var o = m[d] || (m[d] = { total: 0, pt: 0, ortho: 0, pilates: 0, foNew: 0, foOld: 0 });
         o.total += fov_num(p.amount_total); o.pt += fov_num(p.amount_pt);
         o.ortho += fov_num(p.amount_ortho); o.pilates += fov_num(p.amount_pilates);
+        o.foNew += fov_num(p.amount_new); o.foOld += fov_num(p.amount_returning);
       });
       fov_salesByDate = m;
       if (fov_lastRows.length) fov_renderCharts(fov_lastRows);
@@ -309,6 +310,11 @@ function fov_renderCharts(rows) {
       comboSeries.push({ key: 'chN_' + ci, name: 'ใหม่ · ' + ch, vals: isoKeys.map(function (d) { var s = gBy(d); return s ? (s.chanNew[ch] || 0) : 0; }), color: Y.color(ci) });
       comboSeries.push({ key: 'chO_' + ci, name: 'เก่า · ' + ch, vals: isoKeys.map(function (d) { var s = gBy(d); return s ? (s.chanOld[ch] || 0) : 0; }), color: Y.color(ci + 5) });
     });
+  }
+  // ยอดขายใหม่/เก่า ที่พนักงาน "กรอกหน้าร้าน" (fo_daily_sales) — ไว้ cross-check กับ JERA
+  if (isoKeys.some(function (d) { var s = sBy(d); return s && (s.foNew || s.foOld); })) {
+    comboSeries.push({ key: 'foNew', name: 'ยอดใหม่ (FO กรอก)', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.foNew : 0; }), color: Y.color(2), axis: 'right' });
+    comboSeries.push({ key: 'foOld', name: 'ยอดเก่า (FO กรอก)', vals: isoKeys.map(function (d) { var s = sBy(d); return s ? s.foOld : 0; }), color: Y.color(7), axis: 'right' });
   }
   var comboCard = Y.card({
     title: 'กราฟรวม · เลือกดูได้', icon: 'ti-chart-dots-2', sub: 'กด chip เลือกเส้นที่จะแสดงพร้อมกัน · ' + perLab, action: dlBtn,
