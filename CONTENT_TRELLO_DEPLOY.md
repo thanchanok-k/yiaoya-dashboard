@@ -120,6 +120,12 @@ curl -s -X POST "https://iyldrlzhftylewstfmsg.supabase.co/functions/v1/content_t
 - **บั๊กที่แก้:** token placeholder ของ `_cnLinkify` ห้ามใช้ ` <เลข> ` (ชนตัวเลขในข้อความ → โผล่ "undefined") · เปลี่ยนเป็น `@@LK<i>@@`
 - ผลจริง: 361 การ์ดมีลิงก์งาน (Drive 376 · Facebook 705 = ลิงก์โพสต์จริง · Canva 14)
 
+### Canva — รูปดึงตรงไม่ได้ (ดีไซน์ private) · ใช้ oEmbed เอาชื่อ+คนทำ — เพิ่ม 27 มิ.ย. 2569
+- ทดสอบแล้ว 3 ทาง **ไม่ได้รูป** ถ้าไม่ผ่าน OAuth: thumbnail `screen?type=thumbnail` = 403 (ต้อง session) · iframe `view?embed` = ว่าง (ดีไซน์ไม่ได้แชร์ public) · ต่างจาก Drive ที่เปิดสาธารณะ
+- รูป Canva จริงต้องใช้ **Canva Connect API (OAuth `design:meta:read`)** → `GET /v1/designs/{id}` คืน thumbnail.url (signed) — งานหนัก คุ้มเมื่อ Canva โตกว่า 14 ใบ (pattern refresh_token เหมือน GOOGLE/TIKTOK ที่มีอยู่)
+- **ทำไปแล้ว (ไม่ต้อง OAuth):** `content_trello` เรียก **Canva oEmbed** (`canva.com/_oembed?url=`) เติม `name`=ชื่อดีไซน์ + `by`=คนทำ ให้ลิงก์ Canva → ปุ่มโชว์ชื่องาน+ผู้ทำ (มีประโยชน์ตอน review)
+- ทางลัดที่แนะนำทีม: เซฟงานลง Drive หรือแนบรูปเข้า Trello → ระบบโชว์รูปอัตโนมัติ (ไม่ต้องแตะ Canva API)
+
 ## หมายเหตุ
 - **เสริม ไม่ทับ V3:** ถ้าชีต V3 sync แล้ว บอร์ดจะโชว์ V3 + Trello รวมกัน · ถ้า V3 ยังไม่มา จะโชว์ Trello อย่างเดียว (ทิ้ง mock อัตโนมัติ)
 - **ดึงสดทุกครั้ง:** ทุกครั้งที่เปิดหน้า = ดึง Trello ใหม่ ไม่มี cache (ข้อมูลตรงกับ Trello เสมอ)
