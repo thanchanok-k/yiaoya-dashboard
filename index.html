@@ -4055,8 +4055,25 @@ function cnPersonAgg(){
 function _cnModalClose(){var m=$('cnModal');if(m)m.remove();}
 function _cnModal(title,html){_cnModalClose();var ov=document.createElement('div');ov.id='cnModal';ov.style.cssText='position:fixed;inset:0;background:rgba(13,47,79,.5);z-index:9998;display:flex;align-items:flex-start;justify-content:center;padding:28px 14px;overflow:auto';ov.onclick=function(e){if(e.target===ov)_cnModalClose();};var box=document.createElement('div');box.className='card';box.style.cssText='max-width:780px;width:100%;padding:0;overflow:hidden;box-shadow:0 24px 70px rgba(13,47,79,.4)';box.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--border,#E2E8F0);position:sticky;top:0;background:var(--surface,#fff);z-index:1">'+title+'<button id="cnModalX" style="margin-left:auto;background:#F1F5F9;border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:15px;color:#64748B;flex-shrink:0">✕</button></div><div style="padding:18px 20px">'+html+'</div>';ov.appendChild(box);document.body.appendChild(ov);$('cnModalX').onclick=_cnModalClose;_cnBind(box);}
 function _cnDomain(u){try{return String(u).replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'');}catch(e){return 'ลิงก์';}}
-/* รูป Drive ที่ thumbnail โดนจำกัดสิทธิ์ → แทนด้วยกล่อง "เปิดไฟล์" (ลิงก์ที่ครอบยังกดได้) */
+/* รูป Drive ที่ thumbnail โดนจำกัดสิทธิ์ → แทนด้วยกล่อง "เปิดไฟล์" (คลิกเปิด lightbox/ไฟล์ได้) */
 function _cnImgFb(img){try{var d=document.createElement('div');d.style.cssText='display:flex;align-items:center;justify-content:center;gap:5px;height:148px;border:1px dashed #CBD5E1;border-radius:9px;color:#475569;font-size:12px;font-weight:600;text-align:center;padding:6px';d.innerHTML='<i class="ti ti-external-link"></i> เปิดไฟล์ Drive';img.replaceWith(d);}catch(e){img.style.display='none';}}
+/* ===== Lightbox: ซูมรูปงานเต็มจอ + เลื่อนซ้าย-ขวา (ไม่ต้องเปิดแท็บใหม่) ===== */
+var _CN_GAL=[],_cnLbI=0;
+function _cnLbFb(img){try{var im=_CN_GAL[_cnLbI]||{};var a=document.createElement('a');a.href=im.open||im.full||'#';a.target='_blank';a.rel='noopener';a.style.cssText='color:#fff;font-size:15px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px';a.innerHTML='<i class="ti ti-external-link"></i> เปิดไฟล์ Drive';img.replaceWith(a);}catch(e){}}
+function _cnLbRender(){var im=_CN_GAL[_cnLbI]||{};var b=$('cnLbBody');if(b)b.innerHTML='<img src="'+esc(im.full||im.thumb||'')+'" style="max-width:92vw;max-height:86vh;border-radius:10px;object-fit:contain;background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5)" onerror="_cnLbFb(this)">';var ct=$('cnLbCt');if(ct)ct.textContent=(_cnLbI+1)+' / '+_CN_GAL.length;}
+function _cnLbGo(d){if(!_CN_GAL.length)return;_cnLbI=(_cnLbI+d+_CN_GAL.length)%_CN_GAL.length;_cnLbRender();}
+function _cnLbClose(){var o=$('cnLb');if(o)o.remove();document.removeEventListener('keydown',_cnLbKey);}
+function _cnLbKey(e){if(e.key==='Escape')_cnLbClose();else if(e.key==='ArrowLeft')_cnLbGo(-1);else if(e.key==='ArrowRight')_cnLbGo(1);}
+function _cnLightbox(i){_cnLbI=i||0;var o=$('cnLb');if(o)o.remove();
+ var ov=document.createElement('div');ov.id='cnLb';ov.style.cssText='position:fixed;inset:0;background:rgba(13,47,79,.86);z-index:10000;display:flex;align-items:center;justify-content:center;padding:30px';
+ ov.onclick=function(e){if(e.target===ov)_cnLbClose();};
+ var nav=_CN_GAL.length>1?'<button data-lb="-1" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.16);border:none;color:#fff;width:46px;height:46px;border-radius:50%;font-size:22px;cursor:pointer">‹</button><button data-lb="1" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.16);border:none;color:#fff;width:46px;height:46px;border-radius:50%;font-size:22px;cursor:pointer">›</button><div id="cnLbCt" style="position:absolute;bottom:20px;left:0;right:0;text-align:center;color:#fff;font-size:13px;font-weight:600"></div>':'';
+ ov.innerHTML='<button id="cnLbX" style="position:absolute;top:16px;right:18px;background:rgba(255,255,255,.16);border:none;color:#fff;width:40px;height:40px;border-radius:10px;font-size:17px;cursor:pointer">✕</button>'+nav+'<div id="cnLbBody" style="display:flex;align-items:center;justify-content:center"></div>';
+ document.body.appendChild(ov);_cnLbRender();
+ $('cnLbX').onclick=_cnLbClose;
+ ov.querySelectorAll('[data-lb]').forEach(function(b){b.onclick=function(e){e.stopPropagation();_cnLbGo(+b.dataset.lb);};});
+ document.addEventListener('keydown',_cnLbKey);
+}
 /* แปลงข้อความ (desc/คอมเมนต์) ที่มีลิงก์ดิบ/มาร์กดาวน์ Trello → ลิงก์คลิกได้สั้นๆ (โดเมน ↗) */
 function _cnLinkify(s){s=String(s||'');var toks=[];
  var mk=function(url){url=url.replace(/[.,]+$/,'');var i=toks.length;toks.push('<a href="'+url.replace(/"/g,'%22')+'" target="_blank" rel="noopener" style="color:#0079BF;font-weight:600;text-decoration:none">'+esc(_cnDomain(url))+' ↗</a>');return '@@LK'+i+'@@';};
@@ -4082,7 +4099,8 @@ function cnPiece(id){
  if(it.source==='trello'){
    h+='<div style="margin-top:13px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:800;color:#0079BF;background:#E4F0F6;border:1px solid #B6D9EA;padding:2px 8px;border-radius:8px"><i class="ti ti-brand-trello"></i> Trello</span>'+(it.url?'<a href="'+esc(it.url)+'" target="_blank" rel="noopener" style="font-size:12px;color:#0079BF;text-decoration:none">เปิดการ์ดใน Trello <i class="ti ti-external-link"></i></a>':'')+'</div>';
    var _imgs=(it.images&&it.images.length)?it.images:(it.image?[{thumb:it.image,full:it.image,open:it.image}]:[]);
-   if(_imgs.length){h+='<div style="margin-top:11px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px"><i class="ti ti-photo"></i> ผลงาน'+(_imgs.length>1?' ('+_imgs.length+' รูป)':'')+'</div><div style="display:grid;grid-template-columns:'+(_imgs.length>1?'repeat(2,1fr)':'1fr')+';gap:7px">';_imgs.forEach(function(im){var op=esc(im.open||im.full||im.thumb);h+='<a href="'+op+'" target="_blank" rel="noopener" style="display:block"><img src="'+esc(im.thumb)+'" loading="lazy" style="width:100%;'+(_imgs.length>1?'height:148px;object-fit:cover;':'')+'border-radius:9px;border:1px solid var(--border,#E2E8F0);background:#F8FAFC;display:block" onerror="_cnImgFb(this)"></a>';});h+='</div></div>';}
+   _CN_GAL=_imgs;
+   if(_imgs.length){h+='<div style="margin-top:11px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px"><i class="ti ti-photo"></i> ผลงาน'+(_imgs.length>1?' ('+_imgs.length+' รูป)':'')+'</div><div style="display:grid;grid-template-columns:'+(_imgs.length>1?'repeat(2,1fr)':'1fr')+';gap:7px">';_imgs.forEach(function(im,ix){h+='<div onclick="_cnLightbox('+ix+')" style="display:block;cursor:zoom-in"><img src="'+esc(im.thumb)+'" loading="lazy" style="width:100%;'+(_imgs.length>1?'height:148px;object-fit:cover;':'')+'border-radius:9px;border:1px solid var(--border,#E2E8F0);background:#F8FAFC;display:block" onerror="_cnImgFb(this)"></div>';});h+='</div></div>';}
    if(it.links&&it.links.length){h+='<div style="margin-top:11px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px"><i class="ti ti-external-link"></i> เปิดดูงาน</div><div style="display:flex;flex-wrap:wrap;gap:7px">';it.links.slice(0,10).forEach(function(l){var k=_CN_LK[l.kind]||_CN_LK.link;var lb=(l.name&&(l.kind==='canva'||l.kind==='drive'))?l.name:k[0];var tip=l.by?(' • โดย '+l.by):'';h+='<a href="'+esc(l.url)+'" target="_blank" rel="noopener" title="'+esc(lb+tip)+'" style="display:inline-flex;align-items:center;gap:5px;max-width:100%;font-size:12px;font-weight:600;color:'+k[2]+';background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:6px 11px;text-decoration:none"><i class="ti '+k[1]+'"></i><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">'+esc(lb)+'</span></a>';});h+='</div></div>';}
    h+='<div style="margin-top:14px;border-top:1px solid var(--border,#E2E8F0);padding-top:13px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:7px"><i class="ti ti-send"></i> สั่งงาน / คอมเมนต์ (ส่งเข้า Trello)</div><textarea id="cnCmtBox" placeholder="พิมพ์คอมเมนต์ถึงทีม… (อนุมัติ/ตีกลับจะแนบข้อความนี้ไปด้วย)" style="width:100%;box-sizing:border-box;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;resize:vertical;min-height:56px"></textarea><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button onclick="cnTrelloAct(\''+esc(it.id)+'\',\'comment\',document.getElementById(\'cnCmtBox\').value,this)" style="'+_cnBtnCss('')+'"><i class="ti ti-message-2"></i> ส่งคอมเมนต์</button><button onclick="cnTrelloAct(\''+esc(it.id)+'\',\'approve\',document.getElementById(\'cnCmtBox\').value,this)" style="'+_cnBtnCss('ok')+'"><i class="ti ti-check"></i> อนุมัติ</button><button onclick="cnTrelloAct(\''+esc(it.id)+'\',\'reject\',document.getElementById(\'cnCmtBox\').value,this)" style="'+_cnBtnCss('danger')+'"><i class="ti ti-arrow-back-up"></i> ตีกลับแก้ไข</button></div></div>';
  }
@@ -4589,6 +4607,20 @@ function mountBoard(){ var w=$('wrap-board'); if(!w)return;
    body.addEventListener('dragleave',function(){body.parentElement.style.outline='';});
    body.addEventListener('drop',function(e){e.preventDefault();body.parentElement.style.outline='';var it=(KB_DATA.cards||[]).find(function(x){return String(x.id)===String(_kbDragId);});if(it&&(it.status||'วางแผน')!==body.dataset.col){kbAct(it.id,{action:'move',from_status:it.status,to_status:body.dataset.col});}}); });
 }
+/* ผูก Supabase auth uid → fo.staff อัตโนมัติ ครั้งแรกที่ login (เฉพาะคนที่ HR ผูก LINE แล้ว)
+   - insert-only (ignoreDuplicates) → ไม่ทับแถวเดิม → สิทธิ์ที่ admin ตั้งไว้ (owner/hr/manager) คงอยู่เสมอ
+   - role ตั้งได้แค่ 'employee' (RLS staff_self_provision คุมอีกชั้น) → เลื่อนขั้นต้องให้ owner ทำ
+   - gate ด้วย LINE employee_id → ได้สิทธิ์เฉพาะคนที่ HR อนุมัติผูก LINE แล้ว (ไม่ใช่ใครสมัครก็เห็น) */
+async function ensureFoStaffLink(user){
+ try{
+   if(!user||!user.id) return;
+   if(!LINE_ID||!LINE_ID.employee_id) return;          // ผูกเฉพาะตัวตนที่ HR อนุมัติแล้ว
+   const name=LINE_ID.employee_name||LINE_ID.display_name||'(ไม่ระบุชื่อ)';
+   const row={auth_user_id:user.id, hr_employee_id:LINE_ID.employee_id, full_name:name, nickname:name, role:'employee', branch_id:'BR01', is_active:true};
+   await sb.schema('fo').from('staff').upsert([row],{onConflict:'auth_user_id',ignoreDuplicates:true});
+ }catch(_){ /* RLS ยังไม่ตั้ง/schema ไม่เปิด → เงียบ ไม่ขวาง login */ }
+}
+
 function start(){
  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
  buildNav(); navAudit(); navAuditRegistry(); fbInit();
@@ -4602,6 +4634,7 @@ function start(){
    const sel=$('viewAs'); if(sel) sel.value=role;
    applyRole(role);
    resolveAccess(); /* เฟส D: override ด้วยสิทธิ์จริงจาก DB (ถ้ามีการตั้งสิทธิ์) */
+   ensureFoStaffLink(data&&data.user);  /* ผูก auth uid → fo.staff อัตโนมัติ (employee) ครั้งแรกที่ login */
  });
  document.querySelectorAll('.sb-item').forEach(i=>i.onclick=()=>{showView(i.dataset.view);mountPortedView(i.dataset.view);});
  // AI Approvals badge (global): นับคิว pending — RLS aq_read กรองให้เห็นเฉพาะของ role ตัวเอง + realtime เด้งสดทุกหน้า
