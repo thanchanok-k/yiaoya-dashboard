@@ -4057,11 +4057,11 @@ function _cnModal(title,html){_cnModalClose();var ov=document.createElement('div
 function _cnDomain(u){try{return String(u).replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'');}catch(e){return 'ลิงก์';}}
 /* แปลงข้อความ (desc/คอมเมนต์) ที่มีลิงก์ดิบ/มาร์กดาวน์ Trello → ลิงก์คลิกได้สั้นๆ (โดเมน ↗) */
 function _cnLinkify(s){s=String(s||'');var toks=[];
- var mk=function(url){url=url.replace(/[.,]+$/,'');var i=toks.length;toks.push('<a href="'+url.replace(/"/g,'%22')+'" target="_blank" rel="noopener" style="color:#0079BF;font-weight:600;text-decoration:none">'+esc(_cnDomain(url))+' ↗</a>');return ' '+i+' ';};
+ var mk=function(url){url=url.replace(/[.,]+$/,'');var i=toks.length;toks.push('<a href="'+url.replace(/"/g,'%22')+'" target="_blank" rel="noopener" style="color:#0079BF;font-weight:600;text-decoration:none">'+esc(_cnDomain(url))+' ↗</a>');return '@@LK'+i+'@@';};
  s=s.replace(/\[[^\]]*\]\((https?:\/\/[^\s)]+)(?:\s+"[^"]*")?\)/g,function(_m,url){return mk(url);}); /* [text](url "smartCard-inline") */
  s=s.replace(/https?:\/\/[^\s)\]]+/g,function(url){return mk(url);}); /* ลิงก์ดิบ */
  s=esc(s); /* escape ข้อความที่เหลือ (token   ไม่ถูกแตะ) */
- return s.replace(/ (\d+) /g,function(_m,i){return toks[+i];});
+ return s.replace(/@@LK(\d+)@@/g,function(_m,i){return toks[+i];});
 }
 /* ป้าย/ไอคอนของลิงก์งานตามชนิด */
 var _CN_LK={canva:['เปิดใน Canva','ti-brand-canva','#7D2AE8'],drive:['เปิดใน Drive','ti-brand-google-drive','#1FA463'],youtube:['ดูใน YouTube','ti-brand-youtube','#FF0000'],tiktok:['ดูใน TikTok','ti-brand-tiktok','#0F172A'],facebook:['ดูโพสต์','ti-brand-facebook','#1877F2'],link:['เปิดลิงก์','ti-external-link','#475569']};

@@ -112,6 +112,14 @@ curl -s -X POST "https://iyldrlzhftylewstfmsg.supabase.co/functions/v1/content_t
 - deploy: `supabase functions deploy content_trello_action`
 - ทดสอบแล้ว: comment + approve(move+comment) เขียนเข้า Trello จริง แล้วลบ/ย้อนกลับ — ผ่าน
 
+### งานที่เป็นลิงก์ (Canva/Drive) ไม่ใช่รูปแนบ — เพิ่ม 27 มิ.ย. 2569
+ปัญหา: หลายการ์ดงานจริงอยู่บน **Canva/Google Drive** (เป็นลิงก์) ไม่ได้อัปรูปเข้า Trello → เปิดการ์ดแล้วไม่เห็นงาน + คอมเมนต์เป็นพืดลิงก์ดิบ
+- **`content_trello` ส่ง `links[]`** (attachment ที่ไม่ใช่รูป + URL ใน desc) = `{name,url,kind}` · kind: canva/drive/youtube/tiktok/facebook/link
+- **Google Drive thumbnail สาธารณะ** (`drive.google.com/thumbnail?id=..&sz=w400`, ไม่ต้อง token) → การ์ดไม่มีรูปแนบแต่มีลิงก์ Drive ใช้ thumbnail เป็นรูป `thumb`/`image` ได้เลย
+- หน้าเว็บ: โมดัลมีปุ่ม **"เปิดดูงาน"** (Canva/Drive/ฯลฯ) + `_cnLinkify()` แปลงลิงก์ดิบ/มาร์กดาวน์ Trello (`[..](url "smartCard-inline")`) ในเนื้อหา+คอมเมนต์ → ลิงก์คลิกได้สั้น (โดเมน ↗)
+- **บั๊กที่แก้:** token placeholder ของ `_cnLinkify` ห้ามใช้ ` <เลข> ` (ชนตัวเลขในข้อความ → โผล่ "undefined") · เปลี่ยนเป็น `@@LK<i>@@`
+- ผลจริง: 361 การ์ดมีลิงก์งาน (Drive 376 · Facebook 705 = ลิงก์โพสต์จริง · Canva 14)
+
 ## หมายเหตุ
 - **เสริม ไม่ทับ V3:** ถ้าชีต V3 sync แล้ว บอร์ดจะโชว์ V3 + Trello รวมกัน · ถ้า V3 ยังไม่มา จะโชว์ Trello อย่างเดียว (ทิ้ง mock อัตโนมัติ)
 - **ดึงสดทุกครั้ง:** ทุกครั้งที่เปิดหน้า = ดึง Trello ใหม่ ไม่มี cache (ข้อมูลตรงกับ Trello เสมอ)
