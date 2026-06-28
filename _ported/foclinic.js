@@ -75,6 +75,31 @@ if(typeof window!=='undefined'){
       else alert('บันทึกนัดวันที่ '+fcl_dateTH(date)+' แล้ว');
     }).catch(function(e){fcl_busy=false;alert('บันทึกไม่ได้: '+(e&&e.message));});
   };
+  // ตัดคอร์ส 1 ครั้ง (insert ledger → trigger คำนวณคงเหลือ + ปิดคอร์สอัตโนมัติเมื่อครบ)
+  window.fcl_cut=function(courseId){
+    if(fcl_busy) return;
+    if(!window.confirm('ตัดคอร์สนี้ 1 ครั้ง?')) return;
+    var sb=fcl_sb(); if(!sb||!sb.schema) return; fcl_busy=true;
+    sb.schema('fo').from('course_session_ledger').insert({branch_id:'BR01',course_id:courseId,used_on:fcl_todayStr}).then(function(res){
+      fcl_busy=false; if(res.error){alert('ตัดไม่ได้: '+res.error.message);return;}
+      fcl_loadUpsell();   // sessions อัปเดตโดย trigger → refresh
+    }).catch(function(e){fcl_busy=false;alert('ตัดไม่ได้: '+(e&&e.message));});
+  };
+}
+
+function fcl_loadUpsell(){
+  var sb=fcl_sb(); var box=document.getElementById('fclUpsell'); if(!sb||!box) return;
+  sb.schema('fo').from('v_course_upsell').select('course_id,product_name,sessions_used,sessions_total,sessions_remaining,pct_used').order('pct_used',{ascending:false}).limit(50).then(function(res){
+    if(res.error){box.innerHTML='<div class="fc-empty">โหลดไม่ได้</div>';return;}
+    var rows=res.data||[];
+    if(!rows.length){box.innerHTML='<div class="fc-empty">ไม่มีคอร์สใกล้จบ</div>';return;}
+    var h='<table><thead><tr><th>คอร์ส</th><th class="r">ใช้/รวม</th><th class="r">เหลือ</th><th>จัดการ</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var btn=fcl_num(r.sessions_remaining)>0?'<button class="fc-btn fc-b-teal" onclick="window.fcl_cut(\''+r.course_id+'\')">ตัด 1 ครั้ง</button>':'<span style="color:#16A34A;font-size:12px">จบแล้ว</span>';
+      h+='<tr><td>'+fcl_esc(r.product_name||'-')+'</td><td class="r">'+fcl_fmt(r.sessions_used)+'/'+fcl_fmt(r.sessions_total)+'</td><td class="r">'+fcl_fmt(r.sessions_remaining)+'</td><td>'+btn+'</td></tr>';
+    });
+    box.innerHTML=h+'</tbody></table>';
+  }).catch(function(){box.innerHTML='<div class="fc-empty">โหลดไม่ได้</div>';});
 }
 
 function fcl_loadAppt(){
@@ -175,14 +200,7 @@ function mountFoclinic(){
     var r=(res.data&&res.data[0])||{};document.getElementById('fclK_rev').innerHTML=fcl_baht(r.revenue_total)+' <span class="fc-sub">'+fcl_fmt(r.receipts)+' บิล</span>';
   }).catch(function(){document.getElementById('fclK_rev').textContent='฿0';});
 
-  S().from('v_course_upsell').select('product_name,sessions_used,sessions_total,sessions_remaining,pct_used').order('pct_used',{ascending:false}).limit(50).then(function(res){
-    var box=document.getElementById('fclUpsell');if(!box)return;
-    if(res.error){box.innerHTML='<div class="fc-empty">โหลดไม่ได้</div>';return;}
-    var rows=res.data||[];if(!rows.length){box.innerHTML='<div class="fc-empty">ยังไม่มีคอร์สใกล้จบ</div>';return;}
-    var h='<table><thead><tr><th>คอร์ส</th><th class="r">ใช้/รวม</th><th class="r">เหลือ</th><th class="r">%</th></tr></thead><tbody>';
-    rows.forEach(function(r){h+='<tr><td>'+fcl_esc(r.product_name||'-')+'</td><td class="r">'+fcl_fmt(r.sessions_used)+'/'+fcl_fmt(r.sessions_total)+'</td><td class="r">'+fcl_fmt(r.sessions_remaining)+'</td><td class="r">'+fcl_fmt(r.pct_used)+'%</td></tr>';});
-    box.innerHTML=h+'</tbody></table>';
-  }).catch(function(){var b=document.getElementById('fclUpsell');if(b)b.innerHTML='<div class="fc-empty">โหลดไม่ได้</div>';});
+  fcl_loadUpsell();
 
   S().from('v_revenue_daily').select('sale_date,revenue_total,receipts').order('sale_date',{ascending:false}).limit(14).then(function(res){
     var box=document.getElementById('fclRev');if(!box)return;
