@@ -3926,7 +3926,7 @@ const CN_CHECKIN_MOCK=[
  {who:'ปาย',inT:'-',punc:'ลา',plan:'-',eod:0}
 ];
 let _cnDragId=null; var _cnDragging=false;
-var _cnBoardF={who:'',dept:'',q:''}; /* ฟิลเตอร์ Kanban: ครีเอเตอร์/แผนก/ค้นหาชื่อ */
+var _cnBoardF={who:'',dept:'',q:'',month:''}; /* ฟิลเตอร์ Kanban: ครีเอเตอร์/แผนก/ค้นหา/เดือนที่จะโพส */
 let CN_UPLOADS=[];
 let CN_LIVE=null;
 function cnGet(key,mock){ var a=CN_LIVE&&CN_LIVE[key]; return (a&&a.length)?a:mock; }
@@ -4096,7 +4096,7 @@ function cnPiece(id){
  var _bdg=(it.dept?_cnDept(it.dept):'')+(it.topic?_cnTopic(it.topic):'')+(it.eng!=null?_cnEngBadge(it.eng):'');
  var h=_bdg?'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'+_bdg+'</div>':'';
  if(it.who)h+=row('ผู้ดูแล','<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:'+c+'"></span>'+esc(it.who)+'</span>'+_cnInactiveBadge(it.who));
- h+=row('รูปแบบ',it.fmt?esc(it.fmt):'')+row('หัวข้อ',it.topic?esc(it.topic):'')+row('วันโพสต์',it.date?esc(it.date):'')+row('โปรโมชั่น',it.promo_id?esc(it.promo_id):'');
+ h+=row('รูปแบบ',it.fmt?esc(it.fmt):'')+row('หัวข้อ',it.topic?esc(it.topic):'')+row('เดือนที่จะโพส',it.post_month_label?'<span style="color:#0F766E;font-weight:700"><i class="ti ti-calendar-event"></i> '+esc(it.post_month_label)+'</span>':'')+row('วันโพสต์',it.date?esc(it.date):'')+row('โปรโมชั่น',it.promo_id?esc(it.promo_id):'');
  var links=_cnLinks(it);
  if(links)h+='<div style="margin-top:13px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">ลิงก์โพสต์</div><div style="display:flex;gap:13px;font-size:20px">'+links+'</div></div>';
  if(it.caption)h+='<div style="margin-top:13px"><div style="font-size:12px;font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:6px">Caption</div><div style="font-size:13px;color:var(--text,#0F172A);white-space:pre-wrap;background:#F8FAFC;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:10px 12px;line-height:1.5">'+esc(it.caption)+'</div></div>';
@@ -4198,14 +4198,16 @@ function mountCnBoard(){const w=$('cnBoardWrap');if(!w)return;
  var all=cnDATA();
  var whoList=[]; all.forEach(function(x){if(x.who&&whoList.indexOf(x.who)<0)whoList.push(x.who);}); (CN_TEAM||[]).forEach(function(n){if(whoList.indexOf(n)<0)whoList.push(n);});
  var f=_cnBoardF;
- var data=all.filter(function(x){ if(f.dept&&x.dept!==f.dept)return false; if(f.who&&x.who!==f.who)return false; if(f.q&&String(x.title||'').toLowerCase().indexOf(f.q.toLowerCase())<0)return false; return true; });
- var hasF=!!(f.dept||f.who||f.q);
+ var data=all.filter(function(x){ if(f.dept&&x.dept!==f.dept)return false; if(f.who&&x.who!==f.who)return false; if(f.month&&x.post_month!==f.month)return false; if(f.q&&String(x.title||'').toLowerCase().indexOf(f.q.toLowerCase())<0)return false; return true; });
+ var hasF=!!(f.dept||f.who||f.q||f.month);
  var opt=function(v,cur){return '<option value="'+esc(v)+'"'+(cur===v?' selected':'')+'>'+esc(v)+'</option>';};
+ var _mset={},_months=[]; all.forEach(function(x){if(x.post_month&&!_mset[x.post_month]){_mset[x.post_month]=x.post_month_label||x.post_month;_months.push(x.post_month);}}); _months.sort();
  var selCss='padding:7px 10px;border:1px solid var(--border,#E2E8F0);border-radius:8px;font-size:12px;font-family:inherit;background:#fff;color:var(--navy,#0D2F4F)';
  let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:9px 13px;background:#F0FDFA;border:1px solid #C7E8E3;border-radius:10px"><i class="ti ti-grip-vertical" style="color:#0F766E"></i><span style="font-size:12px;color:#0F766E">ลากการ์ดเปลี่ยนสถานะ (บันทึกจริง) · คลิกการ์ดดูรายละเอียด</span><button data-cnact="เพิ่มการ์ดใหม่" style="margin-left:auto;background:#0F766E;color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มการ์ด</button></div>';
  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">'
    +'<select data-fbdept style="'+selCss+'"><option value="">ทุกแผนก</option>'+Object.keys(CN_DEPT).map(function(d){return opt(d,f.dept);}).join('')+'</select>'
    +'<select data-fbwho style="'+selCss+'"><option value="">ทุกคน</option>'+whoList.map(function(n){return opt(n,f.who);}).join('')+'</select>'
+   +'<select data-fbmonth style="'+selCss+(f.month?';border-color:#0F766E;color:#0F766E;font-weight:700':'')+'"><option value="">ทุกเดือนที่จะโพส</option>'+_months.map(function(m){return '<option value="'+esc(m)+'"'+(f.month===m?' selected':'')+'>โพส '+esc(_mset[m])+'</option>';}).join('')+'</select>'
    +'<input data-fbq value="'+esc(f.q)+'" placeholder="ค้นหาชื่อเรื่อง…" style="'+selCss+';min-width:170px">'
    +(hasF?'<button data-fbclear style="background:#fff;border:1px solid #FCA5A5;color:#B91C1C;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit"><i class="ti ti-x"></i> ล้าง</button>':'')
    +'<span style="margin-left:auto;font-size:11px;color:var(--text-muted,#64748B)">แสดง '+data.length+'/'+all.length+'</span></div>';
@@ -4214,14 +4216,15 @@ function mountCnBoard(){const w=$('cnBoardWrap');if(!w)return;
   h+='<div class="cnCol" style="flex:0 0 210px;min-width:210px;background:#F1F5F9;border-radius:12px;padding:8px">';
   h+='<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--navy,#0D2F4F);padding:4px 6px 8px"><i class="ti '+col.i+'"></i>'+esc(col.k)+'<span style="margin-left:auto;font-size:10px;background:#fff;color:var(--text-muted,#64748B);border-radius:8px;padding:1px 7px">'+its.length+'</span></div>';
   h+='<div class="cnColBody" data-col="'+esc(col.k)+'" style="min-height:40px;display:flex;flex-direction:column;gap:7px">';
-  its.forEach(function(it){h+='<div class="cnKan" draggable="true" data-id="'+esc(String(it.id))+'" data-cnpiece="'+esc(String(it.id))+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)">'+(it.thumb?'<img loading="lazy" src="'+esc(it.thumb)+'" style="width:100%;height:84px;object-fit:cover;border-radius:6px;margin-bottom:6px;background:#F1F5F9;display:block" onerror="this.style.display=\'none\'">':'')+'<div style="font-size:11px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.3;margin-bottom:5px">'+esc(it.title)+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+_cnDept(it.dept)+_cnWhoLink(it.who)+(it.source==='trello'?'<span title="จาก Trello" style="font-size:9px;font-weight:700;color:#0079BF;background:#E4F0F6;padding:1px 6px;border-radius:7px"><i class="ti ti-brand-trello"></i></span>':'')+(it.comment_count?'<span title="คอมเมนต์" style="font-size:10px;color:var(--text-muted,#64748B);display:inline-flex;align-items:center;gap:2px"><i class="ti ti-message-2"></i>'+it.comment_count+'</span>':'')+'</div></div>';});
+  its.forEach(function(it){h+='<div class="cnKan" draggable="true" data-id="'+esc(String(it.id))+'" data-cnpiece="'+esc(String(it.id))+'" style="background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:9px;padding:9px 10px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)">'+(it.thumb?'<img loading="lazy" src="'+esc(it.thumb)+'" style="width:100%;height:84px;object-fit:cover;border-radius:6px;margin-bottom:6px;background:#F1F5F9;display:block" onerror="this.style.display=\'none\'">':'')+'<div style="font-size:11px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.3;margin-bottom:5px">'+esc(it.title)+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+_cnDept(it.dept)+_cnWhoLink(it.who)+(it.source==='trello'?'<span title="จาก Trello" style="font-size:9px;font-weight:700;color:#0079BF;background:#E4F0F6;padding:1px 6px;border-radius:7px"><i class="ti ti-brand-trello"></i></span>':'')+(it.comment_count?'<span title="คอมเมนต์" style="font-size:10px;color:var(--text-muted,#64748B);display:inline-flex;align-items:center;gap:2px"><i class="ti ti-message-2"></i>'+it.comment_count+'</span>':'')+(it.post_month_label?'<span title="เดือนที่จะโพส" style="font-size:9px;font-weight:700;color:#0F766E;background:#CCFBF1;padding:1px 6px;border-radius:7px;display:inline-flex;align-items:center;gap:2px"><i class="ti ti-calendar-event"></i>'+esc(it.post_month_label)+'</span>':'')+'</div></div>';});
   h+='</div></div>';});
  h+='</div>';
  w.innerHTML=h;_cnBind(w);_cnSetCt('cnboard',all.length);
  var dd=w.querySelector('[data-fbdept]'); if(dd)dd.onchange=function(e){_cnBoardF.dept=e.target.value;mountCnBoard();};
  var dw=w.querySelector('[data-fbwho]'); if(dw)dw.onchange=function(e){_cnBoardF.who=e.target.value;mountCnBoard();};
+ var dm=w.querySelector('[data-fbmonth]'); if(dm)dm.onchange=function(e){_cnBoardF.month=e.target.value;mountCnBoard();};
  var dq=w.querySelector('[data-fbq]'); if(dq)dq.oninput=function(e){_cnBoardF.q=e.target.value;_cnBoardF._focus=true;mountCnBoard();};
- var dc=w.querySelector('[data-fbclear]'); if(dc)dc.onclick=function(){_cnBoardF={who:'',dept:'',q:''};mountCnBoard();};
+ var dc=w.querySelector('[data-fbclear]'); if(dc)dc.onclick=function(){_cnBoardF={who:'',dept:'',q:'',month:''};mountCnBoard();};
  if(_cnBoardF._focus){_cnBoardF._focus=false;var qi=w.querySelector('[data-fbq]');if(qi){qi.focus();var v=qi.value;qi.value='';qi.value=v;}}
  w.querySelectorAll('.cnKan').forEach(function(card){
    card.addEventListener('dragstart',function(){_cnDragId=card.dataset.id;_cnDragging=true;card.style.opacity='.45';});
