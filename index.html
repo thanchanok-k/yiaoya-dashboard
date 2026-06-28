@@ -830,7 +830,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div id="promoGrid"></div>
     </section>
     <section class="view" data-view="cnplan">
-      <div class="sec"><span class="sec-bar"></span>ปฏิทินคอนเทนต์<span class="sec-c">วางแผนโพสต์ล่วงหน้า · แบรนด์ × แพลตฟอร์ม × ประเภท (UI · mock)</span></div>
+      <div class="sec"><span class="sec-bar"></span>ปฏิทินคอนเทนต์<span class="sec-c">คอนเทนต์จัดกลุ่มตามเดือนที่จะโพส · ดึงจากลิสต์เดือนใน Trello</span></div>
       <div id="cnPlanWrap"></div>
     </section>
     <section class="view" data-view="cnboard">
@@ -4174,28 +4174,30 @@ function mountCnCheckin(){const w=$('cnCheckinWrap');if(!w)return;
  w.innerHTML=(_cnLiveHas('checkin')?'':_cnDemoBanner('Check-in/EOD นี้ยังเป็นตัวอย่าง · ค่าจริงมาเมื่อ sync V3'))+h;_cnBind(w);_cnSetCt('cncheckin',onTime);}
 
 function mountCnPlan(){const w=$('cnPlanWrap');if(!w)return;
- var TMON=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
- var all=cnDATA(),dated=[],undated=[];
- all.forEach(function(it){ if(it.date&&/^\d{4}-\d{2}-\d{2}$/.test(String(it.date))) dated.push(it); else undated.push(it); });
- /* เลือกเดือนที่แสดง = เดือนที่มีคอนเทนต์มากสุดจากวันจริง · ถ้าไม่มีวันเลย → เดือนปัจจุบัน */
- var y,m;
- if(dated.length){ var cnt={}; dated.forEach(function(it){var ym=String(it.date).slice(0,7);cnt[ym]=(cnt[ym]||0)+1;});
-   var topYm=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]||(a<b?1:-1);})[0]; y=+topYm.slice(0,4); m=+topYm.slice(5,7)-1; }
- else { var now=new Date(); y=now.getFullYear(); m=now.getMonth(); }
- var first=new Date(y,m,1).getDay(), days=new Date(y,m+1,0).getDate(), mkey=y+'-'+String(m+1).padStart(2,'0');
- var byDate={}; dated.forEach(function(it){ if(String(it.date).slice(0,7)===mkey){(byDate[it.date]=byDate[it.date]||[]).push(it);} });
- var inMonth=Object.keys(byDate).reduce(function(a,k){return a+byDate[k].length;},0);
- let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(inMonth||all.length,'คอนเทนต์เดือนนี้')+_cnSc(Object.keys(CN_DEPT).length,'แผนก','#185FA5')+'<div style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:center"><button data-cnact="เพิ่มคอนเทนต์ลงปฏิทิน" style="background:#3DC5B7;color:#04342C;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-plus"></i> เพิ่มคอนเทนต์</button></div></div>';
- h+='<div class="card" style="padding:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:10px">'+TMON[m]+' '+y+'</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;font-size:11px">';
- ['อา','จ','อ','พ','พฤ','ศ','ส'].forEach(d=>h+='<div style="text-align:center;color:var(--text-muted,#64748B);font-weight:600;padding:2px">'+d+'</div>');
- for(let i=0;i<first;i++)h+='<div></div>';
- for(let d=1;d<=days;d++){var k=mkey+'-'+String(d).padStart(2,'0');var its=byDate[k]||[];h+='<div style="min-height:58px;border:1px solid var(--border,#E2E8F0);border-radius:8px;padding:4px"><div style="font-size:11px;color:var(--text-muted,#64748B);margin-bottom:2px">'+d+'</div>'+its.map(it=>'<div title="'+esc(it.title)+'" style="font-size:10px;color:#fff;background:'+(CN_DEPT[it.dept]||'#64748B')+';border-radius:4px;padding:1px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title)+'</div>').join('')+'</div>';}
- h+='</div><div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap">'+Object.keys(CN_DEPT).map(b=>'<span style="font-size:11px;color:var(--text-muted,#64748B)"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+CN_DEPT[b]+';margin-right:4px"></span>'+esc(b)+'</span>').join('')+'</div></div>';
- if(undated.length){ h+='<div class="card" style="padding:14px;margin-top:14px"><div style="font-weight:700;color:var(--navy,#0D2F4F);margin-bottom:8px"><i class="ti ti-calendar-question" style="color:#94A3B8"></i> ยังไม่กำหนดวันโพสต์ ('+undated.length+')</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+undated.map(it=>'<span title="'+esc(it.title)+'" style="font-size:11px;color:#fff;background:'+(CN_DEPT[it.dept]||'#64748B')+';border-radius:6px;padding:2px 9px;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block">'+esc(it.title)+'</span>').join('')+'</div></div>'; }
- w.innerHTML=h;_cnBind(w);_cnSetCt('cnplan',all.length);}
+ var TMONF=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+ var all=cnDATA();
+ var pm=function(it){return it.post_month||(it.date&&/^\d{4}-\d{2}/.test(String(it.date))?String(it.date).slice(0,7):'');};
+ var groups={}; all.forEach(function(it){var k=pm(it);if(k)(groups[k]=groups[k]||[]).push(it);});
+ var months=Object.keys(groups).sort();
+ var withM=months.reduce(function(a,k){return a+groups[k].length;},0);
+ let h='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">'+_cnSc(withM,'คอนเทนต์ระบุเดือน')+_cnSc(months.length,'เดือน','#185FA5')+'</div>';
+ if(!months.length){ h+='<div class="card" style="padding:22px;color:var(--text-muted,#64748B);text-align:center"><i class="ti ti-calendar-off" style="font-size:22px;color:#CBD5E1"></i><div style="margin-top:8px">ยังไม่มีคอนเทนต์ที่ระบุเดือน — ทีมจัดคอนเทนต์ในลิสต์ตามเดือนใน Trello (เช่น "มีนาคม 2569") ระบบจะดึงมาแสดงที่นี่อัตโนมัติ</div></div>'; }
+ months.forEach(function(ym){
+  var arr=groups[ym].slice().sort(function(a,b){return String(a.date||'').localeCompare(String(b.date||''));});
+  var y=+ym.slice(0,4), mo=+ym.slice(5,7);
+  h+='<div class="card" style="padding:14px;margin-bottom:14px"><div style="display:flex;align-items:center;gap:9px;margin-bottom:12px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:800;color:#0F766E;background:#CCFBF1;padding:4px 13px;border-radius:9px"><i class="ti ti-calendar-event"></i> '+(TMONF[mo]||'')+' '+(y+543)+'</span><span style="font-size:12px;color:var(--text-muted,#64748B)">'+arr.length+' คอนเทนต์</span></div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:9px">';
+  arr.forEach(function(it){var c=CN_WHO_C[it.who]||'#64748B';var dlabel=(it.date&&/^\d{4}-\d{2}-\d{2}$/.test(String(it.date)))?(' · '+String(it.date).slice(8,10)):'';
+   h+='<div data-cnpiece="'+esc(String(it.id))+'" style="cursor:pointer;border:1px solid var(--border,#E2E8F0);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.04)">'+(it.thumb?'<img loading="lazy" src="'+esc(it.thumb)+'" style="width:100%;height:88px;object-fit:cover;display:block;background:#F1F5F9" onerror="this.style.display=\'none\'">':'')+'<div style="padding:7px 9px"><div style="font-size:11px;font-weight:600;color:var(--navy,#0D2F4F);line-height:1.3;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+esc(it.title)+'</div><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">'+(it.who?'<span style="font-size:9px;font-weight:700;color:'+c+'">'+esc(it.who)+'</span>':'')+'<span style="font-size:9px;color:var(--text-muted,#64748B);background:#F1F5F9;padding:1px 6px;border-radius:6px">'+esc(it.col||'')+esc(dlabel)+'</span></div></div></div>';});
+  h+='</div></div>';
+ });
+ w.innerHTML=h;_cnBind(w);
+ w.querySelectorAll('[data-cnpiece]').forEach(function(el){el.onclick=function(){cnPiece(el.dataset.cnpiece);};});
+ _cnSetCt('cnplan',withM);}
 
 function mountCnBoard(){const w=$('cnBoardWrap');if(!w)return;
- var all=cnDATA();
+ /* kanban = งานตามสเตจ · เอาการ์ดลิสต์ตามเดือน (วางแผนรายเดือน) ออก → ไปอยู่หน้า "ปฏิทินคอนเทนต์" */
+ var all=cnDATA().filter(function(x){return x.post_date_src!=='list';});
  var whoList=[]; all.forEach(function(x){if(x.who&&whoList.indexOf(x.who)<0)whoList.push(x.who);}); (CN_TEAM||[]).forEach(function(n){if(whoList.indexOf(n)<0)whoList.push(n);});
  var f=_cnBoardF;
  var data=all.filter(function(x){ if(f.dept&&x.dept!==f.dept)return false; if(f.who&&x.who!==f.who)return false; if(f.month&&x.post_month!==f.month)return false; if(f.q&&String(x.title||'').toLowerCase().indexOf(f.q.toLowerCase())<0)return false; return true; });
