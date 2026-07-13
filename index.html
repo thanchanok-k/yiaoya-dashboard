@@ -481,6 +481,8 @@ tbody tr{transition:background .15s}tbody tr:hover{background:#FAFBFC}
       <div class="card"><div id="payments"></div></div>
     </section>
     <section class="view" data-view="appointments">
+      <div class="sec"><span class="sec-bar"></span>โปรโมชั่นที่ขึ้นเว็บแล้ว<span class="sec-c">ดึงสดจาก web.v_promotions · หน้าร้านใช้อ้างอิงเวลาปิดการขาย</span></div>
+      <div class="card"><div id="foPromoLive">กำลังโหลด…</div></div>
       <div class="sec"><span class="sec-bar"></span>นัดหมาย (Appointments)</div>
       <div class="card"><div id="appointments"></div></div>
     </section>
@@ -5078,6 +5080,23 @@ function fbInit(){
 }
 
 $('logout').onclick=async()=>{localStorage.removeItem('yy_line_id');LINE_ID=null;await sb.auth.signOut();location.reload();};
+/* FO: โปรโมชั่นที่ขึ้นเว็บแล้ว (อ่านสดจาก edge fn promotions → web.v_promotions) */
+(function mountFoPromo(){
+  var el=document.getElementById('foPromoLive'); if(!el) return;
+  var e=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
+  var baht=function(n){ return '฿'+(Number(n)||0).toLocaleString('th-TH'); };
+  fetch('https://iyldrlzhftylewstfmsg.supabase.co/functions/v1/promotions').then(function(r){return r.json();}).then(function(res){
+    var p=(res&&res.promos)||[];
+    if(!p.length){ el.innerHTML='<div style="padding:14px;color:#64748B;font-size:13px">ยังไม่มีโปรฯ ขึ้นเว็บ — ทีมมาร์เก็ตติ้งกด <b>อนุมัติ + web_publish</b> ในหน้า “ออกแบบโปรโมชั่น” แล้วจะขึ้นที่นี่และบนเว็บอัตโนมัติ</div>'; return; }
+    el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="text-align:left;color:#64748B">'
+      +'<th style="padding:8px 10px">โปรฯ</th><th style="padding:8px 10px">แผนก</th><th style="padding:8px 10px">ราคา</th><th style="padding:8px 10px">ถึงวันที่</th></tr></thead><tbody>'
+      +p.map(function(x){ return '<tr style="border-top:1px solid #eef2f0"><td style="padding:8px 10px"><b>'+e(x.name)+'</b>'+(x.web_blurb?'<div style="color:#94a3b8;font-size:12px">'+e(x.web_blurb)+'</div>':'')+'</td>'
+        +'<td style="padding:8px 10px">'+e(x.dept)+'</td><td style="padding:8px 10px;font-weight:700;color:#047857">'+baht(x.price)+'</td>'
+        +'<td style="padding:8px 10px">'+(x.valid_until?e(x.valid_until):'—')+'</td></tr>'; }).join('')
+      +'</tbody></table>';
+  }).catch(function(){ el.innerHTML='<div style="padding:14px;color:#B91C1C;font-size:13px">โหลดโปรฯ ไม่สำเร็จ</div>'; });
+})();
+
 /* LINE-login-first: เปิด LINE_FIRST=true เมื่อเสียบ LIFF ID + ตั้ง LINE_CHANNEL_ID_PUR แล้ว
    → ทั้งระบบ (HR/บัญชี/จัดซื้อ) บังคับเข้าผ่าน LINE ก่อน · email/OTP เหลือไว้สำหรับแอดมิน (?admin=1) */
 const LINE_FIRST=true;
