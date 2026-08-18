@@ -11,6 +11,7 @@
 .pt.confirmed{border-left-color:#3B82F6}
 .pt.done{border-left-color:var(--teal)}
 .pt.declined{border-left-color:var(--border);opacity:.62}
+.pt.already{border-left-color:var(--faint)}
 .pt .nm{font-size:17px;font-weight:700;color:var(--navy);line-height:1.35}
 .pt .nm .hn{font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap}
 .pt .sub{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:8px}
@@ -23,6 +24,7 @@
 .st.confirmed{background:#DBEAFE;color:#1e40af}
 .st.done{background:var(--ltl);color:var(--teal-dk)}
 .st.declined{background:#F1F5F9;color:var(--faint)}
+.st.already{background:#F1F5F9;color:var(--muted)}
 .hd{display:flex;align-items:flex-start;gap:8px}
 .acts{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
 .acts button{width:auto;flex:1;min-width:118px;margin-top:0;padding:11px 12px;font-size:13.5px}
@@ -59,7 +61,8 @@ let busy = false;
 
 // invited = ส่งชื่อให้ PT แล้ว แต่ยังไม่รู้ว่าคนไข้ตอบอะไร — เคาน์เตอร์ต้องถามต่อ
 const ST_LABEL = { new:'ยังไม่ชวน', invited:'รอถามผล', accepted:'ตกลง รอรีวิว',
-                   confirmed:'รีวิวแล้ว รอให้ของ', done:'จบแล้ว', declined:'ไม่สนใจ' };
+                   confirmed:'รีวิวแล้ว รอให้ของ', done:'จบแล้ว',
+                   declined:'ไม่สนใจ', already:'เคยรีวิวแล้ว' };
 const RW_LABEL = { massage15:'นวดคอบ่าไหล่ 15 นาที', discount100:'ส่วนลด 100 บาท' };
 
 const fdate = (d) => { if(!d) return ''; const x=new Date(d); return isNaN(x)?esc(d)
@@ -101,9 +104,12 @@ function card(r){
   } else if (r.status === 'new' || r.status === 'invited') {
     acts = '<button data-a="confirm" data-hn="'+esc(r.hn)+'">รีวิวแล้ว</button>'
          + '<button class="ghost" data-a="accept"  data-hn="'+esc(r.hn)+'">ตกลง จะไปรีวิว</button>'
+         // เคยรีวิวให้นานแล้วก่อนมีโปรแกรม → ปิดเคส ไม่ให้ของ (เจ้าของเคาะ 19 ส.ค. 69)
+         + '<button class="ghost" data-a="already" data-hn="'+esc(r.hn)+'">เคยรีวิวแล้ว</button>'
          + '<button class="ghost sm" data-a="decline" data-hn="'+esc(r.hn)+'">ไม่สนใจ</button>';
   } else if (r.status === 'accepted') {
     acts = '<button data-a="confirm" data-hn="'+esc(r.hn)+'">รีวิวแล้ว</button>'
+         + '<button class="ghost" data-a="already" data-hn="'+esc(r.hn)+'">เคยรีวิวแล้ว</button>'
          + '<button class="ghost sm" data-a="decline" data-hn="'+esc(r.hn)+'">ไม่สนใจ</button>';
   } else if (r.status === 'confirmed') {
     extra += '<div class="pick"><div class="q">คนไข้เลือกอะไร</div><div class="acts">'
