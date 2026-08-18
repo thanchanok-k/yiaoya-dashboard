@@ -1,0 +1,452 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ใบสรุปผลตรวจโครงสร้างร่างกาย · เยียวยา</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══ ใบสรุปให้คนไข้ถือกลับบ้าน — A4 ═══
+   ★ ใบนี้ "ลูกค้าเห็น" → ใช้อัตลักษณ์ เยียวยา (forest green + Noto Sans Thai 300 airy)
+     ไม่ใช่สี Altmedical corporate ที่ใช้กับหลังบ้าน (กติกาใน brand guide)
+     tokens จาก yiaoya-website/DESIGN-SYSTEM-FINAL.md (เว็บลูกค้าจริง)
+   ★ เขียนให้ "คนไข้อ่านเอง" ไม่ใช่ใบแล็บ — คำก่อนตัวเลข · ระดับเป็นแถบ 3 ขั้น · ตัวเลขจริงตัวเล็กท้ายบรรทัด
+   ★ ห้ามใส่ราคา (price-visibility-rule) · ห้าม emoji (no-emoji-line-art-only) */
+:root{
+  --forest-deep:#2D5016; --forest:#3A6B1E; --green:#4A8C2A; --forest-darkest:#1A3A0D;
+  --ink:#1A1A1A; --soft:#5A6B57; --line:#DFE5DC; --paper:#FAFAFA; --wash:#F2F6EF;
+  --mild:#4A8C2A; --mod:#C77B23; --sev:#B4442E;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#E9EDE6;color:var(--ink);
+  font-family:'Noto Sans Thai',Inter,-apple-system,sans-serif;font-weight:400;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+/* แถบเครื่องมือ — ไม่ติดไปกับกระดาษ */
+.bar{position:sticky;top:0;z-index:5;background:var(--forest-deep);color:#fff;padding:11px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bar b{font-size:14px;font-weight:600}
+.bar .sp{margin-left:auto;display:flex;gap:8px}
+.bar button{font:inherit;font-size:13px;font-weight:600;padding:9px 20px;border-radius:50px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,#4A8C2A,#3A6B1F);color:#fff}
+.bar button.gh{background:transparent;color:#CFE3C2;border:1px solid #4E7238;border-radius:8px}
+.note{background:#FFF6E5;color:#8A5A12;font-size:13px;padding:10px 16px;line-height:1.55}
+
+/* ── กระดาษ ── */
+.page{width:210mm;margin:16px auto;background:#fff;padding:13mm 14mm 11mm;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.page + .page{margin-top:0}
+
+/* หัวจดหมาย */
+.lh{display:flex;align-items:center;gap:13px;padding-bottom:11px;border-bottom:2px solid var(--forest-deep)}
+.lh img{width:52px;height:52px;object-fit:contain;flex:none}
+.lh .bd{flex:1}
+.lh .nm{font-size:17px;font-weight:600;color:var(--forest-deep);line-height:1.25}
+.lh .en{font-size:10px;color:var(--soft);letter-spacing:1.6px;text-transform:uppercase;margin-top:2px}
+.lh .rt{text-align:right;font-size:10.5px;color:var(--soft);line-height:1.6;white-space:nowrap}
+.lh .rt b{display:block;font-size:12px;font-weight:600;color:var(--forest-deep)}
+
+.title{margin:13px 0 3px;font-size:25px;font-weight:300;color:var(--forest-deep);line-height:1.2}
+.title b{font-weight:600}
+.lead{font-size:12px;color:var(--soft);line-height:1.6;max-width:150mm}
+
+.who{display:flex;gap:0;background:var(--wash);border-radius:16px;margin-top:13px;overflow:hidden}
+.who div{flex:1;padding:9px 14px;border-right:1px solid #E2EADC}
+.who div:last-child{border-right:none}
+.who .k{font-size:9.5px;color:var(--soft);letter-spacing:.4px}
+.who .v{font-size:13px;font-weight:600;color:var(--forest-deep);margin-top:2px}
+
+h2{font-size:15px;font-weight:600;color:var(--forest-deep);margin:19px 0 4px;page-break-after:avoid;
+   display:flex;align-items:baseline;gap:9px}
+h2 em{font-style:normal;font-size:11px;font-weight:400;color:var(--soft)}
+.sub{font-size:11.5px;color:var(--soft);line-height:1.6;margin-bottom:9px}
+section{page-break-inside:avoid;margin-bottom:4px}
+
+/* 1 · คะแนนรวม 3 ชุด */
+.sc{display:flex;gap:10px}
+.sc .b{flex:1;background:var(--wash);border-radius:16px;padding:11px 13px}
+.sc .b .l{font-size:12px;font-weight:600;color:var(--forest-deep)}
+.sc .b .d{font-size:10.5px;color:var(--soft);line-height:1.5;margin-top:1px;min-height:31px}
+.sc .b .n{font-size:33px;font-weight:300;color:var(--forest-deep);line-height:1.1;margin-top:5px}
+.sc .b .n small{font-size:12px;color:var(--soft)}
+.sc .b .n.na{font-size:12px;font-weight:400;color:var(--soft);padding:11px 0 3px}
+.sc .b .g{font-size:11px;font-weight:600;margin-top:1px}
+.scale{display:flex;gap:5px;margin-top:9px;font-size:10px;color:var(--soft);align-items:center}
+.scale span{display:inline-flex;align-items:center;gap:4px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* 2 · แผนภาพร่างกาย */
+.bmap{display:flex;gap:16px;align-items:flex-start;background:var(--wash);border-radius:20px;padding:13px 16px}
+.figs{display:flex;gap:10px;flex:none}
+.fg{text-align:center}
+.fg svg{height:112mm;max-height:250px;width:auto;display:block}
+.fg .cap{font-size:10px;color:var(--soft);margin-top:3px}
+.ln{fill:none;stroke:#B9C8B0;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.mk circle{stroke:#fff;stroke-width:1.6}
+.mk text{fill:#fff;font-size:11px;font-weight:700;text-anchor:middle;font-family:'Noto Sans Thai',sans-serif}
+.mk.M2 circle{fill:var(--mod)} .mk.M3 circle{fill:var(--sev)}
+.lgs{flex:1;padding-top:2px}
+.lg{display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid #E4EBDF;font-size:12px;line-height:1.5}
+.lg:last-of-type{border-bottom:none}
+.lg .no{width:19px;height:19px;border-radius:50%;color:#fff;font-size:10.5px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;flex:none;transform:translateY(3px)}
+.lg .no.M2{background:var(--mod)} .lg .no.M3{background:var(--sev)}
+.lg b{font-weight:600;color:var(--forest-deep);white-space:nowrap}
+.lg .tx{color:#3E4B3B}
+.lgnote{font-size:10.5px;color:var(--soft);margin-top:8px}
+/* อธิบาย 3 ข้อแรก — แปลว่าอะไร + มักมาจากอะไร (ของที่เมล Moti มี) */
+.whys{display:flex;gap:9px;margin-top:9px}
+.whys .w{flex:1;border:1px solid var(--line);border-radius:14px;padding:8px 12px;font-size:11px;line-height:1.55}
+.whys .w b{display:block;font-size:11.5px;font-weight:600;color:var(--forest-deep);margin-bottom:2px}
+.whys .w .m{display:block;color:#3E4B3B}
+.whys .w .f{display:block;color:var(--soft);margin-top:3px}
+
+/* รายละเอียดผลตรวจทั้งหมด — 2 คอลัมน์ */
+.cols{column-count:2;column-gap:13px}
+.set{margin:0 0 9px;page-break-inside:avoid;break-inside:avoid}
+.set .sh{font-size:11.5px;font-weight:600;color:#fff;background:var(--forest);border-radius:11px 11px 0 0;padding:4px 12px}
+.set .bx{border:1px solid var(--line);border-top:none;border-radius:0 0 11px 11px}
+.it{display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid #EFF3EC}
+.it:last-child{border-bottom:none}
+.it .nm{flex:1;font-size:11px;line-height:1.4}
+.it .mt{display:flex;gap:2px;flex:none}
+.it .mt i{width:13px;height:6px;border-radius:3px;background:#E7ECE4;display:block}
+.it .vl{width:44px;text-align:right;font-size:10px;color:var(--soft);flex:none;font-variant-numeric:tabular-nums}
+.L1{color:var(--mild)} .L2{color:var(--mod)} .L3{color:var(--sev)}
+.B1{background:var(--mild)} .B2{background:var(--mod)} .B3{background:var(--sev)}
+
+/* 3 · ข้อควรระวัง */
+.care{display:flex;gap:10px}
+.care .c{flex:1;border-radius:16px;padding:10px 14px}
+.care .c.stop{background:#FBEDEA;border:1px solid #EBC9C1}
+.care .c.watch{background:#FDF5E7;border:1px solid #EEDCBC}
+.care .c .h{font-size:11.5px;font-weight:600;margin-bottom:4px}
+.care .c.stop .h{color:#8E3423} .care .c.watch .h{color:#8A5A12}
+.care .c .l{font-size:12.5px;line-height:1.75}
+.okbox{background:var(--wash);border-radius:16px;padding:11px 14px;font-size:12.5px;color:var(--forest-deep)}
+
+/* 4 · การบ้าน */
+.hw{border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.hw .r{display:flex;gap:12px;padding:8px 14px;border-bottom:1px solid #EFF3EC;align-items:flex-start}
+.hw .r:last-child{border-bottom:none}
+.hw .r .n{width:19px;height:19px;border-radius:50%;background:var(--wash);color:var(--forest-deep);
+  font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+.hw .r .im{width:60px;height:44px;object-fit:cover;border-radius:9px;flex:none;background:var(--wash)}
+.hw .r .k{font-size:12.5px;font-weight:600;color:var(--forest-deep);min-width:116px}
+.hw .r .t{font-size:12px;color:#33402F;line-height:1.6;flex:1}
+
+/* 5 · โปรแกรม */
+.pg{background:var(--wash);border-radius:16px;padding:10px 15px;margin-bottom:7px}
+.pg .t{font-size:13px;font-weight:600;color:var(--forest-deep)}
+.pg .w{font-size:12px;color:#33402F;line-height:1.65;margin-top:2px}
+.pg .f{font-size:10.5px;color:var(--soft);margin-top:3px}
+
+/* 6 · ก้าวถัดไป */
+.nx{display:flex;gap:10px}
+.nx .b{flex:1;border:1px solid var(--line);border-radius:16px;padding:10px 14px}
+.nx .b .k{font-size:10px;color:var(--soft)}
+.nx .b .v{font-size:12.5px;font-weight:600;color:var(--forest-deep);margin-top:2px;line-height:1.5}
+
+.foot{margin-top:15px;border-top:1px solid var(--line);padding-top:9px}
+.foot .dis{font-size:10.5px;color:var(--soft);line-height:1.7}
+.foot .id{display:flex;align-items:center;gap:9px;margin-top:9px;font-size:10.5px;color:var(--soft)}
+.foot .id img{width:26px;height:26px;object-fit:contain;flex:none}
+.foot .id b{color:var(--forest-deep);font-weight:600}
+.foot .id .sp{margin-left:auto;text-align:right;line-height:1.5}
+.empty,.loading{padding:56px 18px;text-align:center;color:var(--soft);font-size:14px;line-height:1.7}
+
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  .bar,.note{display:none !important}
+  .page{width:auto;margin:0;padding:12mm 13mm;box-shadow:none}
+  .page.p2{page-break-before:always}
+}
+@media(max-width:820px){ .page{width:auto;margin:0;padding:16px} .sc,.nx,.care{flex-wrap:wrap} }
+</style></head>
+<body>
+<div class="bar" id="bar" style="display:none">
+  <b>ใบสรุปให้คนไข้</b>
+  <div class="sp">
+    <button class="gh" id="back">กลับหน้าคนไข้</button>
+    <button id="print">พิมพ์ใบ</button>
+  </div>
+</div>
+<div id="note"></div>
+<div id="body"><div class="loading">กำลังโหลด…</div></div>
+<div id="block" style="display:none"></div>
+
+<script type="module">
+import { $, api, requireSession, esc } from './m-shared.js';
+
+const qs   = new URLSearchParams(location.search);
+const HN   = (qs.get('hn')   || '').trim();
+const APPT = (qs.get('appt') || '').trim();
+const DATE = (qs.get('date') || '').trim();
+
+const LOGO = 'img/logo-yiaoya.png';
+/* คำอธิบายแต่ละชุด — เขียนแบบคนไข้อ่านเอง ไม่ใช่ศัพท์เครื่อง */
+const SET = {
+  posture: { th:'ยืนนิ่ง', d:'ดูว่าร่างกายสองข้างสมดุลแค่ไหน ตอนยืนเฉย ๆ' },
+  core:    { th:'ย่อตัว',  d:'ดูว่าคุมลำตัวและเข่าได้ดีแค่ไหน ตอนเคลื่อนไหว' },
+  balance: { th:'ทรงตัว',  d:'ดูการลงน้ำหนักและการทรงตัว ตอนยืนขาเดียว' },
+};
+const LV = { MILD:{n:1,th:'เล็กน้อย'}, MODERATE:{n:2,th:'ปานกลาง'}, SEVERE:{n:3,th:'ควรดูแล'} };
+const TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function thDate(iso){ const [y,m,d] = String(iso||'').split('-').map(Number);
+  return (!y||!m||!d) ? esc(iso||'') : d+' '+TH_M[m-1]+' '+String(y+543).slice(-2); }
+const UNIT = { deg:'°', mm:' มม.', sec:' วิ' };
+const fval = (it) => (it.value==null || it.value==='') ? '' : esc(it.value) + (UNIT[it.unit] || '');
+
+/* หัวจดหมาย — ใช้ทั้ง 2 หน้า ให้ใบดูเป็นชุดเดียวกัน */
+function letterhead(D, page){
+  return '<div class="lh"><img src="'+LOGO+'" alt="เยียวยา">'
+    + '<div class="bd"><div class="nm">เยียวยา สหคลินิก</div>'
+    + '<div class="en">Yiaoya Clinic</div></div>'
+    + '<div class="rt"><b>'+thDate(D.date)+'</b>'
+    + (D.round==='baseline' ? 'ตรวจครั้งแรกของคอร์ส' : 'ตรวจเพื่อเทียบผล')
+    + (page ? '<br>หน้า '+page+' จาก 2' : '') + '</div></div>';
+}
+
+/* ── 1 · คะแนนรวม ── */
+function scoreBlock(S){
+  const box = (k) => {
+    const s = S[k] || {}, lv = LV[s.level];
+    const n = (s.index==null)
+      ? '<div class="n na">ยังไม่มีผลจากเครื่อง</div>'
+      : '<div class="n">'+esc(s.index)+'<small> / 100</small></div>';
+    const g = lv ? '<div class="g L'+lv.n+'">'+lv.th+'</div>' : '';
+    return '<div class="b"><div class="l">'+SET[k].th+'</div><div class="d">'+SET[k].d+'</div>'+n+g+'</div>';
+  };
+  return '<section><h2>คะแนนความสมดุล <em>ยิ่งน้อยยิ่งสมดุล</em></h2>'
+    + '<div class="sub">คะแนนนี้บอกว่าร่างกายสองข้างต่างกันมากแค่ไหน ไม่ใช่คะแนนสุขภาพรวม '
+    + 'และเปลี่ยนได้ตามการฝึกและการใช้ชีวิต</div>'
+    + '<div class="sc">'+['posture','core','balance'].map(box).join('')+'</div>'
+    + '<div class="scale"><span><i class="dot B1"></i>เล็กน้อย 0–33</span>'
+    + '<span><i class="dot B2"></i>ปานกลาง 34–66</span>'
+    + '<span><i class="dot B3"></i>ควรดูแล 67–100</span></div></section>';
+}
+
+/* ══════════ 2 · แผนภาพร่างกาย — "ข้อนี้อยู่ตรงไหนของตัวฉัน" ══════════
+   คนไข้อ่านตัวหนังสือ 19 บรรทัดแล้วแปลเองไม่ได้ว่าอยู่ส่วนไหน → วางจุดลงบนรูปคนแทน
+   ★ รูปเป็น line art วาดด้วย SVG ในไฟล์นี้เอง (ไม่มีไฟล์แนบ ไม่มี emoji · พิมพ์ขาวดำได้)
+   ★ พิกัดเป็นเรื่อง "ตำแหน่งบนรูป" ไม่ใช่เนื้อหาทางคลินิก จึงเก็บในหน้าเว็บได้
+     แต่ "รายการไหนอยู่บริเวณไหน" มาจาก item_key ของทะเบียน (093) — เพิ่มรายการใหม่แล้วไม่ขึ้นรูป = เติมที่นี่ */
+const ZONE = {   // บริเวณบนรูป: [view, x, y, ชื่อบริเวณ]   f = มองด้านหน้า · s = มองด้านข้าง
+  'f.shoulder':['f', 60,  52, 'ไหล่'],      'f.spine':  ['f', 60,  92, 'กลางหลัง'],
+  'f.pelvis':  ['f', 60, 132, 'เชิงกราน'],  'f.knee_r': ['f', 45, 190, 'เข่าขวา'],
+  'f.knee_l':  ['f', 75, 190, 'เข่าซ้าย'],  'f.foot':   ['f', 60, 238, 'เท้า/การทรงตัว'],
+  's.head':    ['s', 46,  22, 'ศีรษะ–คอ'],  's.upper':  ['s', 38,  74, 'หลังส่วนบน'],
+  's.low':     ['s', 38, 118, 'หลังส่วนล่าง'], 's.pelvis':['s', 48, 132, 'เชิงกราน (ด้านข้าง)'],
+  's.knee':    ['s', 45, 192, 'เข่า (ด้านข้าง)'],
+};
+const ITEM_ZONE = {   // รายการจากเครื่อง → บริเวณบนรูป (หนึ่งรายการอยู่ได้หลายจุด เช่น เข่าสองข้าง)
+  head_posture:['s.head'], round_shoulder:['f.shoulder'], arms_lowered:['f.shoulder'],
+  spine_scoliosis:['f.spine'], upper_body_leaning:['s.upper'], excessive_back_curvature:['s.low'],
+  post_pelvic_tilt:['s.pelvis'], pelvis_axial_rotation:['f.pelvis'],
+  hka_angle_rt:['f.knee_r'], hka_angle_lt:['f.knee_l'], back_knee:['s.knee'],
+  lateral_knee_asymmetry:['f.knee_r','f.knee_l'], front_knee_asymmetry:['f.knee_r','f.knee_l'],
+  lt_stance_ap:['f.foot'], lt_stance_ml:['f.foot'], lt_hold_time:['f.foot'],
+  rt_stance_ap:['f.foot'], rt_stance_ml:['f.foot'], rt_hold_time:['f.foot'],
+};
+const FIG_F = '<circle cx="60" cy="22" r="14"/><path d="M60 36v9"/>'
+  + '<path d="M34 51q26-8 52 0"/><path d="M34 51l-9 60-2 30M86 51l9 60 2 30"/>'
+  + '<path d="M37 53l2 59M83 53l-2 59"/><path d="M39 112l-3 21q24 8 48 0l-3-21"/>'
+  + '<path d="M45 138l-2 52-1 42M75 138l2 52 1 42"/><path d="M42 232h-9M78 232h9"/>';
+const FIG_S = '<circle cx="46" cy="22" r="14"/><path d="M44 36l-2 10"/>'
+  + '<path d="M42 46q-9 44-2 84"/><path d="M57 49q4 42-2 79"/>'
+  + '<path d="M51 54l2 52-3 26"/><path d="M40 130l15-2"/>'
+  + '<path d="M47 132l-2 58 2 42"/><path d="M47 232h16"/>';
+
+function bodyMap(S){
+  // รวมทุกรายการจาก 3 ชุด แล้วเก็บเฉพาะที่ "ปานกลางขึ้นไป" — ไม่งั้นรูปเต็มไปด้วยจุดจนอ่านไม่ออก
+  const all = ['posture','core','balance'].flatMap(k => (S[k]?.items)||[]);
+  const flagged = all.filter(it => (LV[it.level]?.n || 0) >= 2);
+  if (!flagged.length) return '';
+
+  const zone = {};   // บริเวณ → {ระดับสูงสุด, รายการ[]}
+  flagged.forEach(it => (ITEM_ZONE[it.key] || []).forEach(z => {
+    const n = LV[it.level].n;
+    if (!zone[z]) zone[z] = { n, items: [] };
+    zone[z].n = Math.max(zone[z].n, n);
+    const nm = it.name_th || it.name_en || it.key;
+    if (!zone[z].items.includes(nm)) zone[z].items.push(nm);
+  }));
+  const keys = Object.keys(zone).sort((a,b) => zone[b].n - zone[a].n);
+  if (!keys.length) return '';
+  keys.forEach((z, i) => { zone[z].no = i + 1; });
+
+  const marks = (view) => keys.filter(z => ZONE[z][0] === view).map(z => {
+    const [, x, y] = ZONE[z], d = zone[z];
+    return '<g class="mk M'+d.n+'"><circle cx="'+x+'" cy="'+y+'" r="9"/>'
+      + '<text x="'+x+'" y="'+(y+3.6)+'">'+d.no+'</text></g>';
+  }).join('');
+  const fig = (view, path, w, label) =>
+    '<div class="fg"><svg viewBox="0 0 '+w+' 250" role="img" aria-label="'+label+'">'
+    + '<g class="ln">'+path+'</g>'+marks(view)+'</svg><div class="cap">'+label+'</div></div>';
+
+  const legend = keys.map(z => '<div class="lg"><span class="no M'+zone[z].n+'">'+zone[z].no+'</span>'
+    + '<b>'+esc(ZONE[z][3])+'</b><span class="tx">'+esc(zone[z].items.join(' · '))+'</span></div>').join('');
+
+  // ── อธิบาย 3 ข้อแรก: "แปลว่าอะไร" + "มักมาจากอะไร" (ของที่เมล Moti มี) ──
+  //   จำกัด 3 ข้อ เพราะพิมพ์ครบ 19 ข้อแล้วใบกลายเป็นกำแพงตัวหนังสือ
+  const top = flagged.slice(0, 3).filter(it => it.means_th || (it.factors||[]).length);
+  const why = top.length ? '<div class="whys">' + top.map(it =>
+      '<div class="w"><b>'+esc(it.name_th || it.name_en || it.key)+'</b>'
+      + (it.means_th ? '<span class="m">'+esc(it.means_th)+'</span>' : '')
+      + ((it.factors||[]).length ? '<span class="f">มักมาจาก: '+esc(it.factors.join(' · '))+'</span>' : '')
+      + '</div>').join('') + '</div>' : '';
+
+  return '<section><h2>จุดที่เราเห็นบนร่างกายคุณ <em>เฉพาะข้อที่ควรดูแลก่อน</em></h2>'
+    + '<div class="sub">ตัวเลขบนรูปตรงกับรายการด้านขวา — ส่วนที่ไม่มีตัวเลขคือส่วนที่อยู่ในเกณฑ์ดีอยู่แล้ว</div>'
+    + '<div class="bmap"><div class="figs">'+fig('f', FIG_F, 120, 'มองด้านหน้า')+fig('s', FIG_S, 90, 'มองด้านข้าง')+'</div>'
+    + '<div class="lgs">'+legend
+    + '<div class="lgnote">สีของตัวเลข: <span class="L2">ปานกลาง</span> · <span class="L3">ควรดูแล</span></div>'
+    + '</div></div>' + why + '</section>';
+}
+
+/* ── รายการที่ตรวจทั้งหมด — ทุกรายการ (ใบจริง 1 ครั้ง = 19 รายการ) จัด 2 คอลัมน์ให้กระชับ ── */
+function itemsBlock(S){
+  const set = (k) => {
+    const items = (S[k] && S[k].items) || [];
+    if (!items.length) return '';
+    const rows = items.map(it => {
+      const lv = LV[it.level] || {n:0, th:''};
+      const meter = [1,2,3].map(i => '<i'+(i<=lv.n ? ' class="B'+lv.n+'"' : '')+'></i>').join('');
+      return '<div class="it"><div class="nm">'+esc(it.name_th || it.name_en || it.key)+'</div>'
+        + '<div class="mt">'+meter+'</div>'
+        + '<div class="vl">'+fval(it)+'</div></div>';
+    }).join('');
+    return '<div class="set"><div class="sh">'+SET[k].th+'</div><div class="bx">'+rows+'</div></div>';
+  };
+  const body = ['posture','core','balance'].map(set).join('');
+  if (!body) return '';
+  return '<section style="page-break-inside:auto"><h2>รายละเอียดผลตรวจทั้งหมด</h2>'
+    + '<div class="sub">แต่ละข้อคือ “ความต่างของสองข้าง” ที่เครื่องวัดได้ ยังไม่ใช่การวินิจฉัยโรค · '
+    + 'แถบยิ่งยาว = ยิ่งต่างจากแนวสมดุลมาก</div>'
+    + '<div class="cols">'+body+'</div></section>';
+}
+
+/* ── 3 · ข้อควรระวังในคลาส ── */
+function careBlock(C){
+  const stop = (C.stop||[]), watch = (C.watch||[]);
+  if (!stop.length && !watch.length) {
+    if (!C.none) return '';
+    return '<section><h2>สิ่งที่ต้องระวังในคลาส</h2>'
+      + '<div class="okbox">รอบนี้ไม่มีท่าที่ต้องเลี่ยงเป็นพิเศษ ฝึกได้ตามปกติ</div></section>';
+  }
+  const li = (a) => a.map(x=>'· '+esc(x.label||x.key)).join('<br>');
+  return '<section><h2>สิ่งที่ต้องระวังในคลาส</h2>'
+    + '<div class="sub">ครูผู้สอนได้รับข้อมูลชุดนี้แล้ว จะปรับท่าให้เองในคลาส</div>'
+    + '<div class="care">'
+    + (stop.length  ? '<div class="c stop"><div class="h">งดไว้ก่อนในรอบนี้</div><div class="l">'+li(stop)+'</div></div>' : '')
+    + (watch.length ? '<div class="c watch"><div class="h">ทำได้ แต่ต้องปรับท่า</div><div class="l">'+li(watch)+'</div></div>' : '')
+    + '</div></section>';
+}
+
+/* ── 4 · ทำเองได้ที่บ้าน ── */
+function homeBlock(H){
+  if (!H || !H.length) return '';
+  // รูปท่า = รูปถ่ายครูจริง (fo.pilates_caution.image_url — migration 095) · ยังไม่มีรูปก็พิมพ์ได้ตามปกติ
+  const rows = H.map((h, i) => '<div class="r"><div class="n">'+(i+1)+'</div>'
+    + (h.image ? '<img class="im" src="'+esc(h.image)+'" alt="">' : '')
+    + '<div class="k">'+esc(h.label||h.key)+'</div>'
+    + '<div class="t">'+esc(h.howto || 'ทำตามที่ครูสอนในคลาส')+'</div></div>').join('');
+  return '<section><h2>ทำเองได้ที่บ้าน <em>จำนวนครั้งทำตามที่ครูบอก</em></h2>'
+    + '<div class="hw">'+rows+'</div>'
+    + '<div class="sub" style="margin-top:7px">ทำเท่าที่ไม่เจ็บ — ถ้าทำแล้วปวดมากขึ้น หยุดก่อนแล้วบอกครูหรือนักกายภาพในครั้งถัดไป</div></section>';
+}
+
+/* ── 5 · เยียวยาช่วยต่อได้อย่างไร (ไม่มีราคาในใบ) ── */
+function programBlock(P){
+  if (!P || !P.length) return '';
+  const rows = P.map(p => '<div class="pg"><div class="t">'+esc(p.name_th)+'</div>'
+    + '<div class="w">'+esc(p.why)+'</div>'
+    + (p.found ? '<div class="f">มาจาก: '+esc(p.found)+'</div>' : '') + '</div>').join('');
+  return '<section><h2>เยียวยาช่วยต่อได้อย่างไร</h2>'
+    + '<div class="sub">เลือกมาจากสิ่งที่ตรวจพบในรอบนี้ ไม่ใช่ใบสั่งการรักษา — '
+    + 'สอบถามรายละเอียดและค่าบริการได้ที่เคาน์เตอร์</div>'+rows+'</section>';
+}
+
+/* ── 6 · ก้าวถัดไป ── */
+function nextBlock(D){
+  const nx = D.next_appt;
+  const b = (k, v) => '<div class="b"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';
+  return '<section><h2>ก้าวถัดไป</h2><div class="nx">'
+    + b('นัดครั้งถัดไป', nx ? thDate(nx.date) + (nx.time ? ' เวลา '+esc(nx.time) : '')
+                                + (nx.teacher ? '<br>'+esc(nx.teacher) : '')
+                            : 'ยังไม่ได้นัด — นัดได้ที่เคาน์เตอร์')
+    + b('ตรวจซ้ำอีกครั้ง', esc(D.rescan_hint || 'ก่อนคลาสสุดท้ายของคอร์ส เพื่อเทียบกับผลรอบนี้'))
+    + '</div></section>';
+}
+
+function footBlock(D){
+  return '<div class="foot"><div class="dis">'
+    + 'ใบนี้เป็นผลการ<b>วัดท่าทางและการเคลื่อนไหว</b> ไม่ใช่การวินิจฉัยโรค · '
+    + 'ค่าที่วัดได้อาจต่างกันในแต่ละวันตามสภาพร่างกาย การนอน และกิจกรรมก่อนวัด · '
+    + 'หากมีอาการปวดหรือบาดเจ็บ กรุณาปรึกษาแพทย์หรือนักกายภาพบำบัด'
+    + '</div><div class="id"><img src="'+LOGO+'" alt=""><div><b>เยียวยา สหคลินิก</b><br>'
+    + 'สอบถามเพิ่มเติมได้ที่เคาน์เตอร์ หรือทาง LINE ของคลินิก</div>'
+    + '<div class="sp">ผู้ตรวจ/ผู้สอน: '+esc(D.teacher || '—')+'<br>'
+    + 'ผู้บันทึกผล: '+esc(D.recorded_by_name || '—')+'</div></div></div>';
+}
+
+function render(D){
+  const p = D.patient || {};
+  const twoPage = !!(D.sets && ['posture','core','balance'].some(k => (D.sets[k]?.items||[]).length));
+
+  let h = '<div class="page">' + letterhead(D, twoPage ? 1 : 0);
+  h += '<div class="title">ผลตรวจ<b>โครงสร้างร่างกาย</b></div>'
+     + '<div class="lead">การตรวจด้วยระบบวิเคราะห์ภาพสามมิติ (Moti Physio) '
+     + 'ดูท่าทางการยืน การควบคุมลำตัว และการทรงตัว เพื่อให้เราออกแบบการฝึกให้เหมาะกับร่างกายคุณโดยเฉพาะ</div>';
+
+  h += '<div class="who">'
+     + '<div><div class="k">ชื่อ–นามสกุล</div><div class="v">'+esc(p.full_name || p.name || '—')+'</div></div>'
+     + (p.hn ? '<div><div class="k">รหัสคนไข้</div><div class="v">'+esc(p.hn)+'</div></div>' : '')
+     + '<div><div class="k">ผู้สอนรอบนี้</div><div class="v">'+esc(D.teacher || '—')+'</div></div>'
+     + '<div><div class="k">วันที่ตรวจ</div><div class="v">'+thDate(D.date)+'</div></div>'
+     + '</div>';
+
+  h += bodyMap(D.sets || {});          // ★ รูปมาก่อนตาราง — คนไข้ดูรูปแล้วเข้าใจได้ทันที
+  h += scoreBlock(D.sets || {});
+  if (!D.has_machine) h += '<div class="okbox" style="margin-top:11px">'
+     + 'รอบนี้ยังไม่มีผลจากเครื่อง — ส่วนที่เหลือของใบใช้ได้ตามปกติ '
+     + 'เมื่อผลเข้าระบบแล้ว ขอรับใบฉบับเต็มได้ที่เคาน์เตอร์</div>';
+
+  // หน้า 2 — คำแนะนำที่เอากลับไปใช้ต่อ (แยกหน้าเมื่อมีตารางผลยาว)
+  if (twoPage) h += footBlock(D) + '</div><div class="page p2">' + letterhead(D, 2);
+  h += careBlock(D.cautions || {});
+  h += homeBlock(D.homework);
+  h += programBlock(D.programs);
+  h += nextBlock(D);
+  h += itemsBlock(D.sets || {});       // ตารางผลเต็มไว้ท้ายสุด — คนที่อยากดูตัวเลขทุกข้อค่อยพลิกมาดู
+  h += footBlock(D) + '</div>';
+
+  $('body').innerHTML = h;
+  $('bar').style.display = 'flex';
+  $('print').onclick = () => window.print();
+  $('back').onclick  = () => {
+    const q = new URLSearchParams();
+    if (HN) q.set('hn', HN); if (APPT) q.set('appt', APPT); if (DATE) q.set('date', DATE);
+    location.href = 'm-moti.html?' + q.toString();
+  };
+  if (!D.has_machine) $('note').innerHTML =
+    '<div class="note">ยังไม่มีค่าจากเครื่องของรอบนี้ — ใบจะพิมพ์เฉพาะข้อควรระวัง การบ้าน และก้าวถัดไป</div>';
+}
+
+async function load(){
+  const r = await api('moti_patient', {
+    action: 'handout',
+    hn: HN || undefined, appt: APPT || undefined, date: DATE || undefined,
+  });
+  if (!r || r.ok === false || r.error) {
+    $('body').innerHTML = '<div class="empty">'+esc((r && r.error) || 'เปิดใบสรุปไม่สำเร็จ')+'</div>';
+    return;
+  }
+  render(r);
+}
+
+async function init(){
+  if (!await requireSession()) return;
+  if (!HN && !APPT) { $('body').innerHTML = '<div class="empty">ไม่ได้ระบุคนไข้ — เปิดใบจากหน้าคนไข้</div>'; return; }
+  await load();
+}
+init();
+</script></body></html>

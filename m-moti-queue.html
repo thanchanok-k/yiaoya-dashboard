@@ -1,0 +1,118 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>คิวสแกน Moti วันนี้ · Yiaoya</title>
+<link rel="stylesheet" href="m-shared.css">
+<style>
+/* หน้า A — รายการคิวพิลาทิสของวันนั้น + สถานะสแกนรายคน (สเปก MOTI_WEBAPP_SPEC "หน้า A")
+   ใช้ที่เคาน์เตอร์เป็นหลัก: กดชื่อ → เข้าหน้าคนไข้ · กดปุ่มใบ → เปิดใบพร้อมพิมพ์ */
+.day{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.day .d{flex:1;font-size:15px;font-weight:700;color:var(--navy)}
+.day button{width:auto;margin:0;padding:7px 13px;font-size:12.5px;background:#fff;color:var(--navy);
+  border:1px solid var(--border);border-radius:9px;font-weight:600}
+.sum{display:flex;gap:8px;margin-bottom:12px}
+.sum .b{flex:1;background:#fff;border:1px solid var(--border);border-radius:10px;padding:9px 11px;text-align:center}
+.sum .b .n{font-size:21px;font-weight:800;color:var(--navy);line-height:1.25}
+.sum .b .l{font-size:11px;color:var(--muted)}
+.row{background:#fff;border:1px solid var(--border);border-left:4px solid var(--border);border-radius:12px;
+  padding:11px 13px;margin-bottom:9px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.row.done{border-left-color:var(--teal)}
+.row.wait{border-left-color:#FCD34D}
+.row.off{opacity:.6;border-left-color:#CBD5E1}
+.row .top{display:flex;align-items:baseline;gap:9px}
+.row .tm{font-size:14px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;flex:none}
+.row .nm{flex:1;font-size:15px;font-weight:700;color:var(--navy);line-height:1.3}
+.row .st{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px;flex:none}
+.st.ok{background:#E6F7F5;color:#0F766E}
+.st.no{background:#FEF3C7;color:#92400e}
+.st.cx{background:#FEE2E2;color:#b91c1c}
+.row .sub{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:8px}
+.row .acts{display:flex;gap:8px;margin-top:10px}
+.row .acts a{flex:1;text-align:center;font-size:13px;font-weight:700;padding:9px 0;border-radius:9px;
+  text-decoration:none;border:1px solid var(--border);color:var(--navy);background:#fff}
+.row .acts a.pri{background:var(--teal);border-color:var(--teal);color:#04342C}
+.loading,.empty{text-align:center;color:var(--faint);font-size:13.5px;padding:38px 10px;line-height:1.6}
+.tip{font-size:11.5px;color:var(--faint);line-height:1.55;margin-top:14px}
+</style></head>
+<body>
+<div id="app" style="display:none"><div id="body"><div class="loading">กำลังโหลด…</div></div></div>
+<div id="block" style="display:none"></div>
+<script type="module">
+import { $, api, mountHead, requireSession, esc } from './m-shared.js';
+mountHead('คิวสแกน Moti');
+
+const qs = new URLSearchParams(location.search);
+let DATE = (qs.get('date') || '').trim();
+
+const TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function thDate(iso){ const [y,m,d] = String(iso||'').split('-').map(Number);
+  return (!y||!m||!d) ? esc(iso||'') : d+' '+TH_M[m-1]+' '+String(y+543).slice(-2); }
+const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10); };
+/* ตัวชี้คนไข้: ใช้ HN ถ้ามี ไม่งั้นใช้ uuid ของนัด (คนไข้ที่ยังไม่มี HN ในระบบ) */
+const ref = (r) => r.hn ? 'hn='+encodeURIComponent(r.hn) : 'appt='+encodeURIComponent(r.appt_uuid);
+
+function render(D){
+  const rows = D.rows || [];
+  const live = rows.filter(r => !r.cancelled);
+  const done = live.filter(r => r.scanned).length;
+
+  let h = '<div class="day"><div class="d">'+thDate(D.date)+'</div>'
+    + '<button id="prev">วันก่อน</button><button id="today">วันนี้</button><button id="next">วันถัดไป</button></div>';
+
+  h += '<div class="sum">'
+    + '<div class="b"><div class="n">'+live.length+'</div><div class="l">คิววันนี้</div></div>'
+    + '<div class="b"><div class="n">'+done+'</div><div class="l">สแกนแล้ว</div></div>'
+    + '<div class="b"><div class="n">'+(live.length-done)+'</div><div class="l">ยังไม่สแกน</div></div></div>';
+
+  if (!rows.length) {
+    h += '<div class="empty">ไม่มีคิวพิลาทิสของวันนี้<br><small>คิวมาจากนัดใน JERA — ถ้าเพิ่งจองอาจต้องรอรอบ sync</small></div>';
+  } else {
+    h += rows.map(r => {
+      const cls = r.cancelled ? 'off' : (r.scanned ? 'done' : 'wait');
+      const st  = r.cancelled ? '<span class="st cx">'+esc(r.status||'ยกเลิก')+'</span>'
+                : r.scanned   ? '<span class="st ok">สแกนแล้ว</span>'
+                              : '<span class="st no">ยังไม่สแกน</span>';
+      const sub = [];
+      if (r.teacher) sub.push(esc(r.teacher));
+      if (r.hn) sub.push(esc(r.hn)); else sub.push('ยังไม่มี HN');
+      if (r.scanned_at) sub.push('บันทึก '+esc(new Date(r.scanned_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})));
+      // ★ ปุ่มใบขึ้นเฉพาะคนที่บันทึกผลแล้ว — ใบที่ยังไม่บันทึกจะไม่มีข้อควรระวัง/การบ้านให้พิมพ์
+      const acts = '<div class="acts">'
+        + '<a class="pri" href="m-moti.html?'+ref(r)+'&date='+encodeURIComponent(D.date)+'">'
+        + (r.scanned ? 'ดู/แก้ผล' : 'บันทึกผลสแกน')+'</a>'
+        + (r.scanned ? '<a href="m-moti-sheet.html?'+ref(r)+'&date='+encodeURIComponent(D.date)+'" target="_blank">ใบให้คนไข้</a>' : '')
+        + '</div>';
+      return '<div class="row '+cls+'"><div class="top">'
+        + '<span class="tm">'+esc(r.time||'—')+'</span>'
+        + '<span class="nm">'+esc(r.name)+'</span>'+st+'</div>'
+        + '<div class="sub">'+sub.map(s=>'<span>'+s+'</span>').join('')+'</div>'
+        + acts + '</div>';
+    }).join('');
+  }
+
+  h += '<div class="tip">เคาน์เตอร์: กด <b>ใบให้คนไข้</b> จะเปิดแท็บใหม่พร้อมปุ่มพิมพ์ — ตั้งกระดาษ A4 '
+     + 'และเปิด “พิมพ์ภาพพื้นหลัง” ในกล่องพิมพ์ครั้งแรกครั้งเดียว เบราว์เซอร์จะจำไว้ให้</div>';
+
+  $('body').innerHTML = h;
+  $('prev').onclick  = () => load(shift(D.date, -1));
+  $('next').onclick  = () => load(shift(D.date,  1));
+  $('today').onclick = () => load('');
+}
+
+async function load(date){
+  DATE = date || '';
+  $('body').innerHTML = '<div class="loading">กำลังโหลด…</div>';
+  const r = await api('moti_patient', { action:'queue', date: DATE || undefined });
+  if (!r || r.ok === false || r.error) {
+    $('body').innerHTML = '<div class="warn">'+esc((r && r.error) || 'เปิดคิวไม่สำเร็จ')+'</div>';
+    return;
+  }
+  render(r);
+}
+
+async function init(){
+  if (!await requireSession()) return;
+  await load(DATE);
+}
+init();
+</script></body></html>

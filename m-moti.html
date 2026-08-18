@@ -1,0 +1,402 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>หน้าคนไข้ · Moti · Yiaoya</title>
+<link rel="stylesheet" href="m-shared.css">
+<style>
+/* หนึ่งคนไข้ หนึ่งหน้า — บล็อกไหนไม่เกี่ยวกับวันนี้ ไม่ขึ้น (สเปก MOTI_WEBAPP_SPEC ข้อ "หลักการ") */
+.pt{background:#fff;border-radius:12px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);padding:16px;margin-bottom:11px;border-left:4px solid var(--teal)}
+.pt .nm{font-size:19px;font-weight:700;color:var(--navy);line-height:1.3}
+.pt .sub{font-size:12.5px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:8px}
+.pt .sub b{color:var(--navy);font-weight:600}
+.nudge{margin-top:11px;background:var(--ltl);color:var(--teal-dk);border-radius:9px;padding:9px 12px;font-size:12.5px;line-height:1.5}
+.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;color:var(--navy);margin-bottom:11px}
+.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+.rd{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--navy);color:#9FE1CB;margin-left:auto}
+.mrow{display:flex;gap:8px}
+.mbox{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center}
+.mbox .ml{font-size:11px;color:var(--muted)}
+.mbox .mv{font-size:21px;font-weight:800;color:var(--navy);line-height:1.35}
+.mbox .mv.na{font-size:12.5px;font-weight:600;color:var(--faint);padding:5px 0}
+.mbox .lv{font-size:10.5px;font-weight:700;margin-top:2px}
+.lv.MILD{color:#0F766E}.lv.MODERATE{color:#92400e}.lv.SEVERE{color:#b91c1c}
+.waiting{font-size:12px;color:var(--muted);margin-top:9px;line-height:1.5}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{padding:9px 14px;border:1px solid var(--border);border-radius:99px;font-size:13.5px;cursor:pointer;background:#fff;user-select:none;display:inline-flex;align-items:center;gap:6px}
+.chip .lv{font-size:10.5px;font-weight:800;letter-spacing:.3px}
+.chip.watch{background:#FEF3C7;border-color:#FCD34D;color:#92400e;font-weight:700}
+.chip.stop{background:#FEE2E2;border-color:#FCA5A5;color:#b91c1c;font-weight:700}
+.sub-h{font-size:12.5px;font-weight:700;color:var(--muted);margin:14px 0 8px}
+.lnk{display:inline-block;font-size:12.5px;color:var(--teal-dk);font-weight:700;cursor:pointer;margin-top:10px;border-bottom:1px dashed var(--teal-dk)}
+.guide{margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px 13px}
+.guide .g{padding:9px 0;border-bottom:1px solid var(--border)}
+.guide .g:last-child{border-bottom:none;padding-bottom:0}
+.guide .gk{font-size:13px;font-weight:700;color:var(--navy)}
+.guide .gw{font-size:12px;color:var(--muted);line-height:1.55;margin-top:3px}
+.guide .ga{font-size:11.5px;color:var(--teal-dk);margin-top:4px;line-height:1.5}
+.find{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--border)}
+.find:last-child{border-bottom:none}
+.find .fn{flex:1;font-size:13px;color:var(--navy);font-weight:600;line-height:1.35}
+.find .fs{display:block;font-size:11px;color:var(--faint);font-weight:400;margin-top:2px}
+.find .fv{font-size:15px;font-weight:800;color:var(--navy);white-space:nowrap}
+.find .fl{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.fl.SEVERE{background:#FEE2E2;color:#b91c1c}.fl.MODERATE{background:#FEF3C7;color:#92400e}.fl.MILD{background:#E6F7F5;color:#0F766E}
+.ana{background:var(--ltl);border-radius:10px;padding:12px 14px;margin-bottom:11px}
+.ana .at{font-size:12px;font-weight:800;color:var(--teal-dk);letter-spacing:.3px;margin-bottom:6px}
+.ana .al{font-size:12.5px;color:#0F5C55;line-height:1.6}
+.grp2{border:1px solid var(--border);border-radius:10px;padding:11px 13px;margin-bottom:8px;background:#fff}
+.grp2 .gh{font-size:13.5px;font-weight:700;color:var(--navy)}
+.grp2 .gg{font-size:11.5px;color:var(--teal-dk);margin-top:2px}
+.grp2 .gm{font-size:12.5px;color:var(--text);margin-top:7px;line-height:1.5}
+.grp2 .gw{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.5}
+.draft{display:inline-block;font-size:10.5px;font-weight:700;color:#92400e;background:#FEF3C7;border-radius:99px;padding:2px 8px;margin-left:6px}
+.hint{font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.5}
+.alert{background:#FEF3C7;color:#92400e;border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.55;margin-bottom:11px}
+.alert.dup{background:#FEE2E2;color:#b91c1c}
+.hist{font-size:12.5px;color:var(--muted);line-height:1.6}
+.hist b{color:var(--navy)}
+.done{background:#E6F7F5;color:#0F766E;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.6;white-space:pre-line}
+.loading,.empty{text-align:center;color:var(--faint);font-size:13.5px;padding:38px 10px;line-height:1.6}
+textarea{min-height:74px;resize:vertical}
+</style></head>
+<body>
+<div id="app" style="display:none">
+  <div id="body"><div class="loading">กำลังโหลด…</div></div>
+</div>
+<div id="block" style="display:none"></div>
+<script type="module">
+import { $, api, mountHead, requireSession, esc } from './m-shared.js';
+mountHead('หน้าคนไข้');
+
+const qs = new URLSearchParams(location.search);
+const HN   = (qs.get('hn') || '').trim();
+const APPT = (qs.get('appt') || '').trim();
+const DATE = (qs.get('date') || '').trim();
+
+let D = null;              // ข้อมูลจาก server
+let picked = new Map();    // key → 'watch' (ระวัง) | 'stop' (งด)
+let focusManual = new Set();  // ท่าที่ควรฝึก ที่ PT เพิ่มเอง (นอกเหนือจากที่มาพร้อมข้อควรระวัง)
+let guideOpen = false;     // toggle "ค่าไหนควรเลือกข้อไหน"
+let noteVal = '';          // ข้อความบอกครู — เก็บไว้ข้าม re-render
+
+// แตะวน: ไม่เลือก → ระวัง → งด → ไม่เลือก
+const NEXT = { '': 'watch', watch: 'stop', stop: '' };
+const LV_TH = { watch: 'ระวัง', stop: 'งด' };
+
+const SET_LABEL = { posture:'ยืนนิ่ง', core:'ย่อตัว', balance:'ทรงตัว' };
+
+function fdate(d){ if(!d) return ''; const x=new Date(d); if(isNaN(x)) return esc(d);
+  return x.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}); }
+
+/* ── บล็อก: ค่าที่เครื่องวัด (แสดงอย่างเดียว) ── */
+function machineBlock(sets){
+  const box = (k) => {
+    const s = (sets && sets[k]) || {};
+    const val = (s.index==null) ? '<div class="mv na">รอผลจากเครื่อง</div>'
+                                : '<div class="mv">'+esc(s.index)+'</div>';
+    const lv  = s.level ? '<div class="lv '+esc(s.level)+'">'+esc(s.level)+'</div>' : '';
+    return '<div class="mbox"><div class="ml">'+SET_LABEL[k]+'</div>'+val+lv+'</div>';
+  };
+  const any = sets && ['posture','core','balance'].some(k=>sets[k] && sets[k].index!=null);
+  return '<div class="card"><div class="sec"><span class="num">1</span>ค่าที่เครื่องวัด'
+    + '<span class="rd">Imbalance Index</span></div>'
+    + '<div class="mrow">'+box('posture')+box('core')+box('balance')+'</div>'
+    + (any ? '' : '<div class="waiting">ยังไม่มีค่าจากเครื่อง (อีเมลผลสแกนยังไม่เข้าระบบ) — บันทึกต่อได้เลย ค่าจะเติมให้เองเมื่อผลมาถึง</div>')
+    + '</div>';
+}
+
+/* ── บล็อก: สิ่งที่เครื่องพบรายรายการ (ค่าจริง) — ขึ้นเฉพาะเมื่อมีค่าจากเครื่อง ── */
+function findingBlock(){
+  const f = (D.findings||[]);
+  if(!f.length) return '';
+  const row = x => '<div class="find"><div class="fn">'+esc(x.name)
+    + '<span class="fs">'+esc(x.set_th)+(x.usefulness==='low'?' · ใช้เป็นข้อควรระวัง ไม่ใช่เป้าหมายของคลาส':'')+'</span></div>'
+    + (x.value!=null?'<div class="fv">'+esc(x.value)+esc(x.unit==='deg'?'°':(x.unit?' '+x.unit:''))+'</div>':'')
+    + '<div class="fl '+esc(x.level)+'">'+esc(x.level)+'</div></div>';
+  return '<div class="card"><div class="sec"><span class="num">2</span>สิ่งที่เครื่องพบ</div>'
+    + f.map(row).join('')
+    + '<div class="hint">เรียงตามที่ใช้กับคลาสได้จริงก่อน — รายการโครงสร้าง (แนวขา/กระดูกสันหลังคด) อยู่ท้ายสุด</div></div>';
+}
+
+/* ── บล็อก: ข้อควรระวังในคลาส + บอกครู + ปุ่มบันทึก ── */
+function chip(o){
+  const lv = picked.get(o.key) || '';
+  const tag = lv ? '<span class="lv">'+LV_TH[lv]+'</span>' : '';
+  return '<div class="chip'+(lv?' '+lv:'')+'" data-o="'+esc(o.key)+'">'+esc(o.label)+tag+'</div>';
+}
+/* toggle: เจอค่าแบบไหนถึงเลือกข้อไหน (เนื้อหามาจากทะเบียน ครู/PT แก้ได้) */
+function guideBlock(moves){
+  if(!guideOpen) return '';
+  const rows = moves.filter(o=>o.kind==='movement').map(o =>
+    '<div class="g"><div class="gk">'+esc(o.label)+(o.is_draft?'<span class="draft">ร่าง</span>':'')+'</div>'
+    + (o.when_text?'<div class="gw">'+esc(o.when_text)+'</div>':'')
+    + ((o.affected&&o.affected.length)?'<div class="ga">ท่าที่กระทบ: '+esc(o.affected.join(' · '))+'</div>':'')
+    + '</div>').join('');
+  return '<div class="guide">'+rows
+    + '<div class="gw" style="margin-top:10px">ข้อที่ติดป้าย "ร่าง" ยังรอครู/PT ยืนยัน — ใช้เป็นตัวช่วยจำ ไม่ใช่คำวินิจฉัย</div></div>';
+}
+/* ท่าที่ควรฝึก = ท่าที่ผูกมากับข้อควรระวังที่เลือก + ที่ PT เพิ่มเอง */
+function focusList(){
+  const opts = (D.caution_options||[]);
+  const byKey = k => opts.find(o=>o.key===k) || {};
+  const out = [];
+  [...picked.keys()].forEach(k => (byKey(k).recommend||[]).forEach(m => { if(!out.includes(m)) out.push(m); }));
+  [...focusManual].forEach(m => { if(!out.includes(m)) out.push(m); });
+  return out;
+}
+/* กล่อง "ระบบเสนอจากค่าเครื่อง" — ขึ้นเฉพาะเมื่อมีค่าจากเครื่องแล้วและยังไม่ได้เลือกอะไร */
+function suggestBlock(){
+  const s = (D.suggested||[]);
+  if(!s.length || picked.size) return '';
+  const items = s.map(x=>'<div class="gw">· <b>'+esc(x.key)+'</b> ('+LV_TH[x.level]+') — จาก '+esc(x.reason)+(x.is_draft?' <span class="draft">เกณฑ์ร่าง</span>':'')+'</div>').join('');
+  return '<div class="guide" style="margin:0 0 11px">'
+    + '<div class="gk">ระบบเสนอจากค่าที่เครื่องวัดได้</div>'+items
+    + '<div class="gw" style="margin-top:8px">เป็นข้อเสนอจากเกณฑ์ที่ตั้งไว้ ไม่ใช่คำวินิจฉัย — ตรวจแล้วกดใช้ หรือเลือกเองก็ได้</div>'
+    + '<span class="lnk" id="usesug">ใช้ตามที่ระบบเสนอ</span></div>';
+}
+/* ── ท่าที่ควรฝึก (ฝั่งบวก) — เติมเองจากข้อที่เลือก + เพิ่มท่าการบ้านได้ ── */
+function focusSection(){
+  const hw = (D.caution_options||[]).filter(o => o.kind==='homework');
+  const auto = focusList();
+  const now = auto.length
+    ? '<div class="chips" style="margin-bottom:6px">'+auto.map(m=>'<div class="chip watch" style="cursor:default">'+esc(m)+'</div>').join('')+'</div>'
+    : '<div class="hint" style="margin:0 0 6px">ยังไม่มี — เลือกข้อควรระวังด้านบน ระบบจะเติมท่าที่ควรฝึกให้เอง หรือเลือกเพิ่มเองได้</div>';
+  const pick = hw.length
+    ? '<div class="chips" id="chips-hw">'+hw.map(o=>'<div class="chip'+(focusManual.has(o.key)?' watch':'')+'" data-f="'+esc(o.key)+'">'+esc(o.label)+'</div>').join('')+'</div>' : '';
+  return '<div class="sub-h">ท่าที่ควรฝึกรอบนี้ (ท่าของครู)</div>' + now
+    + (pick ? '<div class="hint" style="margin:8px 0 6px">เพิ่มท่าการบ้านของครู</div>'+pick : '');
+}
+function formBlock(){
+  const opts = (D.caution_options||[]);
+  const moves = opts.filter(o => o.kind==='movement' || o.kind==='none');
+  const exs   = opts.filter(o => o.kind==='exercise');
+  const note = esc(noteVal);
+  return '<div class="card">'
+    + '<div class="sec"><span class="num">'+((D.findings||[]).length?3:2)+'</span>ข้อควรระวังในคลาส</div>'
+    + suggestBlock()
+    + '<div class="chips" id="chips">'+moves.map(chip).join('')+'</div>'
+    + '<div class="hint">แตะ 1 ครั้ง = <b>ระวัง</b> (ทำได้ แต่ปรับท่า) · แตะซ้ำ = <b>งด</b> (รอบนี้ไม่ทำ) · แตะอีกครั้ง = เอาออก</div>'
+    + '<span class="lnk" id="gtoggle">'+(guideOpen?'ซ่อน':'ดู')+'ว่าค่าไหนควรเลือกข้อไหน</span>'
+    + '<div id="guide">'+guideBlock(opts)+'</div>'
+    + (exs.length ? '<div class="sub-h">ระบุเป็นท่าเลยก็ได้ (ลิสต์ท่าของครู)</div>'
+        + '<div class="chips" id="chips-ex">'+exs.map(chip).join('')+'</div>'
+        + '<div class="hint">ใช้เมื่อต้องเจาะจงกว่ากลุ่มด้านบน เช่น งดเฉพาะ Roll Up</div>' : '')
+    + focusSection()
+    + '<label for="note">บอกครูหนึ่งบรรทัด (ไม่บังคับ)</label>'
+    + '<textarea id="note" maxlength="300" placeholder="เช่น สะโพกขวาสูงกว่า ระวังท่ายืนขาเดียวข้างขวา">'+note+'</textarea>'
+    + '<button id="save">'+(D.scan.today ? 'แก้ไขผลที่บันทึกไว้' : 'บันทึกและส่งให้ครู')+'</button>'
+    + '<div class="msg" id="msg"></div>'
+    + '</div>';
+}
+
+/* ── บล็อก: สรุปให้ครู (ชั้นแปลผล — ประกอบจากทะเบียน ไม่ใช่ข้อความที่ระบบแต่งเอง) ── */
+function localAnalysis(){
+  const opts = (D.caution_options||[]), find = (D.findings||[]);
+  const byKey = k => opts.find(o=>o.key===k) || {};
+  const summary = find.filter(f=>f.usefulness==='high').slice(0,3).map(f =>
+    f.name + (f.value!=null ? ' '+f.value+(f.unit==='deg'?'°':' '+f.unit) : '') + ' ('+f.level+')'
+    + (f.means ? ' — '+f.means : ''));
+  const groups = [...picked].map(([key, level]) => {
+    const o = byKey(key); if(!o || o.kind==='none') return null;
+    const moves = (o.recommend||[]).slice(0,3);
+    if(!moves.length && !o.goal_th) return null;
+    return { caution:key, level, goal:o.goal_th||null, moves,
+      why: find.filter(f=>f.caution_key===key).map(f=>f.for_class).filter(Boolean).slice(0,2) };
+  }).filter(Boolean);
+  const inG = new Set(groups.flatMap(g=>g.moves));
+  return { summary, groups, extra: focusList().filter(m=>!inG.has(m)) };
+}
+function analysisBlock(){
+  const a = localAnalysis();
+  const groups = (a.groups||[]), summary = (a.summary||[]);
+  if(!groups.length && !summary.length) return '';
+  const n = (D.findings||[]).length ? 4 : 3;
+  let h = '<div class="card"><div class="sec"><span class="num">'+n+'</span>สรุปที่ครูจะได้อ่าน</div>';
+  if(summary.length){
+    h += '<div class="ana"><div class="at">สภาพวันนี้</div>'
+       + summary.map(x=>'<div class="al">· '+esc(x)+'</div>').join('') + '</div>';
+  }
+  h += groups.map(g =>
+    '<div class="grp2"><div class="gh">'+(g.level==='stop'?'งด':'ระวัง')+' '+esc(g.caution)+'</div>'
+    + (g.goal?'<div class="gg">เป้า: '+esc(g.goal)+'</div>':'')
+    + (g.moves&&g.moves.length?'<div class="gm">ฝึก: '+esc(g.moves.join(' · '))+'</div>':'')
+    + ((g.why||[]).map(w=>'<div class="gw">'+esc(w)+'</div>').join(''))
+    + '</div>').join('');
+  if((a.extra||[]).length) h += '<div class="hint">ท่าที่ให้เพิ่ม: '+esc(a.extra.join(' · '))+'</div>';
+  h += '<div class="hint">ข้อความนี้จะถูกส่งเข้ากลุ่มครูตอนกดบันทึก — คำอธิบายทั้งหมดแก้ได้ที่ทะเบียน ไม่ใช่ระบบแต่งเอง</div>';
+  return h + '</div>';
+}
+
+/* ── บล็อก: ผลสแกนครั้งก่อน (ขึ้นเฉพาะเมื่อมี) ── */
+function lastBlock(){
+  const l = D.scan.last; if(!l) return '';
+  const idx = ['posture','core','balance']
+    .filter(k=>l.sets[k] && l.sets[k].index!=null)
+    .map(k=>SET_LABEL[k]+' <b>'+esc(l.sets[k].index)+'</b>').join(' · ');
+  const cs = (l.cautions||[]);
+  const stop  = cs.filter(c=>c.level==='stop').map(c=>c.key);
+  const watch = cs.filter(c=>c.level==='watch'&&c.kind!=='none').map(c=>c.key);
+  const av = (stop.length||watch.length)
+    ? (stop.length ? '<div>งด: '+esc(stop.join(' · '))+'</div>' : '')
+      + (watch.length ? '<div>ระวัง: '+esc(watch.join(' · '))+'</div>' : '')
+    : ((l.avoid_moves||[]).length ? '<div>ข้อควรระวัง: '+esc(l.avoid_moves.join(' · '))+'</div>' : '');
+  const nt = l.note_to_teacher ? '<div>โน้ตถึงครู: '+esc(l.note_to_teacher)+'</div>' : '';
+  return '<div class="card"><div class="sec"><span class="num">3</span>สแกนครั้งก่อน</div>'
+    + '<div class="hist"><div>วันที่ <b>'+fdate(l.date)+'</b>'
+    + (l.scan_type==='baseline'?' · รอบตั้งต้น':'')+'</div>'
+    + (idx?'<div>'+idx+'</div>':'<div>ยังไม่มีค่าจากเครื่อง</div>')+av+nt+'</div></div>';
+}
+
+/* ── บล็อก: ใบสรุปให้คนไข้ถือกลับบ้าน (สเปก MOTI_PATIENT_HANDOUT_SPEC ข้อ 3) ──
+   ขึ้นเฉพาะเมื่อ "บันทึกผลแล้ว" ของวันนั้น — ยังไม่บันทึก = ใบยังไม่มีข้อควรระวัง/การบ้านให้พิมพ์ */
+function handoutBlock(){
+  if (!D.scan.today) return '';
+  const noMachine = !['posture','core','balance']
+    .some(k => D.scan.today.sets[k] && D.scan.today.sets[k].index != null);
+  return '<div class="card"><div class="sec"><span class="num">4</span>ใบสรุปให้คนไข้</div>'
+    + '<div class="hint" style="margin:0 0 9px">ใบ A4 หน้าเดียว ให้คนไข้ถือกลับบ้าน — เปิดแล้วกดพิมพ์ได้เลย</div>'
+    + (noMachine ? '<div class="alert" style="margin:0 0 9px">ยังไม่มีค่าจากเครื่อง ใบจะมีแต่ข้อควรระวัง การบ้าน และนัดถัดไป</div>' : '')
+    + '<button id="sheet">เปิดใบสรุปให้คนไข้</button></div>';
+}
+
+function render(){
+  const p = D.patient, f = D.flags;
+  const sub = [];
+  if (p.time) sub.push('<b>'+esc(p.time)+'</b>');
+  if (p.teacher) sub.push(esc(p.teacher));
+  if (p.hn) sub.push(esc(p.hn));
+  if (p.session_no) sub.push('ครั้งที่ '+esc(p.session_no));
+  sub.push(D.scan.round==='baseline' ? '<b>รอบตั้งต้น</b>' : '<b>รอบเทียบ</b>');
+
+  let h = '';
+  h += '<div class="pt"><div class="nm">'+esc(p.name)+'</div>'
+     + '<div class="sub">'+sub.map(s=>'<span>'+s+'</span>').join('')+'</div>'
+     // บรรทัดชวนรีวิว — เบาที่สุด บรรทัดเดียว ไม่มีปุ่ม (ครูมีหน้าที่สอน ไม่ใช่ทำการตลาด)
+     + (p.session_no===1 ? '<div class="nudge">คลาสแรก — สแกนก่อนเล่นเสมอ เพื่อให้รอบหน้าเทียบกันได้</div>' : '')
+     + (f.review_nudge ? '<div class="nudge">วันนี้ครั้งที่ 3 · ถ้าคนไข้พอใจ ฝากชวนรีวิวได้</div>' : '')
+     + '</div>';
+
+  if (p.cancelled) h += '<div class="alert">นัดนี้ขึ้นสถานะ "'+esc(p.status)+'" ในระบบ — เช็คก่อนบันทึก</div>';
+  if (f.late) h += '<div class="alert">เลยเวลานัดแล้ว — ถ้าเล่นไปก่อนสแกน ค่าจะเทียบกับรอบหน้าไม่ได้ (กล้ามเนื้ออุ่นแล้ว)</div>';
+  if (f.same_month_scan && !D.scan.today) h += '<div class="alert dup">มีค่าตั้งต้นอยู่แล้วเมื่อ '+fdate(f.same_month_scan)+' — กดบันทึกแล้วระบบจะถามยืนยันอีกครั้ง</div>';
+  if (!p.registered) h += '<div class="alert">คนไข้รายนี้ยังไม่มี HN ในระบบ — บันทึกได้ แต่ผลจะยังไม่ผูกกับแฟ้มคนไข้</div>';
+
+  h += machineBlock(D.scan.today ? D.scan.today.sets : null);
+  h += findingBlock();
+  h += formBlock();
+  h += analysisBlock();
+  h += handoutBlock();
+  h += lastBlock();
+  $('body').innerHTML = h;
+
+  bindChips();
+  if ($('sheet')) $('sheet').onclick = () => openSheet();
+  $('gtoggle').onclick = () => { guideOpen = !guideOpen; render(); };
+  if ($('usesug')) $('usesug').onclick = () => {
+    (D.suggested||[]).forEach(s => picked.set(s.key, s.level === 'stop' ? 'stop' : 'watch'));
+    render();
+  };
+  document.querySelectorAll('#chips-hw .chip').forEach(c => c.onclick = () => {
+    const k = c.dataset.f;
+    focusManual.has(k) ? focusManual.delete(k) : focusManual.add(k);
+    render();
+  });
+  $('note').oninput = (e) => { noteVal = e.target.value; };
+  $('save').onclick = () => save(false);
+}
+
+/* แตะวน ไม่เลือก → ระวัง → งด · "ไม่มีข้อจำกัด" อยู่ร่วมกับข้ออื่นไม่ได้ */
+function bindChips(){
+  const kindOf = k => ((D.caution_options||[]).find(o=>o.key===k)||{}).kind;
+  const paint = () => document.querySelectorAll('.chip[data-o]').forEach(x => {
+    const lv = picked.get(x.dataset.o) || '';
+    x.className = 'chip' + (lv ? ' ' + lv : '');
+    const label = ((D.caution_options||[]).find(o=>o.key===x.dataset.o)||{}).label || x.dataset.o;
+    x.innerHTML = esc(label) + (lv ? '<span class="lv">'+LV_TH[lv]+'</span>' : '');
+  });
+  document.querySelectorAll('.chip[data-o]').forEach(c => c.onclick = () => {
+    const k = c.dataset.o, cur = picked.get(k) || '', next = NEXT[cur];
+    if (kindOf(k) === 'none') {            // ไม่มีข้อจำกัด = เลือกได้ระดับเดียว และล้างข้ออื่น
+      picked.clear(); if (!cur) picked.set(k, 'watch');
+    } else {
+      (D.caution_options||[]).filter(o=>o.kind==='none').forEach(o=>picked.delete(o.key));
+      next ? picked.set(k, next) : picked.delete(k);
+    }
+    paint();
+  });
+}
+
+async function save(confirmRescan){
+  const btn = $('save'), msg = $('msg');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; msg.textContent = '';
+  const r = await api('moti_patient', {
+    action:'save', hn: D.patient.hn || undefined, appt: D.patient.appt_uuid, date: D.date,
+    cautions: [...picked].map(([key, level]) => ({ key, level })),
+    focus: [...focusManual], note: $('note').value.trim(),
+    scan_type: D.scan.round, confirm_rescan: confirmRescan || undefined,
+  });
+  if (r && r.need_confirm === 'same_month') {
+    btn.disabled = false; btn.textContent = 'บันทึกผลสแกน';
+    if (confirm('มีค่าตั้งต้นอยู่แล้วเมื่อ ' + fdate(r.last_scan_date) + '\nจะสแกนใหม่จริงไหม')) return save(true);
+    return;
+  }
+  if (!r || r.ok === false || r.error) {
+    btn.disabled = false; btn.textContent = 'บันทึกผลสแกน';
+    msg.innerHTML = '<span style="color:#b91c1c">บันทึกไม่สำเร็จ' + (r && r.error ? ': ' + esc(r.error) : '') + '</span>';
+    return;
+  }
+  const sentLine = r.sent_to_teacher
+    ? '<div class="hint">ส่งเข้ากลุ่ม'+esc(D.patient.teacher||'ครู')+'แล้ว</div>'
+    : '<div class="alert" style="margin:11px 0 0">ยังไม่ได้ส่งเข้ากลุ่มครู'
+      + (r.send_error ? ' ('+esc(r.send_error)+')' : '') + ' — ก๊อปข้อความด้านบนส่งเองได้เลย</div>';
+  $('body').innerHTML = '<div class="pt"><div class="nm">'+esc(D.patient.name)+'</div>'
+    + '<div class="sub"><span>บันทึกแล้ว '+esc(new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}))+'</span></div></div>'
+    + '<div class="card"><div class="sec">สรุปที่ส่งให้ครู</div>'
+    + '<div class="done">'+esc(r.teacher_summary||'')+'</div>'
+    + sentLine
+    + '<button id="sheet2">เปิดใบสรุปให้คนไข้</button>'
+    + '<span class="lnk" id="again">กลับไปหน้าคนไข้</span></div>';
+  $('sheet2').onclick = () => openSheet();
+  $('again').onclick = () => load();
+}
+
+/* เปิดใบสรุปในแท็บใหม่ — ส่งตัวชี้คนไข้ชุดเดิม (หลังบ้านตรวจสิทธิ์ซ้ำอยู่แล้ว ไม่เชื่อ HN ลอย ๆ) */
+function openSheet(){
+  const q = new URLSearchParams();
+  if (D.patient.hn) q.set('hn', D.patient.hn); else q.set('appt', D.patient.appt_uuid);
+  q.set('date', D.date);
+  window.open('m-moti-sheet.html?' + q.toString(), '_blank');
+}
+
+async function load(){
+  $('body').innerHTML = '<div class="loading">กำลังโหลด…</div>';
+  const q = new URLSearchParams({ action:'get' });
+  if (HN) q.set('hn', HN);
+  if (APPT) q.set('appt', APPT);
+  if (DATE) q.set('date', DATE);
+  const r = await api('moti_patient?' + q.toString());
+  if (!r || r.ok === false || r.error) {
+    $('body').innerHTML = '<div class="warn">' + esc((r && r.error) || 'เปิดหน้าคนไข้ไม่สำเร็จ') + '</div>';
+    return;
+  }
+  D = r;
+  // ผลที่บันทึกไว้แล้ววันนี้ → เติมกลับให้แก้ต่อได้ (รองรับแถวเก่าที่มีแต่ avoid_moves)
+  picked = new Map();
+  const t = D.scan.today;
+  if (t && t.cautions && t.cautions.length) t.cautions.forEach(c => picked.set(c.key, c.level === 'stop' ? 'stop' : 'watch'));
+  else if (t && t.avoid_moves) t.avoid_moves.forEach(k => picked.set(k, 'watch'));
+  noteVal = (t && t.note_to_teacher) || '';
+  focusManual = new Set();
+  if (t && t.focus_moves) {
+    const fromPicked = focusList();
+    t.focus_moves.forEach(m => { if (!fromPicked.includes(m)) focusManual.add(m); });
+  }
+  render();
+}
+
+async function init(){
+  if (!await requireSession()) return;
+  if (!HN && !APPT) { $('body').innerHTML = '<div class="empty">ไม่ได้ระบุคนไข้ — เปิดจากรายการสแกนวันนี้</div>'; return; }
+  await load();
+}
+init();
+</script></body></html>
