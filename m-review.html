@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>ชวนรีวิว · Yiaoya</title>
+<link rel="stylesheet" href="m-shared.css">
+<style>
+/* หนึ่งคนไข้ หนึ่งการ์ด · แถบสีซ้ายบอกสถานะ (ตามชุดที่ระบบใช้อยู่) */
+.pt{background:#fff;border-radius:12px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);padding:14px 15px;margin-bottom:10px;border-left:4px solid var(--faint)}
+.pt.new{border-left-color:var(--faint)}
+.pt.invited{border-left-color:#F59E0B}
+.pt.accepted{border-left-color:#8B5CF6}
+.pt.confirmed{border-left-color:#3B82F6}
+.pt.done{border-left-color:var(--teal)}
+.pt.declined{border-left-color:var(--border);opacity:.62}
+.pt .nm{font-size:17px;font-weight:700;color:var(--navy);line-height:1.35}
+.pt .nm .hn{font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap}
+.pt .sub{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:8px}
+.pt .sub b{color:var(--navy);font-weight:600}
+.seq{display:inline-block;background:var(--ltl);color:var(--teal-dk);border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:700}
+.st{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;margin-left:auto}
+.st.new{background:#F1F5F9;color:var(--muted)}
+.st.invited{background:#FEF3C7;color:#92400e}
+.st.accepted{background:#EDE9FE;color:#5b21b6}
+.st.confirmed{background:#DBEAFE;color:#1e40af}
+.st.done{background:var(--ltl);color:var(--teal-dk)}
+.st.declined{background:#F1F5F9;color:var(--faint)}
+.hd{display:flex;align-items:flex-start;gap:8px}
+.acts{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
+.acts button{width:auto;flex:1;min-width:118px;margin-top:0;padding:11px 12px;font-size:13.5px}
+button.ghost{background:#fff;color:var(--navy);border:1px solid var(--border);font-weight:600}
+button.sm{flex:0 0 auto;min-width:0;padding:11px 15px}
+.rw{margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--muted);line-height:1.55}
+.rw b{color:var(--navy)}
+.pick{margin-top:11px}
+.pick .q{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px}
+.hint{font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.55}
+.loading,.empty{text-align:center;color:var(--faint);font-size:13.5px;padding:34px 10px;line-height:1.7}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs div{flex:1;text-align:center;padding:10px;border-radius:10px;background:#fff;border:1px solid var(--border);font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.tabs div.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.err{color:#b91c1c;font-size:12.5px;margin-top:8px}
+.ok{color:var(--teal-dk);font-size:12.5px;margin-top:8px;font-weight:600}
+</style></head>
+<body>
+<div id="app" style="display:none">
+  <div class="tabs">
+    <div id="t-today" class="on">คิววันนี้</div>
+    <div id="t-redeem">ใช้สิทธิ์</div>
+  </div>
+  <div id="body"><div class="loading">กำลังโหลด…</div></div>
+</div>
+<div id="block" style="display:none"></div>
+<script type="module">
+import { $, api, mountHead, requireSession, esc } from './m-shared.js';
+mountHead('ชวนรีวิว');
+
+let D = null;            // ผลจาก server
+let tab = 'today';
+let busy = false;
+
+// invited = ส่งชื่อให้ PT แล้ว แต่ยังไม่รู้ว่าคนไข้ตอบอะไร — เคาน์เตอร์ต้องถามต่อ
+const ST_LABEL = { new:'ยังไม่ชวน', invited:'รอถามผล', accepted:'ตกลง รอรีวิว',
+                   confirmed:'รีวิวแล้ว รอให้ของ', done:'จบแล้ว', declined:'ไม่สนใจ' };
+const RW_LABEL = { massage15:'นวดคอบ่าไหล่ 15 นาที', discount100:'ส่วนลด 100 บาท' };
+
+const fdate = (d) => { if(!d) return ''; const x=new Date(d); return isNaN(x)?esc(d)
+  : x.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}); };
+
+/* ── การ์ดคนไข้หนึ่งใบ ── */
+/* ชื่อเล่น (HN เต็ม) — HN เต็มเพราะทีมใช้ตรวจสอบตัวคนไข้กับหน้าจอ JERA */
+function nameOf(r){
+  const nick = r.display_nickname || r.full_name || '-';
+  return esc(nick) + ' <span class="hn">(' + esc(r.hn) + ')</span>';
+}
+
+function card(r){
+  const nm  = nameOf(r);
+  const sub = [];
+  if (r.scheduled_time) sub.push('<b>'+esc(r.scheduled_time)+'</b>');
+  if (r.visit_seq) sub.push('<span class="seq">มาครั้งที่ '+esc(r.visit_seq)+'</span>');
+  // ลิงก์กับฝั่ง PT — เคาน์เตอร์ต้องเห็นว่าใครเป็นคนชวน
+  if (r.pt_nickname) sub.push(esc(r.pt_nickname) + (r.invited_via === 'pt' ? ' ชวนแล้ว' : ''));
+
+  let extra = '';
+  if (r.status === 'done') {
+    extra = '<div class="rw">ให้ <b>'+esc(RW_LABEL[r.reward_type]||r.reward_type||'-')+'</b> แล้ว'
+          + (r.expires_at ? ' · ใช้ได้ถึง <b>'+fdate(r.expires_at)+'</b>' : '') + '</div>';
+  } else if (r.status === 'declined' && r.decline_reason) {
+    extra = '<div class="rw">เหตุผล: '+esc(r.decline_reason)+'</div>';
+  }
+
+  // "รอถามผล" = PT ได้ชื่อไปแล้ว แต่ยังไม่รู้ว่าชวนหรือยัง คนไข้ว่าไง → เคาน์เตอร์ถามตอนคิดเงิน
+  if (r.status === 'invited' && D.can_record) {
+    extra += '<div class="rw">ส่งชื่อให้ PT แล้ว — ถามคนไข้ตอนคิดเงินว่ารีวิวให้ไหม'
+           + (r.invited_via === 'pt' ? ' (ถ้า PT ยังไม่ได้ชวน ชวนตรงนี้ได้เลย)' : '') + '</div>';
+  }
+
+  // ปุ่มตามสถานะ — ปุ่มให้ของขึ้นเฉพาะหลังยืนยันรีวิวแล้วเท่านั้น
+  let acts = '';
+  if (!D.can_record) {
+    acts = '';                                    // PT/HR ดูอย่างเดียว ไม่ต้องกดอะไร
+  } else if (r.status === 'new' || r.status === 'invited') {
+    acts = '<button data-a="confirm" data-hn="'+esc(r.hn)+'">รีวิวแล้ว</button>'
+         + '<button class="ghost" data-a="accept"  data-hn="'+esc(r.hn)+'">ตกลง จะไปรีวิว</button>'
+         + '<button class="ghost sm" data-a="decline" data-hn="'+esc(r.hn)+'">ไม่สนใจ</button>';
+  } else if (r.status === 'accepted') {
+    acts = '<button data-a="confirm" data-hn="'+esc(r.hn)+'">รีวิวแล้ว</button>'
+         + '<button class="ghost sm" data-a="decline" data-hn="'+esc(r.hn)+'">ไม่สนใจ</button>';
+  } else if (r.status === 'confirmed') {
+    extra += '<div class="pick"><div class="q">คนไข้เลือกอะไร</div><div class="acts">'
+           + '<button data-a="give" data-rw="massage15"   data-hn="'+esc(r.hn)+'">นวดคอบ่าไหล่ 15 นาที</button>'
+           + '<button data-a="give" data-rw="discount100" data-hn="'+esc(r.hn)+'">ส่วนลด 100 บาท</button>'
+           + '</div><div class="hint">ออกสิทธิ์แล้วใช้ได้ภายใน 90 วัน</div></div>';
+  }
+
+  return '<div class="pt '+esc(r.status)+'" id="c-'+esc(r.hn)+'">'
+    + '<div class="hd"><div style="flex:1"><div class="nm">'+nm+'</div>'
+    + '<div class="sub">'+sub.map(s=>'<span>'+s+'</span>').join('')+'</div></div>'
+    + '<span class="st '+esc(r.status)+'">'+esc(ST_LABEL[r.status]||r.status)+'</span></div>'
+    + extra
+    + (acts ? '<div class="acts">'+acts+'</div>' : '')
+    + '<div class="msg" id="m-'+esc(r.hn)+'" style="min-height:0"></div>'
+    + '</div>';
+}
+
+function renderToday(){
+  const rows = (D.today || []);
+  if (!rows.length) {
+    $('body').innerHTML = '<div class="empty">วันนี้ยังไม่มีคนไข้ที่เข้าเกณฑ์<br><span style="font-size:12.5px">เกณฑ์คือคนไข้ใหม่ปีนี้ที่มาครบ 3 ครั้งขึ้นไป</span></div>';
+    return;
+  }
+  const note = D.can_record ? ''
+    : '<div class="note">หน้านี้ดูอย่างเดียว — การบันทึกผลและให้ของ เคาน์เตอร์เป็นคนทำตอนคิดเงิน</div>';
+  $('body').innerHTML = note + rows.map(card).join('');
+  bind();
+}
+
+function renderRedeem(){
+  $('body').innerHTML = '<div class="card">'
+    + '<label for="hn">ค้นด้วย HN</label>'
+    + '<input id="hn" placeholder="26-SLY-000123" autocomplete="off">'
+    + '<button id="find">ตรวจสิทธิ์</button>'
+    + '<div class="msg" id="rmsg"></div><div id="rout"></div></div>';
+  $('find').onclick = doLookup;
+  $('hn').onkeydown = (e) => { if (e.key === 'Enter') doLookup(); };
+}
+
+async function doLookup(){
+  const hn = $('hn').value.trim();
+  if (!hn) return;
+  $('rmsg').textContent = 'กำลังค้น…'; $('rout').innerHTML = '';
+  const r = await api('review_desk', { action:'lookup', hn });
+  if (!r || r.error) { $('rmsg').innerHTML = '<span class="err">'+esc((r&&r.error)||'ค้นไม่สำเร็จ')+'</span>'; return; }
+  $('rmsg').textContent = '';
+  if (!r.found) { $('rout').innerHTML = '<div class="rw">คนไข้รายนี้ไม่มีสิทธิ์ค้างอยู่</div>'; return; }
+  const g = r.right;
+  $('rout').innerHTML = '<div class="pt done" style="margin-top:12px">'
+    + '<div class="nm">'+nameOf(g)+'</div>'
+    + '<div class="rw">มีสิทธิ์ <b>'+esc(g.reward_label||RW_LABEL[g.reward_type]||g.reward_type)+'</b>'
+    + ' · เหลืออีก <b>'+esc(g.days_left)+'</b> วัน</div>'
+    + '<div class="acts"><button data-a="redeem" data-id="'+esc(g.id)+'">ใช้สิทธิ์แล้ว</button></div>'
+    + '<div class="msg" id="m-redeem" style="min-height:0"></div></div>';
+  bind();
+}
+
+function bind(){
+  document.querySelectorAll('button[data-a]').forEach(btn => btn.onclick = () => act(btn));
+}
+
+async function act(btn){
+  if (busy) return;
+  busy = true;
+  const a = btn.dataset.a, hn = btn.dataset.hn || '';
+  const msg = $('m-' + (a === 'redeem' ? 'redeem' : hn));
+  const old = btn.textContent;
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+  if (msg) msg.textContent = '';
+
+  const body = { action: a };
+  if (hn) body.hn = hn;
+  if (a === 'give')    body.reward_type = btn.dataset.rw;
+  if (a === 'confirm') body.method = 'shown_screen';
+  if (a === 'redeem')  body.id = btn.dataset.id;
+  if (a === 'decline') {
+    const reason = prompt('เหตุผลสั้น ๆ (ไม่บังคับ)') ?? '';
+    body.reason = reason.trim();
+  }
+
+  const r = await api('review_desk', body);
+  busy = false;
+  if (!r || r.error) {
+    btn.disabled = false; btn.textContent = old;
+    if (msg) msg.innerHTML = '<span class="err">'+esc((r&&r.error)||'บันทึกไม่สำเร็จ')+'</span>';
+    return;
+  }
+  if (a === 'redeem') {
+    if (msg) msg.innerHTML = '<span class="ok">บันทึกแล้ว — ตัดสิทธิ์เรียบร้อย</span>';
+    btn.style.display = 'none';
+    return;
+  }
+  await load();   // โหลดใหม่ให้สถานะตรงกับฐานเสมอ
+}
+
+async function load(){
+  const r = await api('review_desk', { action: 'list' });
+  if (!r || r.error) {
+    $('body').innerHTML = '<div class="warn">'+esc((r&&r.error)||'เปิดหน้านี้ไม่สำเร็จ')+'</div>';
+    return;
+  }
+  D = r;
+  tab === 'today' ? renderToday() : renderRedeem();
+}
+
+function setTab(t){
+  tab = t;
+  $('t-today').className  = t === 'today'  ? 'on' : '';
+  $('t-redeem').className = t === 'redeem' ? 'on' : '';
+  t === 'today' ? load() : renderRedeem();
+}
+
+async function init(){
+  if (!await requireSession()) return;
+  $('t-today').onclick  = () => setTab('today');
+  $('t-redeem').onclick = () => setTab('redeem');
+  await load();
+}
+init();
+</script></body></html>
