@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>ยื่นใบลา · Yiaoya</title>
-<link rel="stylesheet" href="m-shared.css?v=202608211205">
+<link rel="stylesheet" href="m-shared.css?v=202608211213">
 <style>
 .bal{display:flex;gap:8px;margin-bottom:12px}
 .bal .c{flex:1;background:#fff;border-radius:12px;padding:11px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05)}
@@ -34,7 +34,7 @@
 </div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js?v=202608211205';
+import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js?v=202608211213';
 mountHead('ยื่นใบลา');
 mountFeedback('leave', 'ยื่นใบลา');
 const TH={annual:'ลาพักร้อน',sick:'ลาป่วย',personal:'ลากิจ',emergency:'ลาฉุกเฉิน',maternity:'ลาคลอด',paternity:'ลาดูแลบุตร',ordination:'ลาบวช',military:'ลาเกณฑ์ทหาร',special_holiday:'วันหยุดพิเศษ',birthday:'ลาวันเกิด',reward:'ลารางวัล',other:'อื่นๆ'};

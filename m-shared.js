@@ -68,7 +68,24 @@ export async function requireSession() {
     block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');
     return false;
   }
-  const { data: s } = await sb.auth.getSession();
+  let { data: s } = await sb.auth.getSession();
+  // ★ 21 ส.ค. 69 — ไม่มีเซสชัน ไม่ได้แปลว่าต้องให้ผู้ใช้ไปเริ่มใหม่เสมอ
+  //   ถ้ายังมีตั๋ว LINE อยู่ ขอเซสชันเองได้เลย (เซสชันไม่ได้ถูกส่งต่อข้ามหน้าเสมอไป)
+  if (!s.session && ID.line_token) {
+    try {
+      // ต้องมีตั๋ว JWT ก่อนถึงเรียก edge function ได้ (คีย์สาธารณะแบบใหม่ไม่ใช่ JWT)
+      let temp = false;
+      try { const r = await sb.auth.signInAnonymously(); temp = !r.error; } catch (e) { temp = false; }
+      const res = await sb.functions.invoke('line_login', { body: { action: 'console_session', access_token: ID.line_token } });
+      const d = res.data || {};
+      if (d.ok && d.access_token && d.refresh_token) {
+        await sb.auth.setSession({ access_token: d.access_token, refresh_token: d.refresh_token });
+        s = (await sb.auth.getSession()).data;
+      } else if (temp) {
+        try { await sb.auth.signOut(); } catch (e) { /* ตั๋วชั่วคราวห้ามค้าง */ }
+      }
+    } catch (e) { /* ขอเองไม่ได้ = ตกไปที่ข้อความให้เข้าใหม่ด้านล่าง */ }
+  }
   if (!s.session) {
     block('เซสชันหมดอายุแล้ว — กรุณาเข้าระบบใหม่<br>'
         + '<small>ชื่อที่ขึ้นด้านบนเป็นข้อมูลที่เครื่องจำไว้ ไม่ใช่การเข้าระบบ</small><br>'

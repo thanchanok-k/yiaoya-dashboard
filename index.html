@@ -5119,8 +5119,33 @@ $('logout').onclick=async()=>{localStorage.removeItem('yy_line_id');LINE_ID=null
 const LINE_FIRST=true;
 function _validLine(){ return !!(LINE_ID&&LINE_ID.uid&&LINE_ID.employee_id); }
 const _adminBypass=/[?&]admin=1/.test(location.search);
-sb.auth.getSession().then(({data})=>{
+/* ★★ 21 ส.ค. 69 — เดิม: ไม่มีเซสชัน = ไม่ทำอะไรเลย หน้าค้างอยู่ที่ฟอร์มล็อกอิน
+   ทั้งที่ล็อกอินไลน์ผ่านแล้ว (ตรวจฝั่งเซิร์ฟเวอร์: ออกเซสชันสำเร็จ 12:09:26)
+   เซสชันที่หน้า login.html สร้างไว้ไม่ถูกส่งต่อมาถึงหน้านี้
+   → เลิกพึ่งการส่งต่อ · หน้านี้ขอเซสชันเองจากตั๋ว LINE ที่เก็บไว้ */
+async function ensureSession(){
+  const { data } = await sb.auth.getSession();
+  if (data.session) return true;
+  const t = LINE_ID && LINE_ID.line_token;
+  if (!t) return false;
+  try {
+    // ต้องมีตั๋ว JWT ก่อนถึงเรียก edge function ได้ (คีย์สาธารณะแบบใหม่ไม่ใช่ JWT)
+    let { data: pre } = await sb.auth.getSession();
+    let temp = false;
+    if (!pre.session) { try { const r = await sb.auth.signInAnonymously(); temp = !r.error; } catch(_){} }
+    const res = await sb.functions.invoke('line_login', { body:{ action:'console_session', access_token: t } });
+    const d = res.data || {};
+    if (d.ok && d.access_token && d.refresh_token) {
+      await sb.auth.setSession({ access_token: d.access_token, refresh_token: d.refresh_token });
+      return true;
+    }
+    if (temp) { try { await sb.auth.signOut(); } catch(_){} }   // ตั๋วชั่วคราวห้ามค้าง
+  } catch(_){}
+  return false;
+}
+(async () => {
   if(LINE_FIRST && !_validLine() && !_adminBypass){ location.replace('login.html'); return; }
-  if(data.session) start();
-});
+  if (await ensureSession()) { start(); return; }
+  if (!_adminBypass) location.replace('login.html');   // ขอเองไม่ได้ = กลับไปเข้าใหม่ ไม่ค้างหน้าเปล่า
+})();
 </script></body></html>
