@@ -90,7 +90,7 @@ async function run(){
         return;
       }
       msg(`ยินดีต้อนรับ ${data.employee_name||data.display_name}`);
-      document.querySelector('.card').insertAdjacentHTML('beforeend','<a class="btn" href="index.html">เข้าหน้าระบบ →</a>');
+      document.querySelector('.card').insertAdjacentHTML('beforeend','<a class="btn" href=\'index.html?v=202608211329\'>เข้าหน้าระบบ →</a>');
     }
   }catch(e){ stopSpin(); msg('ผิดพลาด: '+e); }
 }

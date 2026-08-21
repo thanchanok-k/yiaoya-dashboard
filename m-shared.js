@@ -1,5 +1,5 @@
 // m-shared.js — โค้ดร่วมของทุกหน้ามือถือพนักงาน (identity · session · api · header)
-// ใช้:  import { ID, $, sb, api, mountHead, requireSession, block, esc } from './m-shared.js';
+// ใช้:  import { ID, $, sb, api, mountHead, requireSession, block, esc } from './m-shared.js?v=202608211329';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export const SB_URL = "https://iyldrlzhftylewstfmsg.supabase.co";
@@ -65,7 +65,7 @@ export function mountHead(title) {
  */
 export async function requireSession() {
   if (!ID || !ID.employee_id) {
-    block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');
+    block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html?v=202608211329">เข้าสู่ระบบด้วย LINE →</a>');
     return false;
   }
   let { data: s } = await sb.auth.getSession();
@@ -89,7 +89,7 @@ export async function requireSession() {
   if (!s.session) {
     block('เซสชันหมดอายุแล้ว — กรุณาเข้าระบบใหม่<br>'
         + '<small>ชื่อที่ขึ้นด้านบนเป็นข้อมูลที่เครื่องจำไว้ ไม่ใช่การเข้าระบบ</small><br>'
-        + '<a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');
+        + '<a class="lk" href="login.html?v=202608211329">เข้าสู่ระบบด้วย LINE →</a>');
     return false;
   }
   const a = $('app'); if (a) a.style.display = 'block';
@@ -103,7 +103,7 @@ export async function requireSession() {
 export function blockRelogin(msg) {
   block((msg || 'เข้าระบบไม่สำเร็จ') + '<br>'
       + '<small>ลองเข้าระบบใหม่อีกครั้ง ถ้ายังไม่ได้แจ้งทีมระบบ</small><br>'
-      + '<a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');
+      + '<a class="lk" href="login.html?v=202608211329">เข้าสู่ระบบด้วย LINE →</a>');
 }
 
 /** ข้อความที่แปลว่า "เซสชันใช้ไม่ได้" ไม่ใช่ "ไม่มีสิทธิ์" */

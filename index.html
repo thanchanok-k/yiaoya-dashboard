@@ -5144,8 +5144,8 @@ async function ensureSession(){
   return false;
 }
 (async () => {
-  if(LINE_FIRST && !_validLine() && !_adminBypass){ location.replace('login.html'); return; }
+  if(LINE_FIRST && !_validLine() && !_adminBypass){ location.replace('login.html?v=202608211329'); return; }
   if (await ensureSession()) { start(); return; }
-  if (!_adminBypass) location.replace('login.html');   // ขอเองไม่ได้ = กลับไปเข้าใหม่ ไม่ค้างหน้าเปล่า
+  if (!_adminBypass) location.replace('login.html?v=202608211329');   // ขอเองไม่ได้ = กลับไปเข้าใหม่ ไม่ค้างหน้าเปล่า
 })();
 </script></body></html>
