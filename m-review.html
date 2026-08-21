@@ -1,10 +1,10 @@
 <!DOCTYPE html><html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>ชวนรีวิว · Yiaoya</title>
-<link rel="stylesheet" href="m-shared.css?v=202608211213">
+<link rel="stylesheet" href="m-shared.css?v=202608211430">
 <style>
 /* หนึ่งคนไข้ หนึ่งการ์ด · แถบสีซ้ายบอกสถานะ (ตามชุดที่ระบบใช้อยู่) */
-.pt{background:#fff;border-radius:12px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);padding:14px 15px;margin-bottom:10px;border-left:4px solid var(--faint)}
+.pt{background:#fff;border-radius:11px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);padding:11px 12px;margin-bottom:8px;border-left:4px solid var(--faint)}
 .pt.new{border-left-color:var(--faint)}
 .pt.invited{border-left-color:#F59E0B}
 .pt.accepted{border-left-color:#8B5CF6}
@@ -12,12 +12,12 @@
 .pt.done{border-left-color:var(--teal)}
 .pt.declined{border-left-color:var(--border);opacity:.62}
 .pt.already{border-left-color:var(--faint)}
-.pt .nm{font-size:17px;font-weight:700;color:var(--navy);line-height:1.35}
-.pt .nm .hn{font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap}
-.pt .sub{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:8px}
+.pt .nm{font-size:15px;font-weight:700;color:var(--navy);line-height:1.35}
+.pt .nm .hn{font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap}
+.pt .sub{font-size:11.5px;color:var(--muted);margin-top:3px;display:flex;flex-wrap:wrap;gap:7px}
 .pt .sub b{color:var(--navy);font-weight:600}
-.seq{display:inline-block;background:var(--ltl);color:var(--teal-dk);border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:700}
-.st{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;margin-left:auto}
+.seq{display:inline-block;background:var(--ltl);color:var(--teal-dk);border-radius:99px;padding:1px 8px;font-size:11px;font-weight:700}
+.st{font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;margin-left:auto}
 .st.new{background:#F1F5F9;color:var(--muted)}
 .st.invited{background:#FEF3C7;color:#92400e}
 .st.accepted{background:#EDE9FE;color:#5b21b6}
@@ -26,18 +26,18 @@
 .st.declined{background:#F1F5F9;color:var(--faint)}
 .st.already{background:#F1F5F9;color:var(--muted)}
 .hd{display:flex;align-items:flex-start;gap:8px}
-.acts{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
-.acts button{width:auto;flex:1;min-width:118px;margin-top:0;padding:11px 12px;font-size:13.5px}
+.acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.acts button{width:auto;flex:1 1 calc(50% - 3px);min-width:0;margin-top:0;padding:8px 10px;font-size:12.5px;border-radius:9px}
 button.ghost{background:#fff;color:var(--navy);border:1px solid var(--border);font-weight:600}
-button.sm{flex:0 0 auto;min-width:0;padding:11px 15px}
-.rw{margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--muted);line-height:1.55}
+button.sm{flex:1 1 calc(50% - 3px);min-width:0;padding:8px 10px}
+.rw{margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--muted);line-height:1.55}
 .rw b{color:var(--navy)}
-.pick{margin-top:11px}
+.pick{margin-top:9px}
 .pick .q{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px}
 .hint{font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.55}
 .loading,.empty{text-align:center;color:var(--faint);font-size:13.5px;padding:34px 10px;line-height:1.7}
 .tabs{display:flex;gap:8px;margin-bottom:12px}
-.tabs div{flex:1;text-align:center;padding:10px;border-radius:10px;background:#fff;border:1px solid var(--border);font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.tabs div{flex:1;text-align:center;padding:9px;border-radius:10px;background:#fff;border:1px solid var(--border);font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer}
 .tabs div.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .err{color:#b91c1c;font-size:12.5px;margin-top:8px}
 .ok{color:var(--teal-dk);font-size:12.5px;margin-top:8px;font-weight:600}
