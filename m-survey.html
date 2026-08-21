@@ -43,8 +43,9 @@ a.lk{color:var(--teal);font-weight:700;text-decoration:none}
 <div class="cta" id="cta" style="display:none"><button id="send" disabled>ส่งแบบสอบถาม</button><div class="msg" id="msg"></div></div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, SB_URL, ANON, api, token, mountHead, requireSession, block, esc } from './m-shared.js';
+import { ID, $, SB_URL, ANON, api, token, mountHead, requireSession, block, esc, mountFeedback } from './m-shared.js';
 mountHead('แบบสอบถาม');
+mountFeedback('survey', 'แบบสอบถาม');
 document.querySelector('.head h1').id='title';   // คงพฤติกรรมเดิม: สคริปต์อัปเดต $('title') ตอนเลือก/โหลดแบบสอบถาม
 async function apiGet(path,qs){const t=await token();const r=await fetch(SB_URL+'/functions/v1/'+path+(qs||''),{headers:{Authorization:'Bearer '+t,apikey:ANON}});return r.json();}
 

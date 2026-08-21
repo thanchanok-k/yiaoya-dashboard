@@ -41,8 +41,9 @@ body{padding-bottom:96px}
 <div class="cta" id="cta" style="display:none"><button id="send" disabled>ยื่นเบิก</button><div class="msg" id="msg"></div></div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js';
 mountHead('เบิกค่าใช้จ่าย');
+mountFeedback('expense', 'เบิกค่าใช้จ่าย');
 // category enum ตรงกับ edge fn hr_expense_claim (EXPENSE_CATEGORIES) เป๊ะ — key,label,auto_threshold
 const CATS=[
   {k:'travel',  label:'ค่าเดินทาง',      hint:'อนุมัติอัตโนมัติ ≤ 1,000 บาท'},

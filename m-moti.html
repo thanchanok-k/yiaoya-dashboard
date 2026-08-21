@@ -64,8 +64,9 @@ textarea{min-height:74px;resize:vertical}
 </div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { $, api, mountHead, requireSession, esc } from './m-shared.js';
+import { $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js';
 mountHead('หน้าคนไข้');
+mountFeedback('moti', 'หน้าคนไข้');
 
 const qs = new URLSearchParams(location.search);
 const HN   = (qs.get('hn') || '').trim();

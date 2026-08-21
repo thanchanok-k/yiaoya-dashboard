@@ -34,8 +34,9 @@
 </div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js';
 mountHead('ยื่นใบลา');
+mountFeedback('leave', 'ยื่นใบลา');
 const TH={annual:'ลาพักร้อน',sick:'ลาป่วย',personal:'ลากิจ',emergency:'ลาฉุกเฉิน',maternity:'ลาคลอด',paternity:'ลาดูแลบุตร',ordination:'ลาบวช',military:'ลาเกณฑ์ทหาร',special_holiday:'วันหยุดพิเศษ',birthday:'ลาวันเกิด',reward:'ลารางวัล',other:'อื่นๆ'};
 const STPILL={submitted:['รออนุมัติ','#FEF3C7','#92400E'],approved:['อนุมัติ','#D1FAE5','#065F46'],rejected:['ไม่อนุมัติ','#FEE2E2','#991B1B']};
 

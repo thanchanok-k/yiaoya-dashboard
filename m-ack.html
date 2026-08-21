@@ -35,8 +35,9 @@
 </div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession, esc } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js';
 mountHead('เอกสารรอรับทราบ');
+mountFeedback('ack', 'เอกสารรอรับทราบ');
 const TYPE_TH={contract:'สัญญาจ้าง',pdpa:'PDPA',handbook:'คู่มือพนักงาน',disciplinary:'หนังสือตักเตือน',policy:'นโยบาย/ประกาศ'};
 
 async function init(){

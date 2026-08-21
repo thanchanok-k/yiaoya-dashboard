@@ -60,8 +60,9 @@
 </div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession, esc } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js';
 mountHead('KPI ของฉัน');
+mountFeedback('kpi', 'KPI ของฉัน');
 
 function fmtPeriod(p){p=String(p||'');const m=p.match(/(\d{4})-?(\d{2})?/);if(!m)return p||'—';return m[2]?(m[2]+'/'+m[1]):m[1];}
 function dl(rows){

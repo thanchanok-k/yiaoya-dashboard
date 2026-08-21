@@ -43,8 +43,9 @@
 </div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession, esc } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js';
 mountHead('ประกาศ');
+mountFeedback('announce', 'ประกาศ');
 
 const CAT_LABELS={permanent:'บอร์ดถาวร',monthly:'บอร์ดประจำเดือน',policy:'นโยบาย',welfare:'สวัสดิการ',activity:'กิจกรรม',announcement:'แจ้งเตือน',urgent:'ด่วน',general:'ทั่วไป'};
 function catLabel(c){const k=String(c||'general').toLowerCase();return CAT_LABELS[k]||(c||'ทั่วไป');}

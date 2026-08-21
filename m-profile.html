@@ -38,8 +38,9 @@ body{padding-bottom:96px}
 <div class="cta" id="cta" style="display:none"><button id="send" disabled>ส่งคำขอแก้ข้อมูล</button><div class="msg" id="msg"></div></div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession, esc } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js';
 mountHead('โปรไฟล์ของฉัน');
+mountFeedback('profile', 'โปรไฟล์ของฉัน');
 // request_type whitelist — ตรงกับ hr_personal_info_request edge fn (REQUEST_TYPES)
 const TYPES=[
   {key:'phone',             label:'เบอร์โทรศัพท์',               att:false},

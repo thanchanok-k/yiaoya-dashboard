@@ -30,8 +30,9 @@
 </div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession, esc } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js';
 mountHead('งานของฉัน');
+mountFeedback('tasks', 'งานของฉัน');
 const PLBL={high:'สำคัญ',normal:'ปกติ',low:'ไม่เร่ง'};
 function fmtDate(d){if(!d)return '';const x=new Date(d);if(isNaN(x))return esc(d);return x.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});}
 function card(t){

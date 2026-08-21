@@ -52,8 +52,9 @@ button.sm{flex:0 0 auto;min-width:0;padding:11px 15px}
 </div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { $, api, mountHead, requireSession, esc } from './m-shared.js';
+import { $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js';
 mountHead('ชวนรีวิว');
+mountFeedback('review', 'ชวนรีวิว');
 
 let D = null;            // ผลจาก server
 let tab = 'today';

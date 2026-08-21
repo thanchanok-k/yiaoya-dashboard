@@ -54,8 +54,9 @@ body{padding-bottom:96px}
 <div id="block" style="display:none"></div>
 
 <script type="module">
-import { ID, $, api, mountHead, requireSession } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js';
 mountHead('เช็คอิน / เช็คเอาท์');
+mountFeedback('checkin', 'เช็คอิน / เช็คเอาท์');
 const MODES=[['onsite','ที่สาขา'],['wfh','WFH'],['off_site_visit','นอกสถานที่'],['hybrid','ผสม']];
 let mode='onsite', rec=null, gpsDenied=false;
 function fmtTime(iso){if(!iso)return '—';try{return new Date(iso).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});}catch(e){return '—';}}

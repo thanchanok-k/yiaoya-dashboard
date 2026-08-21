@@ -29,8 +29,9 @@
 </div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession, esc } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js';
 mountHead('ปฏิทินลาทีม');
+mountFeedback('leavecal', 'ปฏิทินลาทีม');
 const TH_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const LEAVE_LABEL={annual:'พักร้อน',sick:'ลาป่วย',personal:'ลากิจ',maternity:'ลาคลอด',paternity:'ลาเลี้ยงดูบุตร',ordination:'ลาบวช',military:'ลาทหาร',emergency:'ลาฉุกเฉิน',special_holiday:'วันหยุดพิเศษ',birthday:'วันเกิด',reward:'วันลารางวัล',other:'อื่นๆ'};
 function pad(n){return (n<10?'0':'')+n;}

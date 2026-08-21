@@ -1,0 +1,223 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>สรุปก่อนคลาส · Yiaoya</title>
+<link rel="stylesheet" href="m-shared.css">
+<style>
+/* หน้าที่ครูเปิดจากลิงก์ในกลุ่ม — อ่านอย่างเดียว ไม่ต้องล็อกอิน (ลิงก์เซ็น HMAC + หมดอายุ 14 วัน) */
+.pt{background:#fff;border-radius:12px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);padding:16px;margin-bottom:11px;border-left:4px solid var(--teal)}
+.pt .nm{font-size:19px;font-weight:700;color:var(--navy)}
+.pt .sub{font-size:12.5px;color:var(--muted);margin-top:5px;display:flex;flex-wrap:wrap;gap:9px}
+.sec{font-size:14.5px;font-weight:700;color:var(--navy);margin-bottom:11px}
+.grp{border:1px solid var(--border);border-radius:10px;padding:12px 13px;margin-bottom:9px;background:#fff}
+.grp .gh{font-size:14px;font-weight:700;color:var(--navy)}
+.grp .gh .lv{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;margin-right:7px;vertical-align:1px}
+.lv.stop{background:#FEE2E2;color:#b91c1c}.lv.watch{background:#FEF3C7;color:#92400e}
+.grp .gg{font-size:11.5px;color:var(--teal-dk);margin-top:3px}
+.grp .gm{font-size:13px;color:var(--text);margin-top:8px;line-height:1.5}
+.gw{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.55}
+.more{margin-top:4px}
+.more summary{cursor:pointer;font-size:12.5px;color:var(--teal-dk);font-weight:700;list-style:none;padding:9px 0}
+.more summary::-webkit-details-marker{display:none}
+.more summary::after{content:' ▾';font-size:11px}
+.more[open] summary::after{content:' ▴'}
+.find{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
+.find:last-child{border-bottom:none}
+.find .fn{flex:1;font-size:12.5px;color:var(--navy);font-weight:600;line-height:1.35}
+.find .fn span{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+.find .fv{font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap}
+.find .fl{font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.fl.SEVERE{background:#FEE2E2;color:#b91c1c}.fl.MODERATE{background:#FEF3C7;color:#92400e}.fl.MILD{background:#E6F7F5;color:#0F766E}
+.idx{display:flex;gap:8px;margin-top:10px}
+.idx>div{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:9px 6px;text-align:center}
+.idx .l{font-size:11px;color:var(--muted)}.idx .v{font-size:18px;font-weight:800;color:var(--navy)}
+.note{margin-top:0}
+/* ── แผนภาพร่างกาย (line art วาดด้วย SVG — ไม่ใช่ไฟล์รูป จึงคมทุกจอและไม่ต้องรอถ่ายรูป) ── */
+.bodywrap{display:flex;gap:14px;align-items:flex-start}
+.bodywrap svg{flex-shrink:0}
+.legend{flex:1;font-size:12px;color:var(--muted);line-height:1.7}
+.legend .li{display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.legend .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot.SEVERE{background:#EF4444}.dot.MODERATE{background:#F59E0B}.dot.MILD{background:#10B981}
+.legend b{color:var(--navy);font-weight:600}
+.bar{height:6px;border-radius:99px;background:linear-gradient(90deg,#D1FAE5 0%,#FDE68A 50%,#FECACA 100%);position:relative;margin-top:6px}
+.bar i{position:absolute;top:-3px;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transform:translateX(-6px)}
+.bar i.SEVERE{background:#EF4444}.bar i.MODERATE{background:#F59E0B}.bar i.MILD{background:#10B981}
+.mv{display:flex;gap:9px;align-items:center;margin-top:9px}
+.mv img{width:78px;height:78px;object-fit:cover;border-radius:9px;border:1px solid var(--border);flex-shrink:0}
+.mv .mvt{font-size:12.5px;color:var(--text);line-height:1.5}
+.loading,.empty{text-align:center;color:var(--faint);font-size:13.5px;padding:38px 10px;line-height:1.6}
+</style></head>
+<body>
+<div id="app"><div id="body"><div class="loading">กำลังโหลด…</div></div></div>
+<script>
+/* ★ หน้านี้ไม่ใช้ m-shared.js เพราะครูไม่ได้ล็อกอิน — เรียก edge fn ด้วย anon key + token ในลิงก์
+   ตัวตัดสินสิทธิ์อยู่ที่ลายเซ็นของ token ฝั่ง server (verifyLink) ไม่ใช่ฝั่งหน้าเว็บ */
+var SB_URL = "https://iyldrlzhftylewstfmsg.supabase.co";
+var ANON   = "sb_publishable_jLTyhyQ60OBRiT7CATCNDg_7bhmMrCK";
+var $ = function(id){ return document.getElementById(id); };
+var esc = function(s){ return String(s==null?'':s).replace(/[<>&"']/g,function(c){
+  return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]; }); };
+var T = new URLSearchParams(location.search).get('t') || '';
+
+function fdate(d){ if(!d) return ''; var x=new Date(d); if(isNaN(x)) return esc(d);
+  return x.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}); }
+
+/* ── คนแบบเส้น 2 มุมมอง (หน้าตรง + ด้านข้าง) พร้อมจุดไฮไลต์ตามบริเวณที่เจอ ──
+   มุมข้างจำเป็น เพราะ หัวยื่น/ไหล่ห่อ/เชิงกรานเอียง/เข่าแอ่น เป็นเรื่องที่เห็นได้จากด้านข้างเท่านั้น
+   (รายงาน Moti เองก็แยกเป็น Anterior / Sagittal / Posterior) */
+var RANK = { MILD:1, MODERATE:2, SEVERE:3 };
+var COL = { SEVERE:'#EF4444', MODERATE:'#F59E0B', MILD:'#10B981' };
+var VIEW = {
+  front: { label:'หน้าตรง',
+    reg:{ head_neck:[80,26], shoulder:[80,62], spine:[80,96], lowback_pelvis:[80,132],
+          knee_l:[64,206], knee_r:[96,206], knee_both:[80,206], foot_ankle:[80,272] },
+    body:'<circle cx="80" cy="26" r="15"/><path d="M80 41 L80 60"/><path d="M52 62 L108 62"/>'
+       + '<path d="M52 62 L44 112 M108 62 L116 112"/><path d="M80 62 L80 132"/><path d="M62 132 L98 132"/>'
+       + '<path d="M64 132 L64 206 L62 268 M96 132 L96 206 L98 268"/><path d="M52 272 L70 272 M90 272 L108 272"/>' },
+  side: { label:'ด้านข้าง',
+    reg:{ head_neck:[96,26], shoulder:[82,64], spine:[74,100], lowback_pelvis:[78,134],
+          knee_l:[80,206], knee_r:[80,206], knee_both:[80,206], foot_ankle:[80,272] },
+    /* ทรงคนมองจากข้าง: ศีรษะเยื้องหน้า · หลังโค้ง · เข่า · เท้าชี้ไปทางขวา */
+    body:'<circle cx="94" cy="26" r="15"/><path d="M90 41 Q84 52 82 62"/>'
+       + '<path d="M82 64 Q68 96 74 116 Q80 128 78 134"/>'      /* แนวหลัง */
+       + '<path d="M82 66 Q96 92 92 112"/>'                      /* แขน */
+       + '<path d="M70 134 L90 134"/>'                           /* เชิงกราน */
+       + '<path d="M80 134 L80 206 L78 268"/>'                   /* ขา */
+       + '<path d="M70 272 L104 272"/>' }                        /* เท้า */
+};
+function marksFor(find, view){
+  var reg = VIEW[view].reg, worst = {};
+  (find||[]).forEach(function(f){
+    var r=f.body_region; if(!r||!reg[r]) return;
+    var keys = (r==='knee_both' && view==='front') ? ['knee_l','knee_r'] : [r];
+    keys.forEach(function(k){ if(!worst[k] || RANK[f.level]>RANK[worst[k].level]) worst[k]=f; });
+  });
+  return Object.keys(worst).map(function(k){
+    var p=reg[k], c=COL[worst[k].level]||'#94A3B8';
+    return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="11" fill="'+c+'" opacity=".18"/>'
+         + '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="5.5" fill="'+c+'"/>';
+  }).join('');
+}
+function bodySvg(find, view){
+  return '<figure style="margin:0;text-align:center">'
+    + '<svg viewBox="0 0 160 300" width="104" height="195" aria-label="แผนภาพร่างกาย '+VIEW[view].label+'">'
+    + '<g fill="none" stroke="#94A3B8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
+    + VIEW[view].body + '</g>' + marksFor(find, view) + '</svg>'
+    + '<figcaption style="font-size:11px;color:#94a3b8;margin-top:2px">'+VIEW[view].label+'</figcaption></figure>';
+}
+
+/* ── แผนภาพจุดศูนย์ถ่วงตอนยืนขาเดียว (วาดจากตัวเลข มม. ที่เครื่องวัด) ──
+   วงในคือช่วงปกติ (ยิ่งจุดออกนอกวงยิ่งโยกมาก) — ครูเห็นทันทีว่าข้างไหนแย่กว่า */
+function cogSvg(find){
+  var v = {};
+  (find||[]).forEach(function(f){ if(f.unit==='mm') v[f.key]=f; });
+  var side = function(pre, name){
+    var ml=v[pre+'_stance_ml'], ap=v[pre+'_stance_ap'];
+    if(!ml && !ap) return '';
+    var mm2px = function(x){ return Math.max(-30, Math.min(30, (Number(x)||0)/160*60)); };
+    var dx=mm2px(ml&&ml.value), dy=mm2px(ap&&ap.value);
+    var lv = (ml&&ap) ? (RANK[ml.level]>RANK[ap.level]?ml.level:ap.level) : (ml?ml.level:ap.level);
+    var c = COL[lv]||'#94A3B8';
+    var txt = [ap?('หน้า-หลัง '+ap.value+' มม.'):'', ml?('ซ้าย-ขวา '+ml.value+' มม.'):''].filter(Boolean).join(' · ');
+    return '<figure style="margin:0;text-align:center;flex:1">'
+      + '<svg viewBox="0 0 90 90" width="80" height="80" aria-label="จุดศูนย์ถ่วง '+name+'">'
+      + '<circle cx="45" cy="45" r="34" fill="none" stroke="#E5E7EB" stroke-width="2"/>'
+      + '<circle cx="45" cy="45" r="17" fill="none" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="3 3"/>'
+      + '<path d="M45 8 L45 82 M8 45 L82 45" stroke="#F1F5F9" stroke-width="1.5"/>'
+      + '<circle cx="'+(45+dx)+'" cy="'+(45+dy)+'" r="6" fill="'+c+'"/>'
+      + '</svg><figcaption style="font-size:11px;color:#94a3b8;margin-top:2px">'+name+'</figcaption>'
+      + '<div style="font-size:11px;color:#6B7280;margin-top:2px">'+esc(txt)+'</div></figure>';
+  };
+  var a = side('lt','ยืนขาซ้าย'), b = side('rt','ยืนขาขวา');
+  if(!a && !b) return '';
+  return '<div style="display:flex;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">'
+    + a + b + '</div>'
+    + '<div class="gw">วงประ = ช่วงปกติ · จุดยิ่งออกนอกวง ยิ่งโยกมากตอนยืนขาเดียว</div>';
+}
+function bodyBlock(find){
+  var has = (find||[]).some(function(f){ return f.body_region; });
+  if(!has) return '';
+  var seen = {}, items = [];
+  (find||[]).forEach(function(f){
+    if(!f.body_region || seen[f.key]) return; seen[f.key]=1;
+    items.push('<div class="li"><span class="dot '+esc(f.level)+'"></span><span><b>'+esc(f.name)+'</b>'
+      + (f.value!=null ? ' · '+esc(f.value)+(f.unit==='deg'?'°':' '+esc(f.unit||'')) : '')+'</span></div>');
+  });
+  return '<div class="card"><div class="sec">จุดที่ต้องดู</div>'
+    + '<div class="bodywrap">'
+    + '<div style="display:flex;gap:4px">'+bodySvg(find,'front')+bodySvg(find,'side')+'</div>'
+    + '<div class="legend">'+items.join('')+'</div></div>'
+    + '<div class="gw" style="margin-top:10px">สีแดง = SEVERE · เหลือง = MODERATE · เขียว = MILD</div>'
+    + cogSvg(find) + '</div>';
+}
+
+function render(D){
+  var a = D.analysis||{}, groups = a.groups||[], summary = a.summary||[], find = D.findings||[];
+  var sub = [];
+  if(D.date) sub.push('<span>'+fdate(D.date)+'</span>');
+  if(D.scan_type) sub.push('<span>'+(D.scan_type==='baseline'?'รอบตั้งต้น':'รอบเทียบ')+'</span>');
+  if(D.patient && D.patient.teacher) sub.push('<span>'+esc(D.patient.teacher)+'</span>');
+
+  var h = '<div class="pt"><div class="nm">'+esc((D.patient||{}).nickname||'คนไข้')+'</div>'
+        + '<div class="sub">'+sub.join('')+'</div></div>';
+
+  h += bodyBlock(find);
+
+  /* ★ สั้นที่สุดก่อน: รอบนี้ต้องทำอะไร */
+  h += '<div class="card"><div class="sec">รอบนี้</div>';
+  h += groups.length ? groups.map(function(g){
+        return '<div class="grp"><div class="gh"><span class="lv '+esc(g.level)+'">'
+          + (g.level==='stop'?'งด':'ระวัง')+'</span>'+esc(g.caution)+'</div>'
+          + (g.goal?'<div class="gg">เป้า: '+esc(g.goal)+'</div>':'')
+          + ((g.moves&&g.moves.length)? (g.image_url
+              ? '<div class="mv"><img src="'+esc(g.image_url)+'" alt=""><div class="mvt">ฝึก: '+esc(g.moves.join(' · '))+'</div></div>'
+              : '<div class="gm">ฝึก: '+esc(g.moves.join(' · '))+'</div>') : '')
+          + ((g.why||[]).map(function(w){ return '<div class="gw">'+esc(w)+'</div>'; }).join(''))
+          + '</div>'; }).join('')
+     : '<div class="empty" style="padding:16px">ไม่มีข้อจำกัดพิเศษรอบนี้</div>';
+  if((a.extra||[]).length) h += '<div class="gw">ท่าที่ให้เพิ่ม: '+esc(a.extra.join(' · '))+'</div>';
+  if(D.note_to_teacher) h += '<div class="note" style="margin-top:11px">ฝากครู: '+esc(D.note_to_teacher)+'</div>';
+  h += '</div>';
+
+  /* ── ที่เหลือพับไว้ กดอ่านเพิ่มเติมได้ ── */
+  var idx = D.index||{};
+  var box = function(l,v){ return '<div><div class="l">'+l+'</div><div class="v">'+(v==null?'—':esc(v))+'</div></div>'; };
+  h += '<div class="card"><details class="more"><summary>ดูค่าที่เครื่องวัด</summary>'
+     + '<div class="idx">'+box('ยืนนิ่ง',idx.posture)+box('ย่อตัว',idx.core)+box('ทรงตัว',idx.balance)+'</div>'
+     + '<div class="gw" style="margin-top:8px">Imbalance Index — ยิ่งน้อยยิ่งสมดุล</div>'
+     + '</details></div>';
+
+  if(find.length){
+    h += '<div class="card"><details class="more"><summary>ดูสิ่งที่เครื่องพบ ('+find.length+' รายการ)</summary>'
+       + find.map(function(f){
+           return '<div class="find"><div class="fn">'+esc(f.name)
+             + (f.means?'<span>'+esc(f.means)+'</span>':'')+'</div>'
+             + (f.value!=null?'<div class="fv">'+esc(f.value)+(f.unit==='deg'?'°':' '+esc(f.unit||''))+'</div>':'')
+             + '<div class="fl '+esc(f.level)+'">'+esc(f.level)+'</div></div>'
+             + '<div class="bar"><i class="'+esc(f.level)+'" style="left:'
+             + (f.level==='SEVERE'?85:f.level==='MODERATE'?55:20)+'%"></i></div>'; }).join('')
+       + '<div class="gw" style="margin-top:8px">เป็นการวัดท่าทางและการเคลื่อนไหว ไม่ใช่การวินิจฉัยโรค</div>'
+       + '</details></div>';
+  }
+  if(summary.length){
+    h += '<div class="card"><details class="more"><summary>อ่านคำอธิบายแบบเต็ม</summary>'
+       + summary.map(function(x){ return '<div class="gw">· '+esc(x)+'</div>'; }).join('')
+       + '</details></div>';
+  }
+  $('body').innerHTML = h;
+}
+
+(function(){
+  if(!T){ $('body').innerHTML = '<div class="empty">ลิงก์ไม่ครบ — เปิดจากข้อความในกลุ่มอีกครั้ง</div>'; return; }
+  fetch(SB_URL+'/functions/v1/moti_patient', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', apikey:ANON, Authorization:'Bearer '+ANON },
+    body: JSON.stringify({ action:'teacher_view', t:T })
+  }).then(function(r){ return r.json(); }).then(function(D){
+    if(!D || D.ok===false || D.error){
+      $('body').innerHTML = '<div class="warn">'+esc((D&&D.error)||'เปิดไม่สำเร็จ')+'</div>'; return;
+    }
+    render(D);
+  }).catch(function(){ $('body').innerHTML = '<div class="warn">เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง</div>'; });
+})();
+</script></body></html>

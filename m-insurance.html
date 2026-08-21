@@ -35,8 +35,9 @@
 </div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession, esc } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js';
 mountHead('สวัสดิการ & ประกันของฉัน');
+mountFeedback('insurance', 'สวัสดิการ & ประกันของฉัน');
 const TYPE_TH={welfare_fund:'กองทุนสวัสดิการ',professional_insurance:'ประกันวิชาชีพ',malpractice:'ประกันความรับผิด'};
 function baht(v){if(v==null||v===''||isNaN(Number(v)))return null;return '฿'+Number(v).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:2});}
 function fdate(d){if(!d)return '—';const x=new Date(d);if(isNaN(x))return esc(d);return x.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});}

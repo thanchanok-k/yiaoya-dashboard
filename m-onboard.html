@@ -41,8 +41,9 @@
 <div id="app" style="display:none"></div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession, block, esc } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, block, esc, mountFeedback } from './m-shared.js';
 mountHead('ออนบอร์ดของฉัน');
+mountFeedback('onboard', 'ออนบอร์ดของฉัน');
 
 const PHASES=['preboarding','day1','week1','month1'];
 const PHASE_LABEL={preboarding:'ก่อนเริ่มงาน',day1:'วันแรก',week1:'สัปดาห์แรก',month1:'เดือนแรก',probation:'ทดลองงาน'};

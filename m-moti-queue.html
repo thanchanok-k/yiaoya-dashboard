@@ -37,8 +37,9 @@
 <div id="app" style="display:none"><div id="body"><div class="loading">กำลังโหลด…</div></div></div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { $, api, mountHead, requireSession, esc } from './m-shared.js';
+import { $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js';
 mountHead('คิวสแกน Moti');
+mountFeedback('moti-queue', 'คิวสแกน Moti วันนี้');
 
 const qs = new URLSearchParams(location.search);
 let DATE = (qs.get('date') || '').trim();

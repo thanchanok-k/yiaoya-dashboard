@@ -49,8 +49,9 @@ body{padding-bottom:96px}
 <div class="cta" id="cta" style="display:none"><button id="send" disabled>แจ้งเหตุการณ์</button><div class="msg" id="msg"></div></div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js';
 mountHead('แจ้งเหตุการณ์ / Incident');
+mountFeedback('incident', 'แจ้งเหตุการณ์ / Incident');
 const CATEGORIES=[
   {key:'injury',label:'บาดเจ็บ / Injury'},
   {key:'near_miss',label:'เกือบเกิดเหตุ / Near-miss'},
