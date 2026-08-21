@@ -4843,7 +4843,12 @@ function fbReporter(){ return ($('sbName')&&$('sbName').textContent)||'ผู้
    ทำให้เจ้าของ/ผู้อำนวยการ HR กดปิดใบของคนอื่นได้ ผิดกติกาที่ใช้ทั้งระบบ
    เก็บ uid ของคนที่ล็อกอินไว้ แล้วโชว์ปุ่มเฉพาะใบของตัวเอง */
 var FB_UID='';
-(async()=>{ try{ const {data:u}=await sb.auth.getUser(); FB_UID=(u&&u.user&&u.user.id)||''; }catch(e){} })();
+/* ★ ออดิทรอบสาม 21 ส.ค. 69 — เดิมเป็น IIFE ลอย ๆ ถ้าผู้ใช้กดเมนู "ความเห็น" เร็วกว่า
+   ที่เซิร์ฟเวอร์จะตอบว่าเป็นใคร FB_UID จะยังว่าง → ปุ่มยืนยันไม่ขึ้นเลยแม้แต่ใบของตัวเอง
+   และไม่มีอะไร render ซ้ำให้ ต้องทำเป็น promise ให้ loadFeedback รอ (ต้นทุนศูนย์เมื่อได้ค่าแล้ว) */
+const FB_UID_READY = sb.auth.getUser()
+  .then(({data:u})=>{ FB_UID=(u&&u.user&&u.user.id)||''; return FB_UID; })
+  .catch(()=>{ FB_UID=''; return ''; });
 /* core: แคปหน้าจอเป็น File (reuse ทั้งฟอร์มหลัก + กล่องตีกลับ) · hideEl = element ที่ซ่อนก่อนแคป */
 async function fbGrabScreenshot(hideEl){
  const prev=hideEl?hideEl.style.display:null; if(hideEl) hideEl.style.display='none';
@@ -5015,6 +5020,7 @@ async function fbSignMap(rows){
  return map;
 }
 async function loadFeedback(){
+ await FB_UID_READY;   // ★ ต้องรู้ว่าเป็นใครก่อน ไม่งั้นปุ่มยืนยันหายทั้งที่เป็นใบของตัวเอง
  const counts={open:0,new:0,in_progress:0,fixed:0,verified:0,all:0};
  const { data, error }=await sb.from('trial_feedback').select('*').order('created_at',{ascending:false});
  if(error){ $('fbList').innerHTML='<div class="card" style="padding:16px;color:#B91C1C">โหลดไม่ได้: '+esc(error.message)+'</div>'; return; }
