@@ -38,6 +38,20 @@ async function run(){
     await liff.init({ liffId: LIFF_ID });
     if(!liff.isLoggedIn()){ liff.login(); return; }
     const token = liff.getAccessToken();
+    // ★★ 21 ส.ค. 69 รอบสอง — คีย์สาธารณะของโปรเจกต์เป็นแบบใหม่ (sb_publishable_…)
+    //   ซึ่ง "ไม่ใช่ JWT" · ประตูหน้า edge function ตั้ง verify_jwt ไว้ จึงปฏิเสธตั้งแต่หน้าประตู
+    //   → คำขอไม่เคยไปถึงโค้ดเลย (ตรวจแล้ว: วันนี้ไม่มีบันทึกคำขอสักครั้ง)
+    //   ต้องมีตั๋วชั่วคราวที่เป็น JWT ก่อนถึงจะเรียกได้ → เข้าแบบไม่ระบุตัวตนไว้ "ชั่วคราว"
+    //   ★ ต่างจากที่หน้าอื่นเคยทำ: ตรงนี้เป็นแค่ตั๋วผ่านประตู แล้วจะถูกแทนที่ด้วยเซสชันจริงทันที
+    //     ถ้าแลกเซสชันจริงไม่ได้ ต้องออกจากระบบทิ้ง ไม่ปล่อยตั๋วชั่วคราวค้างไว้
+    //     (ตั๋วชั่วคราวที่ค้าง = ต้นเหตุที่ทีมเห็นชื่อตัวเองแต่กดอะไรไม่ได้ และสร้างบัญชีขยะ 110 บัญชี)
+    let { data: pre } = await sb.auth.getSession();
+    let temp = false;
+    if (!pre.session) {
+      try { const r = await sb.auth.signInAnonymously(); temp = !r.error; }
+      catch(_) { temp = false; }
+    }
+
     // ★★ 21 ส.ค. 69 — เดิมล็อกอินไลน์ยืนยันตัวตนได้ แต่ **ไม่เคยสร้างเซสชันจริง**
     //   ทุกหน้ามือถือเรียก edge function ซึ่งตรวจสิทธิ์จาก uid ของเซสชัน (ตาราง app_staff)
     //   เมื่อไม่มีเซสชัน หน้าอื่นจะสร้างบัญชีชั่วคราวให้แทน ซึ่งไม่มีทางผ่านด่านได้เลย
@@ -45,9 +59,20 @@ async function run(){
     //   ตัวออกเซสชันจากไลน์ (console_session) มีอยู่แล้วบนฮับ แค่ไม่มีใครเรียก — ต่อให้ตรงนี้
     const ses = await sb.functions.invoke('line_login',{ body:{ action:'console_session', access_token: token } });
     const sd = ses.data || {};
+    let real = false;
     if (sd.ok && sd.access_token && sd.refresh_token) {
-      try { await sb.auth.setSession({ access_token: sd.access_token, refresh_token: sd.refresh_token }); }
-      catch(_){ /* ตั้งเซสชันไม่ได้ = ไปต่อแบบเดิม แล้วหน้าถัดไปจะบอกให้เข้าใหม่ */ }
+      try {
+        await sb.auth.setSession({ access_token: sd.access_token, refresh_token: sd.refresh_token });
+        real = true;
+      } catch(_){ real = false; }
+    }
+    // ตั๋วชั่วคราวห้ามค้าง — ไม่งั้นหน้าถัดไปจะคิดว่าล็อกอินแล้ว แต่ยิงอะไรก็โดนปฏิเสธ
+    if (!real && temp) { try { await sb.auth.signOut(); } catch(_){} }
+    if (!real) {
+      stopSpin();
+      msg('เข้าระบบไม่สำเร็จ<br><small>' + ((sd && (sd.error_th || sd.error)) || 'แลกเซสชันไม่ได้')
+        + '<br>แจ้งทีมระบบพร้อมข้อความนี้ได้เลยค่ะ</small>');
+      return;
     }
     const { data, error } = await sb.functions.invoke('line_login',{ body:{ action:'verify', access_token: token } });
     if(error||data?.error){ stopSpin(); msg('ยืนยันตัวตนไม่สำเร็จ: '+(data?.error||error.message)); return; }
