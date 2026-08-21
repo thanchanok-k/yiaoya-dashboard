@@ -33,7 +33,12 @@ export async function api(path, body) {
   const r = await fetch(SB_URL + '/functions/v1/' + path, {
     method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined,
   });
-  return r.json();
+  const out = await r.json().catch(() => ({ error: 'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง' }));
+  // ★ 21 ส.ค. 69 — จับอาการ "เซสชันใช้ไม่ได้" ที่ตัวกลางนี้ที่เดียว ครอบทุกหน้า
+  //   เดิมแต่ละหน้าเอา error ดิบไปโชว์ ผู้ใช้เห็น "บัญชีนี้ยังไม่ได้ผูกกับพนักงาน"
+  //   แล้วเข้าใจว่าตัวเองไม่มีสิทธิ์ ทั้งที่ความจริงคือแค่ต้องเข้าระบบใหม่
+  if (out && out.error && isSessionError(out.error)) blockRelogin('เข้าระบบใหม่อีกครั้งนะคะ');
+  return out;
 }
 
 // วาง header แบรนด์ (gradient) บนสุดของ body — เรียกครั้งเดียวต่อหน้า
@@ -46,17 +51,46 @@ export function mountHead(title) {
   document.body.insertBefore(h, document.body.firstChild);
 }
 
-// เช็คตัวตน + ensure Supabase session (anonymous) · คืน true ถ้าพร้อมใช้งาน
+/**
+ * เช็คว่าพร้อมใช้งานจริงไหม · คืน true ถ้าใช่
+ *
+ * ★★ แก้ 21 ส.ค. 69 — มายแจ้งว่าเข้าไม่ได้ ทั้งที่หน้าจอโชว์ชื่อและรหัสเธอถูกต้อง
+ *   สาเหตุ: เดิมถ้าไม่มี session จะ "สร้างบัญชีชั่วคราวแบบไม่ระบุตัวตน" ให้เงียบ ๆ
+ *   แต่ทั้งระบบผูกสิทธิ์ไว้กับบัญชีจริงที่ล็อกอินผ่าน LINE (ตาราง app_staff)
+ *   บัญชีชั่วคราวจึง **ไม่มีทางผ่านด่านได้เลย** — เซิร์ฟเวอร์ตอบว่า "ยังไม่ได้ผูกกับพนักงาน"
+ *   ส่วนชื่อบนหัวจอมาจากที่จำไว้ในเครื่อง ซึ่งอยู่คนละที่กับ session → เลยดูเหมือนล็อกอินอยู่
+ *   ผลข้างเคียง: สร้างบัญชีขยะทิ้งไว้แล้ว 110 บัญชี
+ *
+ *   ตอนนี้: ไม่มี session = บอกตรง ๆ ว่าหมดอายุ แล้วให้เข้าใหม่ · ไม่สร้างบัญชีชั่วคราวอีก
+ */
 export async function requireSession() {
   if (!ID || !ID.employee_id) {
     block('ยังไม่ได้เข้าระบบ — กรุณาเข้าผ่าน LINE ก่อน<br><a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');
     return false;
   }
-  let { data: s } = await sb.auth.getSession();
+  const { data: s } = await sb.auth.getSession();
   if (!s.session) {
-    const r = await sb.auth.signInAnonymously();
-    if (r.error) { block('ระบบยังไม่เปิด anonymous sign-in<br><small>แจ้งแอดมินเปิดใน Supabase → Auth</small>'); return false; }
+    block('เซสชันหมดอายุแล้ว — กรุณาเข้าระบบใหม่<br>'
+        + '<small>ชื่อที่ขึ้นด้านบนเป็นข้อมูลที่เครื่องจำไว้ ไม่ใช่การเข้าระบบ</small><br>'
+        + '<a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');
+    return false;
   }
   const a = $('app'); if (a) a.style.display = 'block';
   return true;
+}
+
+/**
+ * เรียกเมื่อเซิร์ฟเวอร์ตอบว่าบัญชีไม่ผูกกับพนักงาน — เป็นอาการของเซสชันเพี้ยน
+ * ไม่ใช่เรื่องสิทธิ์ จึงต้องบอกให้เข้าใหม่ ไม่ใช่โยนข้อความดิบให้ผู้ใช้งง
+ */
+export function blockRelogin(msg) {
+  block((msg || 'เข้าระบบไม่สำเร็จ') + '<br>'
+      + '<small>ลองเข้าระบบใหม่อีกครั้ง ถ้ายังไม่ได้แจ้งทีมระบบ</small><br>'
+      + '<a class="lk" href="login.html">เข้าสู่ระบบด้วย LINE →</a>');
+}
+
+/** ข้อความที่แปลว่า "เซสชันใช้ไม่ได้" ไม่ใช่ "ไม่มีสิทธิ์" */
+export function isSessionError(err) {
+  const t = String(err || '');
+  return t.indexOf('ยังไม่ได้ผูกกับพนักงาน') >= 0 || t.indexOf('ต้องเข้าระบบก่อน') >= 0;
 }
