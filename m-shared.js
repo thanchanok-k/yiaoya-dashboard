@@ -96,19 +96,28 @@ export function isSessionError(err) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   ปุ่มแจ้งปัญหา — ให้ทุกหน้ามือถือมีเหมือนระบบสต็อก (เจ้าของสั่ง 21 ส.ค. 69)
-   ทำที่ตัวกลางที่เดียว ทุกหน้าเรียก mountFeedback() บรรทัดเดียวจบ
+   ปุ่มแจ้งปัญหา — ลอกหน้าตาจากระบบ Lead มาทั้งชุด (เจ้าของสั่ง 21 ส.ค. 69)
+   ★ ห้ามออกแบบใหม่ · สี ขนาด ป้ายสถานะ การ์ดรายการ ใช้ชุดเดียวกับ lead_console.html
 
-   วงจรเดียวกับที่ใช้ทั้งระบบ: แจ้ง → ทีมแก้ + เขียนอธิบายกลับ → ผู้แจ้งกดยืนยัน
-   หรือตีกลับพร้อมแนบรูป · ★ ตีกลับ = ล้างตราแจ้งเตือน ให้แจ้งซ้ำได้เมื่อแก้รอบสอง
+   ★★ กับดักของหน้ามือถือชุดนี้: m-shared.css มีกฎกลาง button{width:100%;padding:14px;margin-top:16px}
+      ทุกปุ่มในนี้จึงต้องระบุ width/padding/margin ทับเองทุกตัว ไม่งั้นจะยืดเต็มจอ
    ═══════════════════════════════════════════════════════════════════════ */
 
-const FB_CATS = [['bug','ใช้ไม่ได้'], ['slow','ช้า'], ['suggest','อยากให้เพิ่ม'], ['other','อื่น ๆ']];
-const FB_ST   = { new:'รอรับเรื่อง', in_progress:'กำลังแก้', fixed:'แก้แล้ว รอเช็ค', verified:'ยืนยันแล้ว' };
-const FB_MAX_IMG = 3;
+const YFB_CATS = [['bug', 'ใช้งานติดขัด'], ['suggest', 'อยากให้เพิ่ม'], ['other', 'อื่น ๆ']];
+const YFB_ST   = { new: 'รอรับเรื่อง', in_progress: 'กำลังแก้', fixed: 'แก้แล้ว รอทีมเทส', verified: 'ยืนยันแล้ว' };
+const YFB_STC  = { new: '#FEF3C7|#92400E', in_progress: '#DBEAFE|#1E40AF', fixed: '#D1FAE5|#065F46', verified: '#E2E8F0|#334155' };
+const YFB_MAXIMG = 5;
 
-/** ย่อรูปก่อนส่ง — มือถือถ่ายมาไฟล์ใหญ่มาก ส่งดิบจะช้าและเปลืองที่เก็บ */
-function fbShrink(file) {
+function yfbDate(iso) {
+  try {
+    const d = new Date(iso); if (isNaN(d)) return '';
+    const M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    return d.getDate() + ' ' + M[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(-2);
+  } catch (e) { return ''; }
+}
+
+/** ย่อรูปก่อนส่ง — มือถือถ่ายมาไฟล์ใหญ่ ส่งดิบจะช้าและเปลืองที่เก็บ */
+function yfbShrink(file) {
   return new Promise((res) => {
     const r = new FileReader();
     r.onload = (e) => {
@@ -128,8 +137,8 @@ function fbShrink(file) {
   });
 }
 
-/** dataURL → File เพื่ออัปเข้าที่เก็บเดียวกับหน้าเดสก์ท็อป (โฟลเดอร์ = uid ของคนแจ้ง) */
-async function fbUpload(dataUrls) {
+/** อัปรูปเข้าที่เก็บเดียวกับหน้าเดสก์ท็อป (โฟลเดอร์ = uid ของคนแจ้ง) */
+async function yfbUpload(dataUrls) {
   if (!dataUrls.length) return [];
   const { data: u } = await sb.auth.getUser();
   const uid = u && u.user && u.user.id;
@@ -146,114 +155,118 @@ async function fbUpload(dataUrls) {
 }
 
 export function mountFeedback(viewKey, viewLabel) {
-  if (!ID || !ID.employee_id) return;          // ยังไม่ล็อกอิน = ไม่ต้องมีปุ่ม
-  if (document.getElementById('yfbBtn')) return;
+  if (!ID || !ID.employee_id) return;              // ยังไม่ล็อกอิน = ไม่ต้องมีปุ่ม
+  if (document.getElementById('yfbFab')) return;
 
+  // ★ ทุก selector ต้องชนะกฎกลาง button{width:100%…} จึงระบุ width/padding/margin ทับทุกตัว
   const st = document.createElement('style');
   st.textContent = `
-    #yfbBtn{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:80;
-      background:#0D2F4F;color:#fff;border:0;border-radius:999px;padding:11px 17px;font:700 13px/1 inherit;
-      box-shadow:0 6px 20px -6px rgba(13,47,79,.55);cursor:pointer}
-    #yfbSheet{position:fixed;inset:0;z-index:90;background:rgba(15,23,42,.45);display:none;align-items:flex-end}
-    #yfbSheet.on{display:flex}
-    #yfbCard{background:#fff;width:100%;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
-    #yfbCard h3{margin:0 0 12px;font-size:16px;color:#0D2F4F}
-    .yfb-tabs{display:flex;gap:8px;margin-bottom:12px}
-    .yfb-tabs button{flex:1;border:1.5px solid #E2E8F0;background:#fff;color:#475569;border-radius:10px;
-      padding:9px;font:700 13px/1 inherit;cursor:pointer}
-    .yfb-tabs button.on{background:#0D2F4F;color:#fff;border-color:#0D2F4F}
-    .yfb-cats{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
-    .yfb-cats button{border:1.5px solid #E2E8F0;background:#fff;color:#475569;border-radius:20px;
-      padding:6px 13px;font:600 12.5px/1 inherit;cursor:pointer}
-    .yfb-cats button.on{background:#0D2F4F;color:#fff;border-color:#0D2F4F}
-    #yfbMsg{width:100%;box-sizing:border-box;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px;
-      font:400 15px/1.5 inherit;resize:vertical;min-height:88px}
-    .yfb-pick{display:inline-block;border:1.5px dashed #CBD5E1;border-radius:10px;padding:8px 13px;
-      font:600 12.5px/1 inherit;color:#475569;cursor:pointer;margin-top:9px}
-    .yfb-th{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
-    .yfb-th img{height:62px;border-radius:8px;border:1px solid #E2E8F0;object-fit:cover;display:block}
-    .yfb-th button{font:600 11px/1 inherit;color:#DC2626;background:none;border:0;cursor:pointer;margin-top:3px}
-    .yfb-go{width:100%;margin-top:13px;background:#0D2F4F;color:#fff;border:0;border-radius:11px;
-      padding:13px;font:700 14px/1 inherit;cursor:pointer}
-    .yfb-go[disabled]{opacity:.55}
-    .yfb-item{border:1px solid #E7EDF2;border-radius:11px;padding:12px;margin-bottom:9px}
-    .yfb-chip{display:inline-block;font:700 10.5px/1 inherit;padding:4px 9px;border-radius:20px;
-      background:#EEF2F6;color:#475569;margin-bottom:6px}
-    .yfb-fix{background:#F6FAF9;border-left:3px solid #3DC5B7;border-radius:0 8px 8px 0;padding:9px 11px;
-      margin-top:8px;font-size:12.5px;color:#334155}
-    .yfb-acts{display:flex;gap:7px;margin-top:9px}
-    .yfb-acts button{flex:1;border-radius:9px;padding:9px;font:700 12.5px/1 inherit;cursor:pointer}
-    .yfb-ok{background:#15803D;color:#fff;border:0}
-    .yfb-no{background:#fff;color:#B91C1C;border:1.5px solid #FCA5A5}
-    .yfb-msg{font-size:12.5px;margin-top:8px;min-height:16px}
-    .yfb-err{color:#B91C1C}`;
+    #yfbFab{position:fixed;right:14px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:99;
+      background:#0D2F4F;color:#fff;border-radius:24px;padding:10px 16px;font-size:13px;
+      box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:pointer;width:auto;margin:0;font-weight:400}
+    #yfbModal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;overflow:auto}
+    #yfbModal.on{display:block}
+    #yfbBox{background:#fff;border-radius:14px;max-width:420px;margin:8vh auto 24px;padding:16px}
+    #yfbBox .yfb-h{font-weight:bold;color:#0D2F4F;margin-bottom:8px;font-size:15px}
+    #yfbBox .yfb-tabs{display:flex;gap:6px;background:#F1F5F9;border-radius:11px;padding:4px;margin-bottom:12px}
+    #yfbBox .yfb-tabs button{flex:1;border:none;background:transparent;color:#64748B;border-radius:8px;
+      padding:8px 6px;font:600 13px/1.2 inherit;cursor:pointer;width:auto;margin:0;box-shadow:none}
+    #yfbBox .yfb-tabs button.on{background:#fff;color:#0D2F4F;box-shadow:0 1px 3px rgba(15,23,42,.12)}
+    #yfbBox .yfb-opts{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+    #yfbBox .yfb-op{font-size:14px;padding:8px 13px;border-radius:8px;border:1px solid #E2E8F0;
+      color:#64748B;background:#fff;cursor:pointer;display:inline-block}
+    #yfbBox .yfb-op.on{background:#E6F7F5;border-color:#3DC5B7;color:#0F766E;font-weight:600}
+    #yfbBox textarea{width:100%;box-sizing:border-box;border:1px solid #E2E8F0;border-radius:8px;padding:8px;
+      font-size:13px;font-family:inherit;margin-top:8px}
+    #yfbBox .yfb-lbl{font-size:12px;color:#64748B;margin-top:10px}
+    #yfbBox .yfb-thumb{position:relative;display:inline-block}
+    #yfbBox .yfb-thumb img{height:54px;border-radius:8px;border:1px solid #E2E8F0;object-fit:cover;display:block}
+    #yfbBox .yfb-thumb button{position:absolute;top:-6px;right:-6px;background:#B91C1C;color:#fff;border:none;
+      border-radius:50%;width:18px;height:18px;font-size:11px;line-height:1;cursor:pointer;padding:0;margin:0}
+    #yfbBox .yfb-send{width:100%;padding:12px;background:#0D2F4F;color:#fff;border:none;border-radius:10px;
+      font-size:14px;font-weight:700;margin-top:10px;cursor:pointer}
+    #yfbBox .yfb-send:disabled{opacity:.55}
+    #yfbBox .yfb-sub{font-size:11.5px;color:#94A3B8;margin-top:6px;text-align:center}
+    #yfbList{display:none;max-height:60vh;overflow:auto;min-height:120px}
+    #yfbList .ack button{width:auto;margin:0;padding:8px 6px}
+    #yfbBox .yfb-why{width:100%;box-sizing:border-box;margin-top:7px;border:1.5px solid #E2E8F0;
+      border-radius:9px;padding:8px 10px;font-size:13px;font-family:inherit}`;
   document.head.appendChild(st);
 
-  const btn = document.createElement('button');
-  btn.id = 'yfbBtn'; btn.type = 'button'; btn.textContent = 'แจ้งปัญหา';
-  document.body.appendChild(btn);
+  const fab = document.createElement('div');
+  fab.id = 'yfbFab'; fab.textContent = 'แจ้งปัญหา/ติชม';
+  document.body.appendChild(fab);
 
-  const sheet = document.createElement('div');
-  sheet.id = 'yfbSheet';
-  sheet.innerHTML = '<div id="yfbCard"></div>';
-  document.body.appendChild(sheet);
-  sheet.onclick = (e) => { if (e.target === sheet) sheet.classList.remove('on'); };
-
-  const card = () => document.getElementById('yfbCard');
-  let tab = 'form', cat = 'bug', imgs = [], busy = false;
-
-  function shell(inner) {
-    card().innerHTML =
-      '<h3>' + esc(viewLabel || 'แจ้งปัญหา') + '</h3>' +
+  const modal = document.createElement('div');
+  modal.id = 'yfbModal';
+  modal.innerHTML =
+    '<div id="yfbBox">' +
+      '<div class="yfb-h">แจ้งปัญหา / ติชม' + (viewLabel ? ' · ' + esc(viewLabel) : '') + '</div>' +
       '<div class="yfb-tabs">' +
-        '<button id="yfbT1" class="' + (tab === 'form' ? 'on' : '') + '">แจ้งปัญหา</button>' +
-        '<button id="yfbT2" class="' + (tab === 'list' ? 'on' : '') + '">รายการที่แจ้งไว้</button>' +
-      '</div>' + inner;
-    document.getElementById('yfbT1').onclick = () => { tab = 'form'; drawForm(); };
-    document.getElementById('yfbT2').onclick = () => { tab = 'list'; drawList(); };
-  }
+        '<button type="button" id="yfbT1" class="on">แจ้งใหม่</button>' +
+        '<button type="button" id="yfbT2">รายการที่แจ้งไว้</button>' +
+      '</div>' +
+      '<div id="yfbList"></div>' +
+      '<div id="yfbForm">' +
+        '<div class="yfb-opts" id="yfbCats"></div>' +
+        '<textarea id="yfbMsg" rows="3" placeholder="เล่าได้เลยค่ะ ทีมพัฒนาอ่านทุกข้อความ"></textarea>' +
+        '<div class="yfb-lbl">แนบรูป (ได้หลายรูป · สูงสุด ' + YFB_MAXIMG + ')</div>' +
+        '<div class="yfb-opts" id="yfbThumbs"></div>' +
+        '<div class="yfb-op" id="yfbAdd" style="display:inline-block">เพิ่มรูป</div>' +
+        '<input type="file" id="yfbFile" accept="image/*" multiple style="display:none">' +
+        '<button type="button" class="yfb-send" id="yfbSend">ส่งความเห็น</button>' +
+        '<div class="yfb-sub" id="yfbSub">แก้แล้วระบบจะแจ้งกลับให้กดยืนยันค่ะ</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('on'); };
 
+  let cat = 'other', imgs = [], busy = false;
+
+  function drawCats() {
+    $('yfbCats').innerHTML = YFB_CATS.map((c) =>
+      '<span class="yfb-op' + (c[0] === cat ? ' on' : '') + '" data-c="' + c[0] + '">' + c[1] + '</span>').join('');
+    $('yfbCats').querySelectorAll('.yfb-op').forEach((b) => b.onclick = () => { cat = b.dataset.c; drawCats(); });
+  }
   function drawThumbs() {
-    const w = document.getElementById('yfbTh'); if (!w) return;
-    w.innerHTML = imgs.map((u, i) =>
-      '<div><img src="' + u + '" alt="รูปที่แนบ ' + (i + 1) + '"><br><button data-i="' + i + '">ลบรูป</button></div>').join('');
-    w.querySelectorAll('button').forEach((b) => b.onclick = () => { imgs.splice(+b.dataset.i, 1); drawThumbs(); });
-    const p = document.getElementById('yfbPick'); if (p) p.style.display = imgs.length >= FB_MAX_IMG ? 'none' : 'inline-block';
+    $('yfbThumbs').innerHTML = imgs.map((u, i) =>
+      '<span class="yfb-thumb"><img src="' + u + '" alt="รูปที่แนบ ' + (i + 1) + '">' +
+      '<button type="button" data-i="' + i + '">×</button></span>').join('');
+    $('yfbThumbs').querySelectorAll('button').forEach((b) =>
+      b.onclick = () => { imgs.splice(+b.dataset.i, 1); drawThumbs(); });
+    $('yfbAdd').style.display = imgs.length >= YFB_MAXIMG ? 'none' : 'inline-block';
   }
-
-  function drawForm() {
-    shell(
-      '<div class="yfb-cats">' + FB_CATS.map((c) =>
-        '<button data-c="' + c[0] + '" class="' + (c[0] === cat ? 'on' : '') + '">' + c[1] + '</button>').join('') + '</div>' +
-      '<textarea id="yfbMsg" placeholder="เจอปัญหาอะไรคะ เล่าให้ฟังได้เลย"></textarea>' +
-      '<label class="yfb-pick" id="yfbPick">แนบรูปหน้าจอ (ได้ ' + FB_MAX_IMG + ' รูป)' +
-        '<input type="file" accept="image/*" multiple hidden id="yfbFile"></label>' +
-      '<div class="yfb-th" id="yfbTh"></div>' +
-      '<button class="yfb-go" id="yfbGo">ส่งให้ทีมระบบ</button>' +
-      '<div class="yfb-msg" id="yfbM"></div>');
-    card().querySelectorAll('.yfb-cats button').forEach((b) => b.onclick = () => { cat = b.dataset.c; drawForm(); });
-    document.getElementById('yfbFile').onchange = async (e) => {
-      const fs = [...e.target.files]; e.target.value = '';
-      for (const f of fs) {
-        if (imgs.length >= FB_MAX_IMG) break;
-        const u = await fbShrink(f); if (u) imgs.push(u);
-      }
-      drawThumbs();
-    };
+  function tab(which) {
+    const isList = which === 'list';
+    $('yfbT1').className = isList ? '' : 'on';
+    $('yfbT2').className = isList ? 'on' : '';
+    $('yfbForm').style.display = isList ? 'none' : 'block';
+    $('yfbList').style.display = isList ? 'block' : 'none';
+    if (isList) loadList();
+  }
+  $('yfbT1').onclick = () => tab('form');
+  $('yfbT2').onclick = () => tab('list');
+  $('yfbAdd').onclick = () => $('yfbFile').click();
+  $('yfbFile').onchange = async (e) => {
+    const fs = [...e.target.files]; e.target.value = '';
+    for (const f of fs) {
+      if (imgs.length >= YFB_MAXIMG) break;
+      const u = await yfbShrink(f); if (u) imgs.push(u);
+    }
     drawThumbs();
-    document.getElementById('yfbGo').onclick = send;
-  }
+  };
+  $('yfbSend').onclick = send;
 
   async function send() {
     if (busy) return;
-    const m = document.getElementById('yfbMsg').value.trim();
-    const box = document.getElementById('yfbM');
-    if (!m) { box.className = 'yfb-msg yfb-err'; box.textContent = 'พิมพ์ข้อความก่อนนะคะ'; return; }
+    const m = $('yfbMsg').value.trim();
+    const sub = $('yfbSub');
+    if (!m) { sub.style.color = '#B91C1C'; sub.textContent = 'พิมพ์ข้อความก่อนนะคะ'; return; }
     busy = true;
-    const go = document.getElementById('yfbGo'); go.disabled = true; go.textContent = 'กำลังส่ง…';
-    box.className = 'yfb-msg'; box.textContent = '';
+    const btn = $('yfbSend'); btn.disabled = true; btn.textContent = 'กำลังส่ง…';
+    sub.style.color = '#94A3B8'; sub.textContent = '';
     try {
-      const attachments = await fbUpload(imgs);
+      const attachments = await yfbUpload(imgs);
       const { error } = await sb.from('trial_feedback').insert({
         source: 'dashboard', view_key: viewKey || 'mobile',
         view_label: viewLabel || viewKey || 'มือถือ',
@@ -265,68 +278,95 @@ export function mountFeedback(viewKey, viewLabel) {
         attachments,
       });
       if (error) throw error;
-      imgs = [];
-      card().innerHTML = '<h3>ส่งแล้วค่ะ</h3>'
-        + '<p style="color:#475569;font-size:14px;line-height:1.6">ทีมระบบจะดูให้แล้วเขียนอธิบายกลับมา '
-        + 'พอแก้เสร็จจะขึ้นในแท็บ “รายการที่แจ้งไว้” ให้กดยืนยันว่าใช้ได้ไหมค่ะ</p>'
-        + '<button class="yfb-go" id="yfbClose">ปิด</button>';
-      document.getElementById('yfbClose').onclick = () => { sheet.classList.remove('on'); tab = 'form'; };
+      imgs = []; $('yfbMsg').value = ''; drawThumbs();
+      sub.style.color = '#0F766E';
+      sub.textContent = 'ส่งแล้วค่ะ ขอบคุณมาก — แก้เสร็จจะแจ้งกลับให้กดยืนยัน';
     } catch (e) {
-      box.className = 'yfb-msg yfb-err';
-      box.textContent = 'ส่งไม่สำเร็จ: ' + (e.message || e);
-      go.disabled = false; go.textContent = 'ส่งให้ทีมระบบ';
+      sub.style.color = '#B91C1C';
+      sub.textContent = 'ส่งไม่สำเร็จ: ' + (e.message || e);
     }
+    btn.disabled = false; btn.textContent = 'ส่งความเห็น';
     busy = false;
   }
 
-  async function drawList() {
-    shell('<div id="yfbL" style="color:#64748B;font-size:13px">กำลังโหลด…</div>');
+  async function loadList() {
+    const box = $('yfbList');
+    box.innerHTML = '<div style="text-align:center;color:#94A3B8;font-size:13px;padding:28px 8px">กำลังโหลด…</div>';
     const { data: u } = await sb.auth.getUser();
     const uid = u && u.user && u.user.id;
     const { data, error } = await sb.from('trial_feedback')
-      .select('id,category,view_label,message,status,fix_note,created_at,reporter_uid')
+      .select('id,view_label,message,status,fix_note,created_at,reporter_name,reporter_uid')
       .order('created_at', { ascending: false }).limit(60);
-    const L = document.getElementById('yfbL'); if (!L) return;
-    if (error) { L.className = 'yfb-err'; L.textContent = 'โหลดไม่ได้: ' + error.message; return; }
-    const mine = (data || []).filter((r) => r.reporter_uid === uid);
-    if (!mine.length) { L.textContent = 'ยังไม่เคยแจ้งอะไรไว้ค่ะ'; return; }
-    L.className = '';
-    L.innerHTML = mine.map((r) =>
-      '<div class="yfb-item" data-id="' + r.id + '">' +
-        '<span class="yfb-chip">#' + r.id + ' · ' + esc(FB_ST[r.status] || r.status) + '</span>' +
-        '<div style="font-size:14px;color:#0D2F4F;line-height:1.55;white-space:pre-wrap">' + esc(r.message) + '</div>' +
-        (r.fix_note ? '<div class="yfb-fix"><b>ทีมแก้แล้ว:</b> ' + esc(r.fix_note) + '</div>' : '') +
-        (r.status === 'fixed'
-          ? '<div class="yfb-acts"><button class="yfb-ok" data-a="verify" data-id="' + r.id + '">โอเค ใช้ได้แล้ว</button>'
-            + '<button class="yfb-no" data-a="reopen" data-id="' + r.id + '">ยังไม่โอเค</button></div>'
-            + '<div class="yfb-msg" id="yfbR' + r.id + '"></div>'
-          : '') +
-      '</div>').join('');
-    L.querySelectorAll('button[data-a]').forEach((b) => b.onclick = () => act(b));
+    if (error) {
+      box.innerHTML = '<div style="text-align:center;color:#B91C1C;font-size:13px;padding:28px 8px">โหลดไม่ได้: '
+        + esc(error.message) + '</div>';
+      return;
+    }
+    const items = (data || []).map((r) => ({ ...r, mine: r.reporter_uid === uid }));
+    if (!items.length) {
+      box.innerHTML = '<div style="text-align:center;color:#94A3B8;font-size:13px;padding:28px 8px">ยังไม่มีรายการที่แจ้งไว้</div>';
+      return;
+    }
+    box.innerHTML = items.map((it) => {
+      const s = String(it.status || 'new');
+      const c = (YFB_STC[s] || '#F1F5F9|#475569').split('|');
+      return '<div style="border:1px solid ' + (it.mine ? '#0D9E73' : '#E2E8F0') + ';border-radius:12px;padding:11px 12px;margin-bottom:9px;'
+        + (it.mine ? 'background:#F3FBF8' : '') + '">'
+        + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">'
+        +   '<span style="border-radius:11px;padding:3px 9px;font-size:11px;font-weight:700;background:' + c[0] + ';color:' + c[1] + '">'
+        +     esc(YFB_ST[s] || s) + '</span>'
+        +   (it.mine ? '<span style="background:#0D9E73;color:#fff;border-radius:9px;padding:2px 7px;font-size:10px;font-weight:700">ของคุณ</span>' : '')
+        +   (it.view_label ? '<span style="font-size:11px;color:#64748B;font-weight:600">' + esc(it.view_label) + '</span>' : '')
+        + '</div>'
+        + '<div style="font-size:13px;color:#0F172A;line-height:1.5;white-space:pre-wrap;word-break:break-word">' + esc(it.message) + '</div>'
+        + (it.fix_note ? '<div style="margin-top:7px;background:#F0FDF4;border-left:3px solid #34D399;border-radius:0 8px 8px 0;padding:7px 9px;font-size:12px;color:#065F46;line-height:1.5;white-space:pre-wrap">ทีมระบบ: ' + esc(it.fix_note) + '</div>' : '')
+        + '<div style="font-size:11px;color:#94A3B8;margin-top:6px">' + esc(it.reporter_name || 'ไม่ระบุชื่อ') + ' · ' + esc(yfbDate(it.created_at)) + '</div>'
+        + ((it.mine && s === 'fixed')
+            ? '<div class="ack" style="display:flex;gap:7px;margin-top:9px" data-id="' + it.id + '">'
+              + '<button type="button" data-a="verify" style="flex:1;border:1.5px solid #0D2F4F;background:#0D2F4F;color:#fff;border-radius:9px;font:700 12px/1.2 inherit;cursor:pointer">โอเค ใช้ได้แล้ว</button>'
+              + '<button type="button" data-a="reopen" style="flex:1;border:1.5px solid #E2E8F0;background:#fff;color:#64748B;border-radius:9px;font:700 12px/1.2 inherit;cursor:pointer">ยังไม่โอเค</button>'
+              + '</div>'
+            : '')
+        + '</div>';
+    }).join('');
+    box.querySelectorAll('.ack button').forEach((b) => b.onclick = () => ack(b));
   }
 
-  async function act(b) {
-    const id = +b.dataset.id, a = b.dataset.a;
-    const box = document.getElementById('yfbR' + id);
-    b.disabled = true; b.textContent = 'กำลังบันทึก…';
+  async function ack(btn) {
+    const wrap = btn.parentNode, id = +wrap.getAttribute('data-id'), a = btn.dataset.a;
+    const card = wrap.parentNode;
+    // ยังไม่โอเค = ขอเหตุผลก่อน ทีมจะได้รู้ว่าตกตรงไหน (แบบเดียวกับฝั่งลีด)
+    if (a === 'reopen' && !card.querySelector('.yfb-why')) {
+      const ta = document.createElement('input');
+      ta.className = 'yfb-why'; ta.placeholder = 'ยังติดตรงไหนคะ (ไม่ใส่ก็ได้)';
+      card.appendChild(ta); ta.focus();
+      btn.textContent = 'ส่งกลับให้แก้';
+      return;
+    }
+    const why = card.querySelector('.yfb-why');
+    wrap.querySelectorAll('button').forEach((b) => b.disabled = true);
+    btn.textContent = 'กำลังบันทึก…';
     const patch = a === 'verify'
       ? { status: 'verified', verified_at: new Date().toISOString() }
       : { status: 'new', fixed_at: null, notified_fixed_at: null };
     // ★ ต้องรู้ว่าเขียนติดจริงไหม — สิทธิ์ไม่ผ่านจะได้ 0 แถวโดยไม่มี error
     const { data: done, error } = await sb.from('trial_feedback').update(patch).eq('id', id).select('id');
     if (error || !done || !done.length) {
-      box.className = 'yfb-msg yfb-err';
-      box.textContent = error ? ('ไม่สำเร็จ: ' + error.message) : 'ใบนี้ไม่ใช่ของคุณค่ะ';
-      b.disabled = false; b.textContent = a === 'verify' ? 'โอเค ใช้ได้แล้ว' : 'ยังไม่โอเค';
+      wrap.querySelectorAll('button').forEach((b) => b.disabled = false);
+      btn.textContent = a === 'verify' ? 'โอเค ใช้ได้แล้ว' : 'ยังไม่โอเค';
+      alert(error ? ('ไม่สำเร็จ: ' + error.message) : 'ใบนี้ไม่ใช่ของคุณค่ะ');
       return;
     }
     await sb.from('trial_feedback_log').insert({
       feedback_id: id, kind: 'status', to_status: patch.status,
       actor_name: (ID && (ID.employee_name || ID.display_name)) || 'ผู้ใช้',
-      note: a === 'verify' ? 'ยืนยันว่าใช้ได้แล้ว' : 'ยังไม่โอเค เปิดเรื่องใหม่',
+      note: (why && why.value.trim())
+        ? (a === 'verify' ? why.value.trim() : 'ยังไม่โอเค: ' + why.value.trim())
+        : (a === 'verify' ? 'ยืนยันว่าใช้ได้แล้ว' : 'ยังไม่โอเค เปิดเรื่องใหม่'),
     });
-    drawList();
+    loadList();
   }
 
-  btn.onclick = () => { sheet.classList.add('on'); tab === 'list' ? drawList() : drawForm(); };
+  fab.onclick = () => { modal.classList.add('on'); tab('form'); };
+  drawCats(); drawThumbs();
 }
