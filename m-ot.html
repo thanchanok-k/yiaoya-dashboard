@@ -32,7 +32,7 @@ body{padding-bottom:96px}
 <div class="cta" id="cta" style="display:none"><button id="send" disabled>ส่งคำขอ OT</button><div class="msg" id="msg"></div></div>
 <div id="block" style="display:none"></div>
 <script type="module">
-import { ID, $, api, mountHead, requireSession } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js';
 mountHead('ขอ OT (ทำงานล่วงเวลา)');
 const REASONS=['เคลียร์เอกสาร/เวชระเบียนค้าง','รับผู้ป่วยเพิ่ม/คิวยาว','ช่วยงานสาขาอื่น','เตรียมงานอบรม/ประชุม','ปิดยอด/เช็คสต็อก','อื่นๆ'];
 let chip='', minsAuto=true;
@@ -52,6 +52,7 @@ async function submit(){
 }
 (async()=>{
   if(!await requireSession()) return;
+  mountFeedback('ot', 'ขอ OT');
   $('cta').style.display='block';
   const d=new Date();$('fDate').max=todayStr();$('fDate').min=new Date(d.getTime()-7*864e5).toISOString().slice(0,10);$('fDate').value=todayStr();
   $('chips').innerHTML=REASONS.map(r=>`<span class="chip" data-r="${r}">${r}</span>`).join('');

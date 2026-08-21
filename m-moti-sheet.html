@@ -174,7 +174,7 @@ section{page-break-inside:avoid;margin-bottom:4px}
 <div id="block" style="display:none"></div>
 
 <script type="module">
-import { $, api, requireSession, esc } from './m-shared.js';
+import { $, api, requireSession, esc, mountFeedback } from './m-shared.js';
 
 const qs   = new URLSearchParams(location.search);
 const HN   = (qs.get('hn')   || '').trim();
@@ -445,6 +445,7 @@ async function load(){
 
 async function init(){
   if (!await requireSession()) return;
+  mountFeedback('moti-sheet', 'ใบสรุป Moti');
   if (!HN && !APPT) { $('body').innerHTML = '<div class="empty">ไม่ได้ระบุคนไข้ — เปิดใบจากหน้าคนไข้</div>'; return; }
   await load();
 }
