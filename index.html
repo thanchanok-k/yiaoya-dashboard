@@ -4839,6 +4839,11 @@ const FB_SRC_ICON=Object.fromEntries(FB_SRCS.map(s=>[s[0],s[2]]));
 const FB_STAT={new:['ใหม่','#EFF6FF','#1D4ED8','ti-circle-dot'],in_progress:['กำลังแก้','#FEF3C7','#B45309','ti-tool'],fixed:['แก้แล้ว · รอเทส','#FEF9C3','#A16207','ti-clock-check'],verified:['ใช้ได้','#DCFCE7','#15803D','ti-circle-check']};
 let FB_CAT='suggest', FB_SRC='dashboard', FB_FILTER='open', FB_PAGE='', FB_FILES=[], FB_RO_FILES=[];
 function fbReporter(){ return ($('sbName')&&$('sbName').textContent)||'ผู้ใช้'; }
+/* ★ ออดิท 21 ส.ค. 69 (P1) — เดิมโชว์ปุ่มปิดใบให้ทุกแถวโดยไม่เช็คว่าเป็นใบของใคร
+   ทำให้เจ้าของ/ผู้อำนวยการ HR กดปิดใบของคนอื่นได้ ผิดกติกาที่ใช้ทั้งระบบ
+   เก็บ uid ของคนที่ล็อกอินไว้ แล้วโชว์ปุ่มเฉพาะใบของตัวเอง */
+var FB_UID='';
+(async()=>{ try{ const {data:u}=await sb.auth.getUser(); FB_UID=(u&&u.user&&u.user.id)||''; }catch(e){} })();
 /* core: แคปหน้าจอเป็น File (reuse ทั้งฟอร์มหลัก + กล่องตีกลับ) · hideEl = element ที่ซ่อนก่อนแคป */
 async function fbGrabScreenshot(hideEl){
  const prev=hideEl?hideEl.style.display:null; if(hideEl) hideEl.style.display='none';
@@ -4936,8 +4941,11 @@ async function fbSend(){
 async function fbAction(id,from,to){
  const patch={status:to};
  if(to==='verified') patch.verified_at=new Date().toISOString();
- const { error }=await sb.from('trial_feedback').update(patch).eq('id',id);
+ else { patch.fixed_at=null; patch.notified_fixed_at=null; }   // ★ ตีกลับ = แจ้งใหม่ได้เมื่อแก้เสร็จ
+ // ★ ต้องรู้ว่าเขียนติดจริงไหม — เดิมถ้าสิทธิ์ไม่ผ่านจะได้ 0 แถวโดยไม่มี error แล้วหน้าจอบอกว่าสำเร็จ
+ const { data:done, error }=await sb.from('trial_feedback').update(patch).eq('id',id).select('id');
  if(error){ alert('ไม่สำเร็จ: '+error.message); return; }
+ if(!done||!done.length){ alert('ปิดใบนี้ไม่ได้ค่ะ — ใบนี้ไม่ใช่ของคุณ'); return; }
  await sb.from('trial_feedback_log').insert({feedback_id:id,kind:'status',from_status:from,to_status:to,actor_name:fbReporter(),note:to==='verified'?'ยืนยันว่าใช้ได้แล้ว':'เปิดเรื่องใหม่ (ยังไม่โอเค)'});
  loadFeedback();
 }
@@ -4988,13 +4996,14 @@ async function fbReopenSubmit(id){
  try{ added=await fbUploadAll(FB_RO_FILES); }
  catch(e){ const er=document.getElementById('fbRoErr-'+id); if(er) er.textContent='อัปโหลดไฟล์ไม่สำเร็จ'; if(send){ send.disabled=false; send.innerHTML='<i class="ti ti-arrow-back-up"></i> ส่งกลับให้แก้'; } return; }
  // แนบรูปใหม่ต่อท้าย attachments เดิม เพื่อให้โชว์ในการ์ด
- const patch={status:'new'};
+ const patch={status:'new', fixed_at:null, notified_fixed_at:null};   // ★ ตีกลับ = ล้างตราแจ้งเตือน
  if(added.length){
    const cur=await sb.from('trial_feedback').select('attachments').eq('id',id).maybeSingle();
    patch.attachments=((cur.data&&cur.data.attachments)||[]).concat(added);
  }
- const { error }=await sb.from('trial_feedback').update(patch).eq('id',id);
- if(error){ alert('ไม่สำเร็จ: '+error.message); return; }
+ const { data:done2, error }=await sb.from('trial_feedback').update(patch).eq('id',id).select('id');
+ if(error){ alert('ไม่สำเร็จ: '+error.message); if(send){ send.disabled=false; send.innerHTML='<i class="ti ti-arrow-back-up"></i> ส่งกลับให้แก้'; } return; }
+ if(!done2||!done2.length){ alert('ตีกลับใบนี้ไม่ได้ค่ะ — ใบนี้ไม่ใช่ของคุณ'); if(send){ send.disabled=false; send.innerHTML='<i class="ti ti-arrow-back-up"></i> ส่งกลับให้แก้'; } return; }
  await sb.from('trial_feedback_log').insert({feedback_id:id,kind:'status',from_status:'',to_status:'new',actor_name:fbReporter(),note: (note?('ยังไม่โอเค: '+note):'เปิดเรื่องใหม่ (ยังไม่โอเค)')+(added.length?(' [แนบ '+added.length+' ไฟล์]'):'')});
  FB_RO_FILES=[]; loadFeedback();
 }
@@ -5041,7 +5050,9 @@ async function loadFeedback(){
    }).join('');
    const imgRow=atts?'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'+atts+'</div>':'';
    let actions='';
-   if(r.status==='fixed') actions='<div id="fbAct-'+r.id+'" style="display:flex;gap:8px;margin-top:12px"><button class="fbVerify" data-id="'+r.id+'" style="background:#15803D;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-check"></i> โอเค ใช้ได้แล้ว</button><button class="fbReopen" data-id="'+r.id+'" style="background:#fff;color:#B91C1C;border:1.5px solid #FCA5A5;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">ยังไม่ใช่</button></div>';
+   const isMine = !!FB_UID && r.reporter_uid===FB_UID;   // ★ เจ้าของใบเท่านั้น
+   if(!isMine) actions='';
+   else if(r.status==='fixed') actions='<div id="fbAct-'+r.id+'" style="display:flex;gap:8px;margin-top:12px"><button class="fbVerify" data-id="'+r.id+'" style="background:#15803D;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-check"></i> โอเค ใช้ได้แล้ว</button><button class="fbReopen" data-id="'+r.id+'" style="background:#fff;color:#B91C1C;border:1.5px solid #FCA5A5;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">ยังไม่ใช่</button></div>';
    else if(r.status==='verified') actions='<div id="fbAct-'+r.id+'" style="margin-top:10px"><button class="fbReopen" data-id="'+r.id+'" style="background:none;border:none;color:#94A3B8;font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline">เปิดเรื่องนี้ใหม่</button></div>';
    const fix=r.fix_note?'<div style="background:#F8FAFC;border-left:3px solid var(--teal,#3DC5B7);border-radius:0 8px 8px 0;padding:9px 12px;margin-top:10px;font-size:12.5px;color:#334155"><b style="color:#15803D"><i class="ti ti-circle-check"></i> ทีมแก้แล้ว:</b> '+esc(r.fix_note)+'</div>':'';
    return '<div class="card" style="padding:15px 17px;margin-bottom:11px">'+
