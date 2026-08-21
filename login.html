@@ -38,16 +38,35 @@ async function run(){
     await liff.init({ liffId: LIFF_ID });
     if(!liff.isLoggedIn()){ liff.login(); return; }
     const token = liff.getAccessToken();
-    let { data:sess } = await sb.auth.getSession();
-    // verify/request เป็น public action แล้ว (backend) — ไม่บังคับมี session · ถ้าเปิด anonymous ไว้ก็ใช้ (best-effort)
-    if(!sess.session){ try{ await sb.auth.signInAnonymously(); }catch(_){} }
+    // ★★ 21 ส.ค. 69 — เดิมล็อกอินไลน์ยืนยันตัวตนได้ แต่ **ไม่เคยสร้างเซสชันจริง**
+    //   ทุกหน้ามือถือเรียก edge function ซึ่งตรวจสิทธิ์จาก uid ของเซสชัน (ตาราง app_staff)
+    //   เมื่อไม่มีเซสชัน หน้าอื่นจะสร้างบัญชีชั่วคราวให้แทน ซึ่งไม่มีทางผ่านด่านได้เลย
+    //   → ทีมเห็นชื่อตัวเองบนจอ แต่กดอะไรก็ขึ้นว่า "บัญชีนี้ยังไม่ได้ผูกกับพนักงาน"
+    //   ตัวออกเซสชันจากไลน์ (console_session) มีอยู่แล้วบนฮับ แค่ไม่มีใครเรียก — ต่อให้ตรงนี้
+    const ses = await sb.functions.invoke('line_login',{ body:{ action:'console_session', access_token: token } });
+    const sd = ses.data || {};
+    if (sd.ok && sd.access_token && sd.refresh_token) {
+      try { await sb.auth.setSession({ access_token: sd.access_token, refresh_token: sd.refresh_token }); }
+      catch(_){ /* ตั้งเซสชันไม่ได้ = ไปต่อแบบเดิม แล้วหน้าถัดไปจะบอกให้เข้าใหม่ */ }
+    }
     const { data, error } = await sb.functions.invoke('line_login',{ body:{ action:'verify', access_token: token } });
     if(error||data?.error){ stopSpin(); msg('ยืนยันตัวตนไม่สำเร็จ: '+(data?.error||error.message)); return; }
-    localStorage.setItem('yy_line_id', JSON.stringify({ uid:data.uid, display_name:data.display_name, employee_name:data.employee_name||data.display_name, employee_id:data.employee_id||'', role:data.role||'staff', verified:data.verified }));
+    // เก็บ line_token ด้วย → m-shared.js แนบเป็น x-line-token → resolveCaller (backend) verify ตัวตนจริง + scope ตามตัวเอง (กัน IDOR)
+    localStorage.setItem('yy_line_id', JSON.stringify({ uid:data.uid, display_name:data.display_name, employee_name:data.employee_name||data.display_name, employee_id:data.employee_id||'', role:data.role||'staff', verified:data.verified, line_token:token }));
     stopSpin();
     if(!data.linked){ showRequestForm(data, token); }
-    else { msg(`ยินดีต้อนรับ ${data.employee_name||data.display_name}`);
-      document.querySelector('.card').insertAdjacentHTML('beforeend','<a class="btn" href="index.html">เข้าหน้าระบบ →</a>'); }
+    else {
+      const { data:chk } = await sb.auth.getSession();
+      if (!chk.session) {
+        // ผูกไว้แล้วแต่ออกเซสชันไม่ได้ = บัญชีระบบไม่สมบูรณ์ (มักเพราะไม่มีอีเมล) — บอกให้ชัด อย่าปล่อยไปเจอหน้าถัดไปแล้วงง
+        msg(`สวัสดีคุณ ${data.employee_name||data.display_name}<br>`
+          + `<small>เข้าระบบไม่สำเร็จ — บัญชีระบบของคุณยังไม่สมบูรณ์<br>`
+          + `แจ้งทีมระบบพร้อมบอกว่า "${data.employee_id||'-'}" เข้าไม่ได้ค่ะ</small>`);
+        return;
+      }
+      msg(`ยินดีต้อนรับ ${data.employee_name||data.display_name}`);
+      document.querySelector('.card').insertAdjacentHTML('beforeend','<a class="btn" href="index.html">เข้าหน้าระบบ →</a>');
+    }
   }catch(e){ stopSpin(); msg('ผิดพลาด: '+e); }
 }
 
