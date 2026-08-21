@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>เช็คอิน / เช็คเอาท์ · Yiaoya</title>
-<link rel="stylesheet" href="m-shared.css">
+<link rel="stylesheet" href="m-shared.css?v=202608211205">
 <style>
 body{padding-bottom:96px}
 .sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
@@ -54,7 +54,7 @@ body{padding-bottom:96px}
 <div id="block" style="display:none"></div>
 
 <script type="module">
-import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js';
+import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js?v=202608211205';
 mountHead('เช็คอิน / เช็คเอาท์');
 mountFeedback('checkin', 'เช็คอิน / เช็คเอาท์');
 const MODES=[['onsite','ที่สาขา'],['wfh','WFH'],['off_site_visit','นอกสถานที่'],['hybrid','ผสม']];
