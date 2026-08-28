@@ -285,7 +285,9 @@ export function mountFeedback(viewKey, viewLabel) {
     try {
       const attachments = await yfbUpload(imgs);
       const { error } = await sb.from('trial_feedback').insert({
-        source: 'dashboard', view_key: viewKey || 'mobile',
+        // [ออดิท 27 ส.ค. 69] 'dashboard' เป็นถังรวมเก่าที่ถูกถอดออกจากทุกลูปเช็คแล้ว (แถวเดิม re-source หมด)
+        // หน้าตระกูล m-* คือหน้ามือถือฝั่ง HR ที่ทีมใช้จริง → ส่งเข้า hr-liff ให้ลูป "แก้เสร็จ→กดยืนยัน" ไม่ขาด
+        source: 'hr-liff', view_key: viewKey || 'mobile',
         view_label: viewLabel || viewKey || 'มือถือ',
         page_url: location.pathname.slice(0, 300),
         category: cat, message: m,
