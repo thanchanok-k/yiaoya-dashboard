@@ -1,77 +1,8 @@
 <!DOCTYPE html><html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>ยื่นใบลา · Yiaoya</title>
-<link rel="stylesheet" href="m-shared.css?v=202608211329">
-<style>
-.bal{display:flex;gap:8px;margin-bottom:12px}
-.bal .c{flex:1;background:#fff;border-radius:12px;padding:11px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.bal .n{font-size:22px;font-weight:800;color:var(--teal)}.bal .l{font-size:11px;color:var(--muted);margin-top:2px}
-.chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px}.chk input{width:auto}
-.recent{margin-top:14px}.recent .it{background:#fff;border-radius:10px;padding:10px 12px;margin-bottom:7px;font-size:13px;display:flex;justify-content:space-between}
-</style></head>
-<body>
-<div id="app" style="display:none">
-  <div class="bal" id="bal"></div>
-  <div class="card">
-    <label>ประเภทการลา</label>
-    <select id="ltype">
-      <option value="annual">ลาพักร้อน</option><option value="sick">ลาป่วย</option>
-      <option value="personal">ลากิจ</option><option value="emergency">ลาฉุกเฉิน</option>
-      <option value="maternity">ลาคลอด</option><option value="paternity">ลาดูแลบุตร/คู่สมรสคลอด</option>
-      <option value="ordination">ลาบวช</option><option value="military">ลาเกณฑ์ทหาร</option>
-      <option value="special_holiday">วันหยุดพิเศษ</option><option value="birthday">ลาวันเกิด</option>
-      <option value="reward">ลารางวัล</option><option value="other">อื่นๆ</option>
-    </select>
-    <div class="chk"><input type="checkbox" id="half"><label for="half" style="margin:0;font-weight:500">ลาครึ่งวัน</label></div>
-    <div class="row"><div><label>วันที่เริ่ม</label><input type="date" id="sd"></div>
-      <div id="edWrap"><label>ถึงวันที่</label><input type="date" id="ed"></div></div>
-    <label>เหตุผล</label>
-    <textarea id="reason" rows="2" placeholder="(ไม่บังคับ)"></textarea>
-    <button id="send">ส่งใบลา</button>
-    <div class="msg" id="msg"></div>
-  </div>
-  <div class="recent" id="recent"></div>
-</div>
-<div id="block" style="display:none"></div>
-<script type="module">
-import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js?v=202608211329';
-mountHead('ยื่นใบลา');
-mountFeedback('leave', 'ยื่นใบลา');
-const TH={annual:'ลาพักร้อน',sick:'ลาป่วย',personal:'ลากิจ',emergency:'ลาฉุกเฉิน',maternity:'ลาคลอด',paternity:'ลาดูแลบุตร',ordination:'ลาบวช',military:'ลาเกณฑ์ทหาร',special_holiday:'วันหยุดพิเศษ',birthday:'ลาวันเกิด',reward:'ลารางวัล',other:'อื่นๆ'};
-const STPILL={submitted:['รออนุมัติ','#FEF3C7','#92400E'],approved:['อนุมัติ','#D1FAE5','#065F46'],rejected:['ไม่อนุมัติ','#FEE2E2','#991B1B']};
-
-async function init(){
-  if(!await requireSession()) return;
-  $('sd').value=new Date().toISOString().slice(0,10);
-  $('half').onchange=()=>{ $('edWrap').style.display=$('half').checked?'none':''; };
-  $('send').onclick=submit;
-  loadBalance(); loadRecent();
-}
-async function loadBalance(){
-  try{ const d=await api('hr_leave_balance?employee_id='+encodeURIComponent(ID.employee_id)); const me=d.row||(d.rows||[]).find(r=>r.employee_id===ID.employee_id);
-    if(!me){ $('bal').innerHTML=''; return; }
-    $('bal').innerHTML=[['พักร้อน','left_annual'],['ลาป่วย','left_sick'],['ลากิจ','left_personal']]
-      .map(([l,k])=>`<div class="c"><div class="n">${me[k]??'–'}</div><div class="l">${l} (วัน)</div></div>`).join('');
-  }catch(e){}
-}
-async function loadRecent(){
-  try{ const d=await api('hr_leave_request'); const mine=(d.items||[]).filter(x=>x.employee_id===ID.employee_id).slice(0,5);
-    $('recent').innerHTML=mine.length?('<div style="font-size:12px;color:var(--muted);margin:4px 2px">คำขอล่าสุด</div>'+mine.map(x=>{
-      const p=STPILL[x.status]||['',''+'#eee','#555']; return `<div class="it"><span>${TH[x.leave_type]||x.leave_type} · ${x.start_date}${x.days>1?' ('+x.days+'ว)':''}</span><span class="pill" style="background:${p[1]};color:${p[2]}">${p[0]||x.status}</span></div>`;}).join('')):'';
-  }catch(e){}
-}
-async function submit(){
-  const leave_type=$('ltype').value, start_date=$('sd').value, half_day=$('half').checked;
-  const end_date=half_day?start_date:($('ed').value||start_date), reason=$('reason').value.trim();
-  if(!start_date){ $('msg').textContent='เลือกวันที่เริ่ม'; return; }
-  if(end_date<start_date){ $('msg').style.color='#b91c1c'; $('msg').textContent='วันสิ้นสุดต้องไม่ก่อนวันเริ่ม'; return; }
-  const btn=$('send'); btn.disabled=true; $('msg').style.color='var(--muted)'; $('msg').textContent='กำลังส่ง…';
-  const d=await api('hr_leave_request',{employee_id:ID.employee_id,leave_type,start_date,end_date,half_day,reason,
-    requested_by:ID.employee_name||ID.display_name});
-  btn.disabled=false;
-  if(d.error){ $('msg').style.color='#b91c1c'; $('msg').textContent='ผิดพลาด: '+d.error; return; }
-  $('msg').style.color='#0f766e'; $('msg').textContent='ส่งใบลาแล้ว ✓ ('+d.id+') · รอหัวหน้าอนุมัติ';
-  $('reason').value=''; loadBalance(); loadRecent();
-}
-init();
-</script></body></html>
+<!-- หน้ายื่นใบลาย้ายเข้าระบบ ERP แล้ว — หน้านี้เหลือไว้พาไปที่ใหม่ ไม่ลบ URL เดิม (เมนูไลน์รุ่นเก่ายังชี้มาที่นี่) -->
+<meta http-equiv="refresh" content="1;url=https://liff.line.me/2010209924-npcUmsEm?screen=leave">
+<style>body{margin:0;font-family:-apple-system,"Noto Sans Thai","Segoe UI",sans-serif;background:#F1F5F9;color:#0D2F4F} .box{max-width:480px;margin:0 auto;padding:48px 22px;text-align:center;line-height:1.7} h1{font-size:18px;margin:0 0 8px} p{font-size:14px;color:#475569;margin:0 0 20px} a.btn{display:inline-block;padding:13px 22px;background:#3DC5B7;color:#04342C;border-radius:12px;font-weight:800;text-decoration:none;font-size:15px}</style></head>
+<body><div class="box"><h1>ใบลาย้ายไปอยู่ในระบบ ERP แล้ว</h1><p>กำลังพาไปหน้าใหม่ ถ้าไม่เปลี่ยนหน้าเองให้แตะปุ่มด้านล่าง</p><a class="btn" href="https://liff.line.me/2010209924-npcUmsEm?screen=leave">ยื่นใบลาใน ERP</a></div>
+<script>setTimeout(function(){location.replace('https://liff.line.me/2010209924-npcUmsEm?screen=leave');},300);</script></body></html>
