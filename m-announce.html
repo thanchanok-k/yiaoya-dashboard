@@ -1,185 +1,20 @@
 <!DOCTYPE html><html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>ประกาศ · Yiaoya</title>
-<link rel="stylesheet" href="m-shared.css?v=202608211329">
+<!-- (3 ก.ย. 69) หน้าประกาศย้ายเข้าระบบ ERP แล้ว — หน้านี้เหลือไว้พาไปที่ใหม่ ไม่ลบ URL เดิม (เมนูไลน์รุ่นเก่ายังชี้มาที่นี่) -->
+<meta http-equiv="refresh" content="1;url=https://liff.line.me/2010209924-npcUmsEm?screen=announce">
 <style>
-.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
-.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
-.flbl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
-.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
-.chip{padding:8px 13px;border:1px solid var(--border);border-radius:99px;font-size:13px;cursor:pointer;background:#fff}
-.chip.on{background:var(--teal);color:#04342C;border-color:var(--teal);font-weight:700}
-.cta{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 14px;background:rgba(241,245,249,.96);border-top:1px solid var(--border);backdrop-filter:blur(6px)}
-.cta button{width:100%;padding:14px;background:var(--teal);color:#04342C;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}
-.cta button:disabled{opacity:.45}
-/* --- announce-specific (brand tokens reused) --- */
-.acard{cursor:pointer}
-.acard.unread{border-left:3px solid var(--teal)}
-.atop{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px}
-.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600;line-height:1.4}
-.pill.cat{background:#E6F7F5;color:#0F766E}
-.pill.new{background:var(--teal);color:#04342C}
-.pill.ack{background:#FEF3C7;color:#92400e}
-.pill.done{background:#DCFCE7;color:#166534}
-.atitle{font-size:15.5px;font-weight:700;color:var(--navy);line-height:1.35}
-.asnip{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ameta{font-size:12px;color:var(--faint);margin-top:8px;display:flex;align-items:center;gap:6px}
-.ameta .arr{margin-left:auto;color:#0F766E;font-weight:700}
-.abody{font-size:14.5px;line-height:1.7;color:#1E293B;white-space:pre-wrap;margin-top:4px}
-.abody.collapsed{display:none}
-.ackbtn{width:100%;padding:13px;background:var(--teal);color:#04342C;border:none;border-radius:10px;font-size:14.5px;font-weight:800;cursor:pointer;margin-top:12px}
-.ackbtn:disabled{opacity:.55;cursor:default}
-.ackbtn.done{background:#10B981;color:#fff}
-.amsg{text-align:center;font-size:12px;margin-top:8px;min-height:14px;line-height:1.5}
-.empty{text-align:center;padding:42px 20px;color:var(--faint);font-size:14px;line-height:1.6}
-.divline{font-size:13px;font-weight:700;color:var(--muted);margin:6px 2px 9px}
+body{margin:0;font-family:-apple-system,"Noto Sans Thai","Segoe UI",sans-serif;background:#F1F5F9;color:#0D2F4F}
+.box{max-width:480px;margin:0 auto;padding:48px 22px;text-align:center;line-height:1.7}
+h1{font-size:18px;margin:0 0 8px}
+p{font-size:14px;color:#475569;margin:0 0 20px}
+a.btn{display:inline-block;padding:13px 22px;background:#3DC5B7;color:#04342C;border-radius:12px;font-weight:800;text-decoration:none;font-size:15px}
 </style></head>
 <body>
-<div id="app" style="display:none">
-  <div class="note">ประกาศที่ส่งถึงคุณ · แตะการ์ดเพื่ออ่านรายละเอียด · ประกาศที่ต้องรับทราบจะมีปุ่มกดยืนยัน</div>
-  <div class="chips" id="filters"></div>
-  <div id="list"></div>
+<div class="box">
+  <h1>ประกาศย้ายไปอยู่ในระบบ ERP แล้ว</h1>
+  <p>กำลังพาไปหน้าใหม่ ถ้าไม่เปลี่ยนหน้าเองให้แตะปุ่มด้านล่าง</p>
+  <a class="btn" href="https://liff.line.me/2010209924-npcUmsEm?screen=announce">เปิดประกาศใน ERP</a>
 </div>
-<div id="block" style="display:none"></div>
-<script type="module">
-import { ID, $, api, mountHead, requireSession, esc, mountFeedback } from './m-shared.js?v=202608211329';
-mountHead('ประกาศ');
-mountFeedback('announce', 'ประกาศ');
-
-const CAT_LABELS={permanent:'บอร์ดถาวร',monthly:'บอร์ดประจำเดือน',policy:'นโยบาย',welfare:'สวัสดิการ',activity:'กิจกรรม',announcement:'แจ้งเตือน',urgent:'ด่วน',general:'ทั่วไป'};
-function catLabel(c){const k=String(c||'general').toLowerCase();return CAT_LABELS[k]||(c||'ทั่วไป');}
-
-let ME=null, ALL=[], FILTER='all';
-let ACKED={};   // map announcement_id → true (โหลดจาก backend ?acks= ตอน init · cross-device)
-function readAcked(){return ACKED;}
-
-// --- targeting match: ประกาศถึงพนักงานคนนี้หรือไม่ ---
-function arr(v){return Array.isArray(v)?v.filter(Boolean):(v?String(v).split(',').map(s=>s.trim()).filter(Boolean):[]);}
-function meVals(){
-  const m=ME||{};
-  return {
-    branch:[m.branch_id,m.branch_name].filter(Boolean).map(String),
-    pos:[m.position,m.job_title,m.role].filter(Boolean).map(String),
-    dept:[m.department].filter(Boolean).map(String),
-    emp:[m.employee_id].filter(Boolean).map(String),
-  };
-}
-function targeted(a){
-  const v=meVals();
-  // exclude list ตัดทิ้งก่อน
-  if(arr(a.target_exclude_employees).some(e=>v.emp.includes(String(e))))return false;
-  const tb=arr(a.target_branches),tp=arr(a.target_positions),td=arr(a.target_departments),te=arr(a.target_employees);
-  // ไม่มี target ใด ๆ = ส่งทั้งบริษัท → ถึงทุกคน
-  if(!tb.length&&!tp.length&&!td.length&&!te.length)return true;
-  // ระบุพนักงานเจาะจง → ต้องมีชื่อ
-  if(te.length&&te.some(e=>v.emp.includes(String(e))))return true;
-  if(tb.length&&tb.some(b=>v.branch.includes(String(b))))return true;
-  if(tp.length&&tp.some(p=>v.pos.includes(String(p))))return true;
-  if(td.length&&td.some(d=>v.dept.includes(String(d))))return true;
-  return false;
-}
-
-function snippet(a){
-  const raw=String(a.body_md||a.body||'');
-  return raw.replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/[#*_>`~]/g,' ').replace(/\s+/g,' ').trim().slice(0,120);
-}
-function pubDate(a){
-  const d=a.published_at||a.posted_at||a.scheduled_at;
-  if(!d)return '';
-  const t=new Date(d);if(isNaN(t.getTime()))return '';
-  const M=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-  return t.getDate()+' '+M[t.getMonth()]+' '+(t.getFullYear()+543);
-}
-
-function render(){
-  const acked=readAcked();
-  let list=ALL.slice();
-  if(FILTER==='ack')list=list.filter(a=>a.requires_ack&&!acked[a.announcement_id||a.ann_id]);
-  if(!list.length){$('list').innerHTML='<div class="empty">'+(FILTER==='ack'?'ไม่มีประกาศที่ต้องรับทราบ':'ยังไม่มีประกาศสำหรับคุณ')+'</div>';return;}
-  $('list').innerHTML=list.map(card).join('');
-}
-function card(a){
-  const id=a.announcement_id||a.ann_id||'';
-  const acked=readAcked();const isAck=!!acked[id];
-  const pills=['<span class="pill cat">'+esc(catLabel(a.category))+'</span>'];
-  if(a.requires_ack&&!isAck)pills.push('<span class="pill ack">ต้องรับทราบ</span>');
-  if(a.requires_ack&&isAck)pills.push('<span class="pill done">รับทราบแล้ว</span>');
-  const sn=snippet(a),dt=pubDate(a);
-  let footer='';
-  if(a.requires_ack){
-    footer=isAck
-      ? '<button class="ackbtn done" disabled>รับทราบแล้ว</button>'
-      : '<button class="ackbtn" data-ack="'+esc(id)+'">กดรับทราบ</button>';
-  }
-  return '<div class="card acard" data-id="'+esc(id)+'">'+
-    '<div class="atop">'+pills.join('')+'</div>'+
-    '<div class="atitle">'+esc(a.title||'(ไม่มีหัวข้อ)')+'</div>'+
-    (sn?'<div class="asnip" data-snip>'+esc(sn)+'</div>':'')+
-    '<div class="abody collapsed" data-body>'+esc(String(a.body_md||a.body||''))+'</div>'+
-    '<div class="ameta">'+(dt?'ประกาศ '+dt:esc(id))+'<span class="arr" data-arr>เปิดอ่าน &rsaquo;</span></div>'+
-    '<div data-footer style="display:none">'+footer+'<div class="amsg" data-msg></div></div>'+
-  '</div>';
-}
-
-function init2(){
-  $('filters').innerHTML=[['all','ทั้งหมด'],['ack','ต้องรับทราบ']]
-    .map(([k,l])=>'<span class="chip'+(FILTER===k?' on':'')+'" data-f="'+k+'">'+l+'</span>').join('');
-  $('filters').onclick=(e)=>{const c=e.target.closest('.chip');if(!c)return;FILTER=c.dataset.f;init2();render();};
-
-  $('list').onclick=(e)=>{
-    const ackB=e.target.closest('[data-ack]');
-    if(ackB){doAck(ackB);return;}
-    const c=e.target.closest('.acard');if(!c)return;
-    const body=c.querySelector('[data-body]'),foot=c.querySelector('[data-footer]'),snip=c.querySelector('[data-snip]'),arr=c.querySelector('[data-arr]');
-    const open=body.classList.contains('collapsed');
-    body.classList.toggle('collapsed',!open);
-    foot.style.display=open?'block':'none';
-    if(snip)snip.style.display=open?'none':'';
-    if(arr)arr.innerHTML=open?'ย่อ &rsaquo;':'เปิดอ่าน &rsaquo;';
-  };
-}
-
-async function doAck(btn){
-  const id=btn.getAttribute('data-ack');
-  const wrap=btn.closest('[data-footer]');const msg=wrap&&wrap.querySelector('[data-msg]');
-  btn.disabled=true;
-  if(msg){msg.style.color='var(--muted)';msg.textContent='กำลังบันทึกการรับทราบ…';}
-  try{
-    const r=await api('hr_announce',{action:'ack',announcement_id:id,employee_id:ID.employee_id});
-    if(!r||!r.ok)throw new Error((r&&r.error)||'บันทึกไม่สำเร็จ');
-    ACKED[id]=true;
-    btn.classList.add('done');btn.textContent='รับทราบแล้ว';
-    if(msg)msg.textContent='';
-    render();
-  }catch(e){
-    btn.disabled=false;
-    if(msg){msg.style.color='#b91c1c';msg.textContent='บันทึกไม่สำเร็จ ลองอีกครั้ง';}
-  }
-}
-
-async function init(){
-  if(!await requireSession()) return;
-  // โหลดโปรไฟล์ (employee.updated) เพื่อใช้ match targeting
-  try{
-    const pr=await api('hr_list?type=employee.updated&limit=3000');
-    const items=(pr&&(pr.items||pr.data))||[];
-    for(const it of items){const p=it.payload||it;if(p.employee_id===ID.employee_id){ME=p;break;}}
-  }catch(e){}
-  if(!ME)ME={employee_id:ID.employee_id,branch_id:ID.branch_id||'',branch_name:ID.branch_name||''};
-  // โหลดรายการที่รับทราบแล้วจาก backend (cross-device) — api() ทำ GET เมื่อไม่มี body · ส่ง query ใน path
-  try{
-    const ar=await api('hr_announce?acks='+encodeURIComponent(ID.employee_id));
-    ACKED={};for(const aid of ((ar&&ar.acked)||[]))ACKED[String(aid)]=true;
-  }catch(e){}
-  // โหลดประกาศ
-  let r;try{r=await api('hr_announce',{action:'list'});}catch(e){$('list').innerHTML='<div class="empty">โหลดประกาศไม่สำเร็จ</div>';return;}
-  const anns=(r&&r.announcements)||[];
-  ALL=anns
-    .filter(a=>String(a.status||'published').toLowerCase()==='published')
-    .filter(targeted)
-    .sort((a,b)=>String(b.published_at||b.posted_at||'').localeCompare(String(a.published_at||a.posted_at||'')));
-  init2();render();
-}
-init();
-</script></body></html>
+<script>setTimeout(function(){location.replace('https://liff.line.me/2010209924-npcUmsEm?screen=announce');},300);</script>
+</body></html>
