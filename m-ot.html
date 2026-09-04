@@ -1,65 +1,8 @@
 <!DOCTYPE html><html lang="th"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>ขอ OT · Yiaoya</title>
-<link rel="stylesheet" href="m-shared.css?v=202608211329">
-<style>
-body{padding-bottom:96px}
-.sec{display:flex;align-items:center;gap:9px;font-size:14.5px;font-weight:700;margin-bottom:10px}
-.num{width:23px;height:23px;border-radius:50%;background:var(--teal);color:#04342C;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
-.flbl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
-.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
-.chip{padding:8px 13px;border:1px solid var(--border);border-radius:99px;font-size:13px;cursor:pointer;background:#fff}
-.chip.on{background:var(--teal);color:#04342C;border-color:var(--teal);font-weight:700}
-.cta{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 14px;background:rgba(248,249,250,.96);border-top:1px solid var(--border)}
-.cta button{margin-top:0}
-</style></head>
-<body>
-<div id="app" style="display:none">
-  <div class="note">คำขอจะส่งให้หัวหน้าอนุมัติ · ระบบบันทึกชั่วโมง ไม่คำนวณค่าตอบแทน</div>
-  <div class="card"><div class="sec"><span class="num">1</span>วันที่ทำ OT</div>
-    <input type="date" id="fDate"><div class="hint">ขอย้อนหลังได้ไม่เกิน 7 วัน</div></div>
-  <div class="card"><div class="sec"><span class="num">2</span>ช่วงเวลา</div>
-    <div class="row"><div><label class="flbl">เริ่ม</label><input type="time" id="fStart"></div>
-      <div><label class="flbl">สิ้นสุด</label><input type="time" id="fEnd"></div></div></div>
-  <div class="card"><div class="sec"><span class="num">3</span>จำนวนเวลา (นาที)</div>
-    <input type="number" id="fMins" min="0" max="1440" step="5" inputmode="numeric" placeholder="0">
-    <div class="hint" id="minsHint">คำนวณอัตโนมัติจากเวลาเริ่ม–สิ้นสุด · แก้เองได้</div></div>
-  <div class="card"><div class="sec"><span class="num">4</span>เหตุผล</div>
-    <div class="chips" id="chips"></div>
-    <textarea id="fReason" rows="2" maxlength="300" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี) · เช่น เคลียร์เวชระเบียนค้าง 12 ราย"></textarea></div>
-</div>
-<div class="cta" id="cta" style="display:none"><button id="send" disabled>ส่งคำขอ OT</button><div class="msg" id="msg"></div></div>
-<div id="block" style="display:none"></div>
-<script type="module">
-import { ID, $, api, mountHead, requireSession, mountFeedback } from './m-shared.js?v=202608211329';
-mountHead('ขอ OT (ทำงานล่วงเวลา)');
-const REASONS=['เคลียร์เอกสาร/เวชระเบียนค้าง','รับผู้ป่วยเพิ่ม/คิวยาว','ช่วยงานสาขาอื่น','เตรียมงานอบรม/ประชุม','ปิดยอด/เช็คสต็อก','อื่นๆ'];
-let chip='', minsAuto=true;
-const todayStr=()=>new Date().toISOString().slice(0,10);
-function calcMins(){const s=$('fStart').value,e=$('fEnd').value;if(!s||!e)return null;const[a,b]=s.split(':').map(Number),[c,d]=e.split(':').map(Number);let m=(c*60+d)-(a*60+b);if(m<0)m+=1440;return m;}
-function refreshMins(){if(minsAuto){const m=calcMins();if(m!=null)$('fMins').value=m;}validate();}
-function validate(){const ok=$('fDate').value&&Number($('fMins').value)>0&&(chip&&chip!=='อื่นๆ'||$('fReason').value.trim());$('send').disabled=!ok;}
-async function submit(){
-  const mins=Number($('fMins').value);const reason=(chip==='อื่นๆ'?'':chip)+($('fReason').value.trim()?(chip&&chip!=='อื่นๆ'?' · ':'')+$('fReason').value.trim():'');
-  const d=$('fDate').value,dow=new Date(d).getDay(),day_type=(dow===0||dow===6)?'holiday':'normal';
-  $('send').disabled=true;$('msg').style.color='var(--muted)';$('msg').textContent='กำลังส่ง…';
-  const r=await api('hr_ot_request',{employee_id:ID.employee_id,branch_id:ID.branch_id||'',ot_date:d,
-    expected_start:$('fStart').value,expected_end:$('fEnd').value,expected_minutes:mins,expected_hours:+(mins/60).toFixed(2),
-    day_type,reason,requested_by:ID.employee_name||ID.display_name});
-  if(r.error){$('send').disabled=false;$('msg').style.color='#b91c1c';$('msg').textContent='ผิดพลาด: '+r.error;return;}
-  $('msg').style.color='#0f766e';$('msg').textContent='ส่งคำขอ OT แล้ว ✓ ('+(r.id||'')+') · รอหัวหน้าอนุมัติ';
-}
-(async()=>{
-  if(!await requireSession()) return;
-  mountFeedback('ot', 'ขอ OT');
-  $('cta').style.display='block';
-  const d=new Date();$('fDate').max=todayStr();$('fDate').min=new Date(d.getTime()-7*864e5).toISOString().slice(0,10);$('fDate').value=todayStr();
-  $('chips').innerHTML=REASONS.map(r=>`<span class="chip" data-r="${r}">${r}</span>`).join('');
-  $('chips').onclick=(e)=>{const c=e.target.closest('.chip');if(!c)return;chip=c.dataset.r;[...$('chips').children].forEach(x=>x.classList.toggle('on',x===c));validate();};
-  $('fStart').oninput=refreshMins;$('fEnd').oninput=refreshMins;
-  $('fMins').oninput=()=>{minsAuto=false;$('minsHint').textContent='แก้เอง (ปิดคำนวณอัตโนมัติ)';validate();};
-  $('fDate').oninput=validate;$('fReason').oninput=validate;
-  $('send').onclick=submit;
-})();
-</script></body></html>
+<!-- หน้าขอ OT ย้ายเข้าระบบ ERP แล้ว (4 ก.ย. 69) — หน้านี้เหลือไว้พาไปที่ใหม่ ไม่ลบ URL เดิม -->
+<meta http-equiv="refresh" content="1;url=https://liff.line.me/2010209924-npcUmsEm?screen=ot">
+<style>body{margin:0;font-family:-apple-system,"Noto Sans Thai","Segoe UI",sans-serif;background:#F1F5F9;color:#0D2F4F} .box{max-width:480px;margin:0 auto;padding:48px 22px;text-align:center;line-height:1.7} h1{font-size:18px;margin:0 0 8px} p{font-size:14px;color:#475569;margin:0 0 20px} a.btn{display:inline-block;padding:13px 22px;background:#3DC5B7;color:#04342C;border-radius:12px;font-weight:800;text-decoration:none;font-size:15px}</style></head>
+<body><div class="box"><h1>ขอ OT ย้ายไปอยู่ในระบบ ERP แล้ว</h1><p>กำลังพาไปหน้าใหม่ ถ้าไม่เปลี่ยนหน้าเองให้แตะปุ่มด้านล่าง</p><a class="btn" href="https://liff.line.me/2010209924-npcUmsEm?screen=ot">ขอ OT ใน ERP</a></div>
+<script>setTimeout(function(){location.replace('https://liff.line.me/2010209924-npcUmsEm?screen=ot');},300);</script></body></html>
